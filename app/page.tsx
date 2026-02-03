@@ -3,30 +3,30 @@ import { Button } from "@heroui/button";
 import { Image } from "@heroui/image";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Avatar } from "@heroui/avatar";
-import { DollarSign, Heart, Clock, ChefHat } from "lucide-react";
+import { Bot, WalletCards, ShoppingCart, Heart } from "lucide-react";
 
 
 export default function Home() {
   const features = [
     {
-      title: "Economique",
-      description: "Économisez de l'argent grâce à une planification intelligente des repas et des listes de courses.",
-      icon: <DollarSign className="w-6 h-6 text-primary" />,
+      title: "AI Meal Plans",
+      description: "Des plans de repas intelligents générés par l'IA",
+      icon: <Bot className="w-6 h-6 text-primary" />,
     },
     {
-      title: "Manger sainement",
-      description: "Des repas nutritifs au lieu des nouilles instantanées.",
-      icon: <Heart className="w-6 h-6 text-danger" />,
+      title: "Budget-Friendly",
+      description: "Mange mieux sans te ruiner grâce à des recettes économiques",
+      icon: <WalletCards className="w-6 h-6 text-danger" />,
     },
     {
-      title: "Economiser du temps",
-      description: "Préparez une fois, mangez toute la semaine. Parfait pour les horaires chargés.",
-      icon: <Clock className="w-6 h-6 text-warning" />,
+      title: "Shopping Lists",
+      description: "Des listes d'épicerie automatiques et organisées pour gagner du temps",
+      icon: <ShoppingCart className="w-6 h-6 text-warning" />,
     },
     {
-      title: "Recettes faciles",
-      description: "Des recettes simples pour les cuisiniers  .",
-      icon: <ChefHat className="w-6 h-6 text-secondary" />,
+      title: "Nutrition Tracking",
+      description: "Suis tes calories et nutriments facilement",
+      icon: <Heart className="w-6 h-6 text-secondary" />,
     },
   ];
 
@@ -39,7 +39,7 @@ export default function Home() {
               Bienvenue, étudiant!
             </h1>
             <p className="text-lg text-default-500">
-              Faisons des repas faciles et adapter a vos besoins
+              Faisons des repas faciles et adaptés à vos besoins
             </p>
           </div>
 
@@ -51,7 +51,7 @@ export default function Home() {
               size="lg"
               variant="solid"
             >
-              Get Started
+              Commencer
             </Button>
             <Button
               as={Link}
@@ -59,7 +59,7 @@ export default function Home() {
               size="lg"
               variant="bordered"
             >
-              Learn More
+              En savoir plus
             </Button>
           </div>
         </div>
