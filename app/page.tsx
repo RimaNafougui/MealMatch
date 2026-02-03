@@ -49,7 +49,7 @@ export default function Home() {
             <Button
               as={Link}
               color="primary"
-              href="/signup"
+              href="/signup" // TODO: Add signup page
               size="lg"
               variant="solid"
             >
@@ -57,7 +57,7 @@ export default function Home() {
             </Button>
             <Button
               as={Link}
-              href="#features"
+              href="#features" // TODO: Add features section
               size="lg"
               variant="bordered"
             >
@@ -133,6 +133,28 @@ export default function Home() {
             ))}
           </div>
         </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="max-w-7xl mx-auto px-6 w-full pb-12">
+        <Card className="bg-gradient-to-r from-primary to-secondary p-12 text-center border-none">
+          <CardBody className="gap-6 items-center justify-center">
+            <h2 className="text-3xl md:text-4xl font-bold text-white">
+              Prêt à mieux manger ?
+            </h2>
+            <p className="text-white/90 text-lg max-w-2xl">
+              Rejoignez MealMatch aujourd'hui et transformez votre façon de cuisiner.
+            </p>
+            <Button
+              as={Link}
+              href="/signup" // TODO: Add signup page
+              size="lg"
+              className="bg-white text-primary font-bold"
+            >
+              S'inscrire
+            </Button>
+          </CardBody>
+        </Card>
       </section>
     </div>
   );
