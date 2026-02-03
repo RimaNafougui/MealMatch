@@ -1,11 +1,10 @@
-export interface User {
+export interface Profile {
   username: string;
   profilePublic: boolean;
   id: string;
   email: string;
   name?: string;
   image?: string;
-  bio?: string;
   created_at?: string;
   updated_at?: string;
   subscription_status: "free" | "premium";
