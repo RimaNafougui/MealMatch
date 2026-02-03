@@ -33,7 +33,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="flex flex-col gap-16 py-8 md:py-10">
+    <div className="flex flex-col gap-8 md:gap-16 py-8 md:py-10">
       <section className="flex flex-col-reverse md:flex-row items-center justify-between gap-8 max-w-7xl mx-auto px-6">
         <div className="flex flex-col gap-6 text-center md:text-left md:w-1/2">
           <div className="flex flex-col gap-2">
