@@ -3,8 +3,10 @@ import { Button } from "@heroui/button";
 import { Image } from "@heroui/image";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Avatar } from "@heroui/avatar";
+import { Badge } from "@heroui/badge";
 import { Bot, WalletCards, ShoppingCart, Heart } from "lucide-react";
 
+// Page d'accueil
 
 export default function Home() {
   const features = [
@@ -76,6 +78,7 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Features */}
       <section id="features" className="max-w-7xl mx-auto px-6 w-full">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {features.map((feature, index) => (
@@ -97,6 +100,38 @@ export default function Home() {
               </CardBody>
             </Card>
           ))}
+        </div>
+      </section>
+
+      {/* Comment ça marche */}
+      <section className="max-w-7xl mx-auto px-6 w-full py-12">
+        <div className="flex flex-col gap-8">
+          <h2 className="text-3xl font-bold text-center">Comment ça marche?</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              { title: "Entrez vos préférences", step: "1" },
+              { title: "Obtenez votre plan de repas", step: "2" },
+              { title: "Achetez et cuisinez", step: "3" },
+            ].map((item, index) => (
+              <Card key={index} className="p-6 relative overflow-visible">
+                <div className="absolute -top-4 -left-4">
+                  <Badge
+                    content={item.step}
+                    color="primary"
+                    size="lg"
+                    shape="circle"
+                    className="text-xl font-bold w-10 h-10 flex items-center justify-center p-0"
+                  >
+                    <div />
+                  </Badge>
+                </div>
+                <CardHeader className="flex-col !items-start gap-2">
+                  <p className="text-tiny text-primary uppercase font-bold">Étape {item.step}</p>
+                  <h4 className="font-bold text-large">{item.title}</h4>
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
         </div>
       </section>
     </div>
