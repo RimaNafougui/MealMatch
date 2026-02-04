@@ -1,4 +1,4 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
@@ -8,17 +8,11 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
-
-class EmailNotVerifiedError extends Error {
+class EmailNotVerifiedError extends CredentialsSignin {
   code = "EmailNotVerified";
-  constructor() {
-    super("Email not verified");
-    this.name = "EmailNotVerifiedError";
-  }
 }
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
-  secret: process.env.AUTH_SECRET,
   session: { strategy: "jwt" },
   providers: [
     Google({
@@ -58,7 +52,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
 
           const { data: existingUser } = await supabase
             .from("profiles")
-            .select("id, email, username, image")
+            .select("id, email, name, image")
             .eq("email", data.user.email!)
             .single();
 
@@ -66,7 +60,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
             return {
               id: existingUser.id,
               email: existingUser.email,
-              name: existingUser.username,
+              name: existingUser.name,
               image: existingUser.image,
             };
           }
@@ -75,7 +69,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
             id: data.user.id,
             email: data.user.email!,
             name: data.user.user_metadata?.name || null,
-            image: data.user.user_metadata?.avatar_url || null,
+            image: data.user.user_metadata?.image || null,
           };
         } catch (error) {
           if (error instanceof EmailNotVerifiedError) {
@@ -91,84 +85,51 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
     async signIn({ user, account, profile }) {
       if (account?.provider === "github" || account?.provider === "google") {
         try {
-          console.log("🔍 OAuth sign in for:", user.email);
-
-          // ✅ Étape 1 : Vérifier si l'utilisateur existe déjà dans profiles
-          const { data: existingProfile } = await supabase
+          const { data: existingUser } = await supabase
             .from("profiles")
-            .select("id, username, image")
+            .select("id, name, image")
             .eq("email", user.email!)
             .single();
 
-          let userId: string;
+          let userId: any;
 
-          if (existingProfile) {
-            // L'utilisateur existe déjà
-            console.log("✅ User exists:", existingProfile.id);
-            userId = existingProfile.id;
+          if (existingUser) {
+            userId = existingUser.id;
+            console.log(
+              `Linking ${account.provider} account to existing user ${userId}`,
+            );
 
-            // Mettre à jour le profil si nécessaire
-            if (!existingProfile.username && user.name) {
+            if (!existingUser.name && user.name) {
               await supabase
                 .from("profiles")
                 .update({
-                  username: user.name,
+                  name: user.name,
                   image: user.image,
-                  updated_at: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
                 })
                 .eq("id", userId);
             }
           } else {
-            // ✅ Étape 2 : Créer l'utilisateur dans Supabase Auth d'abord
-            console.log("🔍 Creating new user in Supabase Auth...");
-
-            const { data: authData, error: authError } =
-              await supabase.auth.admin.createUser({
-                email: user.email!,
-                email_confirm: true,
-                user_metadata: {
-                  name: user.name,
-                  avatar_url: user.image,
-                  provider: account.provider,
-                },
-              });
-
-            if (authError || !authData.user) {
-              console.error("❌ Error creating auth user:", authError);
-              return false;
-            }
-
-            userId = authData.user.id;
-            console.log("✅ Auth user created:", userId);
-
-            // ✅ Étape 3 : Créer le profil avec le bon ID
-            console.log("🔍 Creating profile...");
-            const { error: profileError } = await supabase
-              .from("profiles")
-              .insert({
-                id: userId, // ✅ ID de Supabase Auth
-                email: user.email!,
-                username: user.name,
-                image: user.image,
-              });
-
-            if (profileError) {
-              console.error("❌ Error creating profile:", profileError);
-              return false;
-            }
-            console.log("✅ Profile created");
+            userId = user.id;
+            await supabase.from("profiles").insert({
+              id: userId,
+              email: user.email!,
+              name: user.name,
+              image: user.image,
+              emailVerified: new Date().toISOString(),
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            });
           }
 
-          // ✅ Étape 4 : Lier le compte OAuth
-          console.log("🔍 Linking OAuth account...");
           const { error: accountError } = await supabase
             .from("accounts")
             .upsert(
               {
-                user_id: userId, // ✅ ID de Supabase, pas de Google/GitHub
+                userId: userId,
                 type: account.type,
                 provider: account.provider,
-                provider_account_id: account.providerAccountId,
+                providerAccountId: account.providerAccountId,
                 refresh_token: account.refresh_token,
                 access_token: account.access_token,
                 expires_at: account.expires_at,
@@ -176,32 +137,32 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
                 scope: account.scope,
                 id_token: account.id_token,
                 session_state: account.session_state,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
               },
               {
-                onConflict: "provider,provider_account_id",
+                onConflict: "provider,providerAccountId",
               },
             );
 
           if (accountError) {
-            console.error("❌ Error linking account:", accountError);
+            console.error("Error linking account:", accountError);
             return false;
           }
 
-          console.log("✅ OAuth account linked successfully");
-          (user as any).id = userId;
+          user.id = userId;
+
           return true;
         } catch (error) {
-          console.error("❌ Exception in signIn callback:", error);
+          console.error("Error in signIn callback:", error);
           return false;
         }
       }
       return true;
     },
-    async jwt({ token, user, trigger, session }) {
+    async jwt({ token, user, trigger, session, account }) {
       if (user) {
-        token.id = (user as any).id;
+        token.id = user.id;
         token.email = user.email;
         token.name = user.name;
         token.picture = user.image;
@@ -217,12 +178,12 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         try {
           const { data: userData } = await supabase
             .from("profiles")
-            .select("username, image")
+            .select("name, image")
             .eq("id", token.id as string)
             .single();
 
           if (userData) {
-            token.name = userData.username;
+            token.name = userData.name;
             token.picture = userData.image;
           }
         } catch (error) {
@@ -234,7 +195,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = token.id as string;
+        session.user.id = token.id as string;
         session.user.name = token.name as string;
         session.user.image = token.picture as string;
       }
@@ -244,4 +205,5 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
   pages: {
     signIn: "/login",
   },
+  trustHost: true,
 });
