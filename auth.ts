@@ -8,6 +8,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
+
 class EmailNotVerifiedError extends CredentialsSignin {
   code = "EmailNotVerified";
 }
@@ -85,18 +86,19 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
     async signIn({ user, account, profile }) {
       if (account?.provider === "github" || account?.provider === "google") {
         try {
+          // 1. Check if profile exists
           const { data: existingUser } = await supabase
             .from("profiles")
             .select("id, name, image")
             .eq("email", user.email!)
             .single();
 
-          let userId: any;
+          let userId: string;
 
           if (existingUser) {
             userId = existingUser.id;
             console.log(
-              `Linking ${account.provider} account to existing user ${userId}`,
+              `Linking ${account.provider} to existing user ${userId}`,
             );
 
             if (!existingUser.name && user.name) {
@@ -105,20 +107,37 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
                 .update({
                   name: user.name,
                   image: user.image,
-                  updatedAt: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
                 })
                 .eq("id", userId);
             }
           } else {
-            userId = user.id;
+            console.log("Creating new user in Supabase Auth...");
+            const { data: authData, error: authError } =
+              await supabase.auth.admin.createUser({
+                email: user.email!,
+                email_confirm: true,
+                user_metadata: {
+                  name: user.name,
+                  avatar_url: user.image,
+                },
+              });
+
+            if (authError || !authData.user) {
+              console.error("Error creating auth user:", authError);
+              return false;
+            }
+
+            userId = authData.user.id;
+
             await supabase.from("profiles").insert({
               id: userId,
               email: user.email!,
               name: user.name,
+              username: user.name,
               image: user.image,
-              emailVerified: new Date().toISOString(),
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
             });
           }
 
@@ -126,10 +145,10 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
             .from("accounts")
             .upsert(
               {
-                userId: userId,
+                user_id: userId,
                 type: account.type,
                 provider: account.provider,
-                providerAccountId: account.providerAccountId,
+                provider_account_id: account.providerAccountId,
                 refresh_token: account.refresh_token,
                 access_token: account.access_token,
                 expires_at: account.expires_at,
@@ -137,11 +156,11 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
                 scope: account.scope,
                 id_token: account.id_token,
                 session_state: account.session_state,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
+                created_at: new Date().toISOString(), // Fixed column name
+                updated_at: new Date().toISOString(), // Fixed column name
               },
               {
-                onConflict: "provider,providerAccountId",
+                onConflict: "provider,provider_account_id", // Fixed constraint name
               },
             );
 
@@ -151,7 +170,6 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           }
 
           user.id = userId;
-
           return true;
         } catch (error) {
           console.error("Error in signIn callback:", error);
@@ -160,7 +178,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       }
       return true;
     },
-    async jwt({ token, user, trigger, session, account }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
         token.email = user.email;
@@ -175,22 +193,17 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       }
 
       if (token.id) {
-        try {
-          const { data: userData } = await supabase
-            .from("profiles")
-            .select("name, image")
-            .eq("id", token.id as string)
-            .single();
+        const { data: userData } = await supabase
+          .from("profiles")
+          .select("name, image")
+          .eq("id", token.id as string)
+          .single();
 
-          if (userData) {
-            token.name = userData.name;
-            token.picture = userData.image;
-          }
-        } catch (error) {
-          console.error("Error fetching user data in JWT callback:", error);
+        if (userData) {
+          token.name = userData.name;
+          token.picture = userData.image;
         }
       }
-
       return token;
     },
     async session({ session, token }) {
