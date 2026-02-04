@@ -32,14 +32,14 @@ export default function SignUpForm() {
   const toggleVisibility = () => setIsVisible(!isVisible);
 
   const validateUsername = (value: string): string | null => {
-    if (!value) return "Username is required";
-    if (value.length < 3) return "Must be at least 3 characters";
-    if (value.length > 30) return "Must be less than 30 characters";
+    if (!value) return "Le nom d'utilisateur est requis";
+    if (value.length < 3) return "Doit comporter au moins 3 caractères";
+    if (value.length > 30) return "Doit contenir moins de 30 caractères";
     if (!/^[a-zA-Z0-9_-]+$/.test(value)) {
-      return "Only letters, numbers, dashes, and underscores";
+      return "Uniquement des lettres, des chiffres, des tirets et des underscores";
     }
     if (/^[-_]|[-_]$/.test(value)) {
-      return "Cannot start or end with dash or underscore";
+      return "Ne peut pas commencer ni se terminer par un tiret ou un underscore";
     }
     return null;
   };
@@ -63,13 +63,13 @@ export default function SignUpForm() {
 
         if (response.ok) {
           setUsernameAvailable(data.available);
-          setUsernameError(data.available ? "" : "Username already taken");
+          setUsernameError(data.available ? "" : "Nom d'utilisateur déjà pris");
         } else {
-          setUsernameError(data.error || "Failed to check username");
+          setUsernameError(data.error || "Échec de la vérification du nom d'utilisateur");
           setUsernameAvailable(null);
         }
       } catch (err) {
-        setUsernameError("Failed to check username");
+        setUsernameError("Impossible de vérifier le nom d'utilisateur");
         setUsernameAvailable(null);
       } finally {
         setIsCheckingUsername(false);
@@ -108,7 +108,7 @@ export default function SignUpForm() {
     setError("");
 
     if (!usernameAvailable) {
-      setError("Please choose an available username");
+      setError("Veuillez choisir un nom d'utilisateur disponible");
       return;
     }
 
@@ -121,7 +121,7 @@ export default function SignUpForm() {
     const confirmPassword = formData.get("confirmPassword") as string;
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError("Les mots de passe ne correspondent pas");
       setIsLoading(false);
       return;
     }
@@ -141,15 +141,15 @@ export default function SignUpForm() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || "Something went wrong");
+        setError(data.error || "Une erreur est survenue");
         setIsLoading(false);
         return;
       }
 
       router.push("/login?signup=success");
-      toast.success("Successfully Signed Up!");
+      toast.success("Inscription réussie!");
     } catch (err) {
-      setError("An unexpected error occurred");
+      setError("Une erreur inattendue est survenue");
       setIsLoading(false);
     }
   };
