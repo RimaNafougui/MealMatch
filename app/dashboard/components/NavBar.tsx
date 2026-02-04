@@ -1,49 +1,91 @@
 "use client";
 
 import Image from "next/image";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
+import {
+  Navbar,
+  NavbarBrand,
+  NavbarContent,
+  NavbarItem,
+  NavbarMenuToggle,
+  Button,
+  Input,
+  Link,
+} from "@heroui/react";
 
-interface NavbarProps {
-  darkMode: boolean;
-  setDarkMode: (value: boolean) => void;
-}
+import Sidebar from "./SideBar";
 
-export default function Navbar({ darkMode, setDarkMode }: NavbarProps) {
+export default function NavBar() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
+  const toggleTheme = () => {
+    setTheme(theme === "dark" ? "light" : "dark");
+  };
+
   return (
-    <nav className="flex items-center justify-between p-4 bg-background shadow sticky top-0 z-50">
-      {/* Logo */}
-      <div className="flex items-center gap-2">
-        <Image src="/images/logo.png" alt="MealMatch Logo" width={40} height={40} />
-        <span className="font-bold text-xl">MealMatch</span>
-      </div>
+    <>
+      <Navbar isBordered className="sticky top-0 z-50">
+        {/* LEFT */}
+        <NavbarContent>
+          <NavbarMenuToggle className="sm:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)} />
 
-      {/* Search bar */}
-      <div className="hidden md:flex relative">
-        <input
-          type="text"
-          placeholder="Search..."
-          className="rounded-medium border-medium border-secondary px-3 py-1 bg-background text-foreground focus:border-focus focus:ring-1 focus:ring-focus"
-        />
-        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-foreground">🔍</span>
-      </div>
+          <NavbarBrand className="gap-2">
+            <Image src="/images/logo.png" alt="MealMatch Logo" width={40} height={40} />
+            <span className="font-bold text-xl">MealMatch</span>
+          </NavbarBrand>
+        </NavbarContent>
 
-      {/* User menu + Dark Mode toggle */}
-      <div className="flex items-center gap-4">
-        <button className="rounded-small bg-primary text-primary-foreground px-3 py-1 hover:bg-primary/80">
-          JG
-        </button>
+        {/* CENTER (desktop only) */}
+        <NavbarContent className="hidden sm:flex gap-4" justify="center">
+          <NavbarItem>
+            <Link href="/dashboard">Dashboard</Link>
+          </NavbarItem>
+          <NavbarItem>
+            <Link href="/recipes">Recipes</Link>
+          </NavbarItem>
+        </NavbarContent>
 
-        <button
-          onClick={() => setDarkMode(!darkMode)}
-          className="rounded-small border-medium border-secondary px-3 py-1 hover:bg-secondary/80"
-        >
-          {darkMode ? "🌙" : "☀️"}
-        </button>
+        {/* RIGHT */}
+        <NavbarContent justify="end">
+          <NavbarItem className="hidden md:flex">
+            <Input size="sm" placeholder="Search..." startContent={<span>🔍</span>} />
+          </NavbarItem>
 
-        {/* Hamburger menu pour mobile */}
-        <button className="md:hidden rounded-small border-medium border-secondary px-3 py-1 hover:bg-secondary/80">
-          ☰
-        </button>
-      </div>
-    </nav>
+          <NavbarItem>
+            <Button size="sm" color="primary">
+              JG
+            </Button>
+          </NavbarItem>
+
+          <NavbarItem>
+            <Button size="sm" variant="bordered" onPress={toggleTheme}>
+              {theme === "dark" ? "🌙" : "☀️"}
+            </Button>
+          </NavbarItem>
+        </NavbarContent>
+      </Navbar>
+
+      {/* MOBILE SIDEBAR */}
+      {isMenuOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50" onClick={() => setIsMenuOpen(false)}>
+          <div
+            className="absolute top-0 left-0 h-full w-60 bg-secondary p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Affiche seulement le Sidebar sur mobile */}
+            <Sidebar isMobile={true} />
+          </div>
+        </div>
+      )}
+    </>
   );
 }

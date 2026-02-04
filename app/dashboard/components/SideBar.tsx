@@ -1,8 +1,9 @@
+// dashboard/components/SideBar.tsx
 "use client";
 
 import Link from "next/link";
 
-export default function Sidebar() {
+export default function Sidebar({ isMobile = false }: { isMobile?: boolean }) {
   const links = [
     { href: "/dashboard", label: "Dashboard", icon: "🏠" },
     { href: "/dashboard/recipes", label: "Recipes", icon: "🍴" },
@@ -12,7 +13,7 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="hidden md:flex flex-col w-60 bg-secondary p-4 gap-2">
+    <aside className={`${isMobile ? "flex" : "hidden md:flex"} flex-col w-60 bg-secondary p-4 gap-2`}>
       {links.map((link) => (
         <Link
           key={link.href}
