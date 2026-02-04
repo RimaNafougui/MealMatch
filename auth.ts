@@ -18,6 +18,7 @@ class EmailNotVerifiedError extends Error {
 }
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
+  secret: process.env.AUTH_SECRET,
   session: { strategy: "jwt" },
   providers: [
     Google({
@@ -87,10 +88,13 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async signIn({ user, account }) {
+    async signIn({ user, account, profile }) {
       if (account?.provider === "github" || account?.provider === "google") {
         try {
-          const { data: existingUser } = await supabase
+          console.log("🔍 OAuth sign in for:", user.email);
+
+          // ✅ Étape 1 : Vérifier si l'utilisateur existe déjà dans profiles
+          const { data: existingProfile } = await supabase
             .from("profiles")
             .select("id, username, image")
             .eq("email", user.email!)
@@ -98,37 +102,70 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
 
           let userId: string;
 
-          if (existingUser) {
-            userId = existingUser.id;
-            console.log(
-              `Linking ${account.provider} account to existing user ${userId}`,
-            );
+          if (existingProfile) {
+            // L'utilisateur existe déjà
+            console.log("✅ User exists:", existingProfile.id);
+            userId = existingProfile.id;
 
-            if (!existingUser.username && user.name) {
+            // Mettre à jour le profil si nécessaire
+            if (!existingProfile.username && user.name) {
               await supabase
                 .from("profiles")
                 .update({
                   username: user.name,
                   image: user.image,
+                  updated_at: new Date().toISOString(),
                 })
                 .eq("id", userId);
             }
           } else {
-            userId = user.id as string;
+            // ✅ Étape 2 : Créer l'utilisateur dans Supabase Auth d'abord
+            console.log("🔍 Creating new user in Supabase Auth...");
 
-            await supabase.from("profiles").insert({
-              id: userId,
-              email: user.email!,
-              username: user.name,
-              image: user.image,
-            });
+            const { data: authData, error: authError } =
+              await supabase.auth.admin.createUser({
+                email: user.email!,
+                email_confirm: true,
+                user_metadata: {
+                  name: user.name,
+                  avatar_url: user.image,
+                  provider: account.provider,
+                },
+              });
+
+            if (authError || !authData.user) {
+              console.error("❌ Error creating auth user:", authError);
+              return false;
+            }
+
+            userId = authData.user.id;
+            console.log("✅ Auth user created:", userId);
+
+            // ✅ Étape 3 : Créer le profil avec le bon ID
+            console.log("🔍 Creating profile...");
+            const { error: profileError } = await supabase
+              .from("profiles")
+              .insert({
+                id: userId, // ✅ ID de Supabase Auth
+                email: user.email!,
+                username: user.name,
+                image: user.image,
+              });
+
+            if (profileError) {
+              console.error("❌ Error creating profile:", profileError);
+              return false;
+            }
+            console.log("✅ Profile created");
           }
 
+          // ✅ Étape 4 : Lier le compte OAuth
+          console.log("🔍 Linking OAuth account...");
           const { error: accountError } = await supabase
             .from("accounts")
             .upsert(
               {
-                user_id: userId,
+                user_id: userId, // ✅ ID de Supabase, pas de Google/GitHub
                 type: account.type,
                 provider: account.provider,
                 provider_account_id: account.providerAccountId,
@@ -148,15 +185,15 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
             );
 
           if (accountError) {
-            console.error("Error linking account:", accountError);
+            console.error("❌ Error linking account:", accountError);
             return false;
           }
 
+          console.log("✅ OAuth account linked successfully");
           (user as any).id = userId;
-
           return true;
         } catch (error) {
-          console.error("Error in signIn callback:", error);
+          console.error("❌ Exception in signIn callback:", error);
           return false;
         }
       }
