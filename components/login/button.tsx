@@ -35,7 +35,7 @@ export const SignInButtonGithub = () => {
 export const SignOutButton = () => {
   return (
     <Link className="text-red-600" onPress={() => logout()}>
-      Sign out
+      Déconnection
     </Link>
   );
 };
