@@ -1,24 +1,20 @@
 export type SiteConfig = typeof siteConfig;
 
 export const siteConfig = {
-  name: "Next.js + HeroUI",
-  description: "Make beautiful websites regardless of your design experience.",
+  name: "Meal Match",
+  description: "Plateforme d'aide à la préparation des repas pour étudiants",
   navItems: [
     {
-      label: "Home",
+      label: "Acceuil",
       href: "/",
     },
     {
-      label: "Docs",
-      href: "/docs",
+      label: "Recettes",
+      href: "/recettes",
     },
     {
       label: "Pricing",
       href: "/pricing",
-    },
-    {
-      label: "Blog",
-      href: "/blog",
     },
     {
       label: "About",
@@ -60,7 +56,7 @@ export const siteConfig = {
     },
   ],
   links: {
-    github: "https://github.com/heroui-inc/heroui",
+    github: "https://github.com/Mercuryy200/MealMatch",
     twitter: "https://twitter.com/hero_ui",
     docs: "https://heroui.com",
     discord: "https://discord.gg/9b6yyZKmH4",
