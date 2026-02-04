@@ -162,10 +162,10 @@ export default function SignUpForm() {
     >
       <div className="text-center space-y-2">
         <h2 className="text-3xl font-extrabold tracking-tighter uppercase italic">
-          Inscription
+          Join RCapsule
         </h2>
         <p className="text-default-500 text-sm tracking-wide">
-          Commencez à planifier vos repas dès aujourd'hui.
+          Start digitizing your wardrobe today
         </p>
       </div>
 
@@ -176,9 +176,9 @@ export default function SignUpForm() {
       >
         <Input
           isRequired
-          label="Nom Complet"
+          label="Full Name"
           name="name"
-          placeholder="Nom"
+          placeholder="Name"
           type="text"
           variant="bordered"
           labelPlacement="outside"
@@ -188,15 +188,15 @@ export default function SignUpForm() {
 
         <Input
           isRequired
-          label="Surnom"
-          placeholder="Surnom"
+          label="Username"
+          placeholder="Username"
           value={username}
           onChange={(e) => setUsername(e.target.value.toLowerCase())}
           variant="bordered"
           labelPlacement="outside"
           startContent={<AtSymbolIcon className="w-5 h-5 text-default-400" />}
           endContent={getUsernameEndContent()}
-          description="3-30 caractères. Lettres, chiffres, tirets et traits de soulignement uniquement."
+          description="3-30 characters. Letters, numbers, dashes, and underscores only."
           errorMessage={usernameError}
           isInvalid={!!usernameError || usernameAvailable === false}
           classNames={{ inputWrapper: "h-12" }}
@@ -204,9 +204,9 @@ export default function SignUpForm() {
 
         <Input
           isRequired
-          label="Courriel"
+          label="Email"
           name="email"
-          placeholder="Courriel"
+          placeholder="Email"
           type="email"
           variant="bordered"
           labelPlacement="outside"
@@ -216,7 +216,7 @@ export default function SignUpForm() {
 
         <Input
           isRequired
-          label="Mot de passe"
+          label="Password"
           name="password"
           placeholder="••••••••"
           minLength={6}
@@ -242,7 +242,7 @@ export default function SignUpForm() {
 
         <Input
           isRequired
-          label="Confirmer le mot de passe"
+          label="Confirm Password"
           name="confirmPassword"
           placeholder="••••••••"
           variant="bordered"
@@ -252,19 +252,18 @@ export default function SignUpForm() {
           classNames={{ inputWrapper: "h-12" }}
         />
         <div className="text-center font-light">
-          En vous inscrivant, vous acceptez nos{" "}
+          By signing up, you agree to our{" "}
           <Link className="font-bold" href="/terms">
-            Conditions d'utilisation
+            Terms
           </Link>
           ,{" "}
           <Link className="font-bold" href="/privacy">
-            Politique de confidentialité
+            Privacy Policy
           </Link>{" "}
-          et notre
-          {" "}
+          and
           <Link className="font-bold" href="#">
-            Politique relative aux cookies
-          </Link>
+            Cookies Policy
+          </Link>{" "}
           .
         </div>
 
@@ -279,13 +278,13 @@ export default function SignUpForm() {
           type="submit"
           isDisabled={!usernameAvailable || isCheckingUsername}
         >
-          Créer un compte
+          Create Account
         </Button>
 
         <div className="flex items-center w-full gap-4 my-2">
           <Divider className="flex-1" />
           <span className="text-xs text-default-400 uppercase tracking-widest">
-            Ou
+            Or
           </span>
           <Divider className="flex-1" />
         </div>
@@ -296,12 +295,12 @@ export default function SignUpForm() {
         </div>
 
         <p className="text-center w-full text-sm text-default-500 pt-4">
-          Déjà membre?{" "}
+          Already a member?{" "}
           <Link
             className="text-primary font-bold hover:underline"
             href="/login"
           >
-            Connexion
+            Sign in
           </Link>
         </p>
       </Form>
