@@ -40,6 +40,7 @@ function LoginFormContent() {
 
       if (result?.error) {
         setIsLoading(false);
+
         if (result.error.includes("EmailNotVerified")) {
           setError(
             "Please check your email to verify your account before logging in.",
@@ -47,15 +48,26 @@ function LoginFormContent() {
         } else {
           setError("Invalid email or password.");
         }
-      } else {
-        router.push("/");
-        router.refresh();
+        return;
       }
+
+      // LOGIN OK > CHECK ONBOARDING
+      const res = await fetch("/api/profile/onboarding-status");
+      const data = await res.json();
+
+      if (!data.onboardingCompleted) {
+        router.push("/onboarding");
+      } else {
+        router.push("/dashboard");
+      }
+
+      router.refresh();
     } catch (err) {
       setError("An unexpected error occurred");
       setIsLoading(false);
     }
   };
+
 
   return (
     <motion.div
