@@ -1,57 +1,29 @@
 "use client";
 import { Button, Link } from "@heroui/react";
 import { FaGithub, FaGoogle } from "react-icons/fa";
-import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { logout } from "@/lib/actions/auth";
 
-export const SignInButtonGoogle = ({
-  isSignup = false,
-}: {
-  isSignup?: boolean;
-}) => {
-  const router = useRouter();
-
-  const handleClick = () => {
-    if (isSignup) {
-      sessionStorage.setItem("oauth_provider", "google");
-      sessionStorage.setItem("oauth_signup_flow", "true");
-    }
-    router.push("/api/auth/signin/google");
-  };
-
+export const SignInButtonGoogle = () => {
   return (
     <Button
       variant="bordered"
       className="w-full font-medium"
       startContent={<FaGoogle />}
-      onPress={handleClick}
+      onPress={() => signIn("google", { callbackUrl: "/" })}
     >
       Google
     </Button>
   );
 };
 
-export const SignInButtonGithub = ({
-  isSignup = false,
-}: {
-  isSignup?: boolean;
-}) => {
-  const router = useRouter();
-
-  const handleClick = () => {
-    if (isSignup) {
-      sessionStorage.setItem("oauth_provider", "github");
-      sessionStorage.setItem("oauth_signup_flow", "true");
-    }
-    router.push("/api/auth/signin/github");
-  };
-
+export const SignInButtonGithub = () => {
   return (
     <Button
       variant="bordered"
       className="w-full font-medium"
       startContent={<FaGithub />}
-      onPress={handleClick}
+      onPress={() => signIn("github", { callbackUrl: "/" })}
     >
       GitHub
     </Button>

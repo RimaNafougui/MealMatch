@@ -90,7 +90,6 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           console.log("Provider:", account.provider);
           console.log("User email:", user.email);
 
-          // Check if profile exists
           const { data: existingProfile, error: profileCheckError } =
             await supabase
               .from("profiles")
@@ -109,7 +108,6 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
             console.log("✅ Existing profile found:", existingProfile.id);
             userId = existingProfile.id;
 
-            // Update profile if name/image changed
             if (
               (user.name && user.name !== existingProfile.name) ||
               (user.image && user.image !== existingProfile.image)
@@ -249,7 +247,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           }
 
           console.log("=== End Debug ===");
-          return true; // ✅ ALWAYS return true/false, NEVER a string
+          return true;
         } catch (error) {
           console.error("❌ Error in signIn callback:", error);
           return false;
@@ -283,7 +281,6 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         if (userData) {
           token.name = userData.name;
           token.picture = userData.image;
-          // Update needsUsername flag based on current state
           token.needsUsername = !userData.username;
         }
       }

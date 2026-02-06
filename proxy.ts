@@ -5,12 +5,10 @@ import { auth } from "@/auth";
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Get session
   const session = await auth();
   const isLoggedIn = !!session;
   const needsUsername = (session as any)?.needsUsername;
 
-  // Route definitions
   const protectedRoutes = ["/profile"];
   const guestRoutes = [
     "/login",
@@ -19,8 +17,6 @@ export async function proxy(req: NextRequest) {
     "/update-password",
   ];
 
-  // If logged in and needs username, redirect to complete-signup
-  // (except if already on that page or on API routes)
   if (
     isLoggedIn &&
     needsUsername &&
@@ -30,12 +26,10 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(new URL("/auth/complete-signup", req.url));
   }
 
-  // If on complete-signup but doesn't need username, redirect home
   if (pathname === "/auth/complete-signup" && (!isLoggedIn || !needsUsername)) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  // Redirect logged-in users away from guest routes
   if (
     isLoggedIn &&
     !needsUsername &&
@@ -44,7 +38,6 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  // Protect routes that require login
   if (
     !isLoggedIn &&
     protectedRoutes.some((route) => pathname.startsWith(route))
@@ -54,7 +47,6 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Protect complete-signup route (must be logged in)
   if (pathname === "/auth/complete-signup" && !isLoggedIn) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
