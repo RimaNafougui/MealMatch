@@ -30,22 +30,22 @@ export function ProfileDropdown({ user }: { user: any }) {
         <DropdownItem
           key="user-info"
           className="h-14 gap-2 opacity-100 italic"
-          textValue="Signed in as"
+          textValue="Connecté en tant que"
         >
-          <p className="font-semibold">Signed in as</p>
+          <p className="font-semibold">Connecté en tant que</p>
           <p className="font-semibold text-primary">{user.email}</p>
         </DropdownItem>
 
         <DropdownItem key="profile" as={NextLink} href="/profile">
-          My Profile
+          Mon Profile
         </DropdownItem>
 
-        <DropdownItem key="closet" as={NextLink} href="/closet">
-          My Closet
+        <DropdownItem key="closet" as={NextLink} href="/recipes">
+          Recettes
         </DropdownItem>
 
         <DropdownItem key="settings" as={NextLink} href="/settings">
-          Settings
+          Paramètres
         </DropdownItem>
 
         <DropdownItem
@@ -54,7 +54,7 @@ export function ProfileDropdown({ user }: { user: any }) {
           className="text-danger"
           onPress={() => logout()}
         >
-          Log Out
+          Déconnection
         </DropdownItem>
       </DropdownMenu>
     </Dropdown>

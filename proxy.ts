@@ -1,12 +1,17 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { supabase } from "@/utils/supabase";
+import { auth } from "@/auth";
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  const protectedRoutes = ["/profile", "/dashboard"];
+  // Session Auth.js
+  const session = await auth();
+  const isLoggedIn = !!session;
+  const needsUsername = (session as any)?.needsUsername === true;
 
+  // Routes
+  const protectedRoutes = ["/profile"];
   const guestRoutes = [
     "/login",
     "/signup",
@@ -14,15 +19,42 @@ export async function proxy(req: NextRequest) {
     "/update-password",
   ];
 
-  const sessionToken =
-    req.cookies.get("authjs.session-token")?.value ||
-    req.cookies.get("__Secure-authjs.session-token")?.value;
+  /*
+   * 1️⃣ User logged in but needs username
+   */
+  if (
+    isLoggedIn &&
+    needsUsername &&
+    pathname !== "/auth/complete-signup" &&
+    !pathname.startsWith("/api")
+  ) {
+    return NextResponse.redirect(new URL("/auth/complete-signup", req.url));
+  }
 
-  const isLoggedIn = !!sessionToken;
-
-  if (isLoggedIn && guestRoutes.some((route) => pathname.startsWith(route))) {
+  /*
+   * 2️⃣ User on complete-signup but shouldn't be
+   */
+  if (
+    pathname === "/auth/complete-signup" &&
+    (!isLoggedIn || !needsUsername)
+  ) {
     return NextResponse.redirect(new URL("/", req.url));
   }
+
+  /*
+   * 3️⃣ Logged-in users shouldn't see guest pages
+   */
+  if (
+    isLoggedIn &&
+    !needsUsername &&
+    guestRoutes.some((route) => pathname.startsWith(route))
+  ) {
+    return NextResponse.redirect(new URL("/", req.url));
+  }
+
+  /*
+   * 4️⃣ Protected routes require login
+   */
   if (
     !isLoggedIn &&
     protectedRoutes.some((route) => pathname.startsWith(route))
@@ -31,35 +63,24 @@ export async function proxy(req: NextRequest) {
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
   }
-  if (isLoggedIn && protectedRoutes.some((route) => pathname.startsWith(route))) {
-    // ⚠️ Ici on utilise ton client Supabase serveur existant
-    const {
-      data: { user },
-    } = await supabase.auth.getUser(sessionToken);
 
-    if (user) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("onboarding_completed")
-        .eq("id", user.id)
-        .single();
-
-      if (!profile?.onboarding_completed && pathname !== "/onboarding") {
-        const onboardingUrl = new URL("/onboarding", req.url);
-        return NextResponse.redirect(onboardingUrl);
-      }
-    }
+  /*
+   * 5️⃣ complete-signup requires login
+   */
+  if (pathname === "/auth/complete-signup" && !isLoggedIn) {
+    return NextResponse.redirect(new URL("/login", req.url));
   }
+
   return NextResponse.next();
 }
 
 export const config = {
   matcher: [
     "/profile/:path*",
-    "/dashboard/:path*",
     "/login",
     "/signup",
     "/forgot-password",
     "/update-password",
+    "/auth/complete-signup",
   ],
 };
