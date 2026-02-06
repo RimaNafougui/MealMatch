@@ -37,7 +37,16 @@ function LoginFormContent() {
       if (!result.success) {
         setError(result.error ?? "Une erreur est survenue"); // <-- fallback si undefined
         setIsLoading(false);
-        return;
+        if (result.error.includes("EmailNotVerified")) {
+          setError(
+            "Veuillez consulter votre messagerie électronique pour vérifier votre compte avant de vous connecter.",
+          );
+        } else {
+          setError("Adresse e-mail ou mot de passe invalide.");
+        }
+      } else {
+        router.push("/");
+        router.refresh();
       }
 
       // Redirection selon l'onboarding
@@ -61,16 +70,16 @@ function LoginFormContent() {
     >
       <div className="text-center space-y-2">
         <h2 className="text-3xl font-extrabold tracking-tighter uppercase italic">
-          Welcome Back
+          Content de vous revoir
         </h2>
         <p className="text-default-500 text-sm tracking-wide">
-          Enter your details to access your account
+          Saisissez vos informations pour accéder à votre compte{" "}
         </p>
       </div>
 
       {signupSuccess && (
         <div className="p-3 text-xs bg-success-50 border border-success-200 text-success-700 rounded-xl text-center">
-          MealMatch account created! Please sign in.
+          MealMatch compte crée! Veuillez vous connecté.
         </div>
       )}
 
@@ -81,9 +90,9 @@ function LoginFormContent() {
       >
         <Input
           isRequired
-          label="Email"
-          name="email"
-          placeholder="AnnaVogue@email.com"
+          label="Courriel"
+          name="Courriel"
+          placeholder="mealmatch@email.com"
           type="email"
           variant="bordered"
           labelPlacement="outside"
@@ -92,8 +101,8 @@ function LoginFormContent() {
         />
         <Input
           isRequired
-          label="Password"
-          name="password"
+          label="Mot de passe"
+          name="Mot de passe"
           placeholder="••••••••"
           variant="bordered"
           labelPlacement="outside"
@@ -120,7 +129,7 @@ function LoginFormContent() {
             size="sm"
             className="text-default-500 hover:text-primary transition-colors"
           >
-            Forgot password?
+            Mot de passe oublié?
           </Link>
         </div>
         {error && (
@@ -132,12 +141,12 @@ function LoginFormContent() {
           isLoading={isLoading}
           type="submit"
         >
-          Sign In
+          Connexion
         </Button>
         <div className="flex items-center w-full gap-4 my-2">
           <Divider className="flex-1" />
           <span className="text-xs text-default-400 uppercase tracking-widest">
-            Or
+            Où
           </span>
           <Divider className="flex-1" />
         </div>
@@ -146,12 +155,12 @@ function LoginFormContent() {
           <SignInButtonGithub />
         </div>
         <p className="text-center w-full text-sm text-default-500 pt-4">
-          Don&apos;t have an account?{" "}
+          Pas de compte?{" "}
           <Link
             className="text-primary font-bold hover:underline"
             href="/signup"
           >
-            Sign up
+            Inscription
           </Link>
         </p>
       </Form>
@@ -163,7 +172,7 @@ export const LoginForm = () => (
   <Suspense
     fallback={
       <div className="h-screen flex items-center justify-center">
-        Loading...
+        Chargement...
       </div>
     }
   >

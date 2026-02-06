@@ -77,7 +77,7 @@ export const AppNavbar = ({ user }: { user: any }) => {
         ) : (
           <div className="flex gap-2">
             <Button as={NextLink} href="/login" variant="light" size="sm">
-              Login
+              Connexion
             </Button>
             <Button
               as={NextLink}
@@ -87,7 +87,7 @@ export const AppNavbar = ({ user }: { user: any }) => {
               size="sm"
               className="hidden sm:flex"
             >
-              Sign Up
+              Inscription
             </Button>
           </div>
         )}
@@ -114,7 +114,7 @@ export const AppNavbar = ({ user }: { user: any }) => {
                   className="text-2xl font-light uppercase tracking-tighter py-2"
                   href="/login"
                 >
-                  Login
+                  Connection
                 </NextLink>
               </NavbarMenuItem>
               <NavbarMenuItem>
@@ -122,7 +122,7 @@ export const AppNavbar = ({ user }: { user: any }) => {
                   className="text-2xl font-light uppercase tracking-tighter py-2"
                   href="/signup"
                 >
-                  Sign Up
+                  Inscription
                 </NextLink>
               </NavbarMenuItem>
             </>
@@ -130,7 +130,7 @@ export const AppNavbar = ({ user }: { user: any }) => {
 
           <div className="pt-4 border-t border-divider flex items-center justify-between">
             <span className="text-sm font-medium uppercase opacity-50">
-              Appearance
+              Apparence
             </span>
             <ThemeSwitch />
           </div>

@@ -7,6 +7,8 @@ export async function proxy(req: NextRequest) {
 
   const protectedRoutes = ["/profile", "/dashboard"];
 
+  // Route definitions
+  const protectedRoutes = ["/profile"];
   const guestRoutes = [
     "/login",
     "/signup",
@@ -14,15 +16,32 @@ export async function proxy(req: NextRequest) {
     "/update-password",
   ];
 
-  const sessionToken =
-    req.cookies.get("authjs.session-token")?.value ||
-    req.cookies.get("__Secure-authjs.session-token")?.value;
+  // If logged in and needs username, redirect to complete-signup
+  // (except if already on that page or on API routes)
+  if (
+    isLoggedIn &&
+    needsUsername &&
+    pathname !== "/auth/complete-signup" &&
+    !pathname.startsWith("/api")
+  ) {
+    return NextResponse.redirect(new URL("/auth/complete-signup", req.url));
+  }
 
-  const isLoggedIn = !!sessionToken;
-
-  if (isLoggedIn && guestRoutes.some((route) => pathname.startsWith(route))) {
+  // If on complete-signup but doesn't need username, redirect home
+  if (pathname === "/auth/complete-signup" && (!isLoggedIn || !needsUsername)) {
     return NextResponse.redirect(new URL("/", req.url));
   }
+
+  // Redirect logged-in users away from guest routes
+  if (
+    isLoggedIn &&
+    !needsUsername &&
+    guestRoutes.some((route) => pathname.startsWith(route))
+  ) {
+    return NextResponse.redirect(new URL("/", req.url));
+  }
+
+  // Protect routes that require login
   if (
     !isLoggedIn &&
     protectedRoutes.some((route) => pathname.startsWith(route))
@@ -37,19 +56,11 @@ export async function proxy(req: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser(sessionToken);
 
-    if (user) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("onboarding_completed")
-        .eq("id", user.id)
-        .single();
-
-      if (!profile?.onboarding_completed && pathname !== "/onboarding") {
-        const onboardingUrl = new URL("/onboarding", req.url);
-        return NextResponse.redirect(onboardingUrl);
-      }
-    }
+  // Protect complete-signup route (must be logged in)
+  if (pathname === "/auth/complete-signup" && !isLoggedIn) {
+    return NextResponse.redirect(new URL("/login", req.url));
   }
+
   return NextResponse.next();
 }
 
@@ -61,5 +72,6 @@ export const config = {
     "/signup",
     "/forgot-password",
     "/update-password",
+    "/auth/complete-signup",
   ],
 };
