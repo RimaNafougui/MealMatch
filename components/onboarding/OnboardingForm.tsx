@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { OnboardingSteps } from "./OnboardingSteps";
 import { Button, CheckboxGroup, Checkbox, Textarea } from "@heroui/react";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/utils/supabase"; // <-- Utilisation de ton client centralisé
 import { siteConfig } from "@/config/site";
 
 const steps = [
@@ -15,10 +15,6 @@ const steps = [
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
 
   const [dietaryRestrictions, setDietaryRestrictions] = useState<string[]>([]);
   const [allergies, setAllergies] = useState<string[]>([]);
@@ -42,6 +38,8 @@ export default function OnboardingPage() {
   };
 
   const handleSubmit = async () => {
+    if (!userId) return;
+
     setLoading(true);
     try {
       const res = await fetch("/api/profile/onboarding", {
@@ -65,7 +63,6 @@ export default function OnboardingPage() {
       setLoading(false);
     }
   };
-
 
   return (
     <div className="max-w-xl mx-auto mt-16 p-6 bg-background rounded-lg shadow-md">
