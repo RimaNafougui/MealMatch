@@ -3,12 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { OnboardingSteps } from "./OnboardingSteps";
-import {
-  Button,
-  CheckboxGroup,
-  Checkbox,
-  Textarea,
-} from "@heroui/react";
+import { Button, CheckboxGroup, Checkbox, Textarea } from "@heroui/react";
 import { createClient } from "@supabase/supabase-js";
 import { siteConfig } from "@/config/site";
 
@@ -24,35 +19,41 @@ export default function OnboardingPage() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+
   const [dietaryRestrictions, setDietaryRestrictions] = useState<string[]>([]);
   const [allergies, setAllergies] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
 
-  // Récupérer l'utilisateur actuel
   const [userId, setUserId] = useState<string | null>(null);
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) router.push("/login"); // redirection si non connecté
+      if (!user) router.push("/login");
       else setUserId(user.id);
     });
   }, []);
 
+  const handleNext = () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      handleSubmit();
+    }
+  };
+
   const handleSubmit = async () => {
-    if (!userId) return;
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          dietary_restrictions: dietaryRestrictions,
-          allergies,
-          onboarding_completed: true,
-        })
-        .eq("id", userId);
+      const res = await fetch("/api/profile/onboarding", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dietary_restrictions: dietaryRestrictions, allergies }),
+      });
 
-      if (error) {
-        console.error("Erreur Supabase:", error);
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        console.error("Erreur onboarding:", data.error);
         setLoading(false);
         return;
       }
@@ -65,12 +66,16 @@ export default function OnboardingPage() {
     }
   };
 
+
   return (
     <div className="max-w-xl mx-auto mt-16 p-6 bg-background rounded-lg shadow-md">
       <h1 className="text-h1 font-bold mb-6">Bienvenue sur MealMatch !</h1>
 
-      <div className="mb-6">
-        <h2 className="font-semibold mb-2">Restrictions alimentaires</h2>
+      {/* Stepper */}
+      <OnboardingSteps steps={steps} currentStep={currentStep} />
+
+      {/* Step content */}
+      {currentStep === 0 && (
         <CheckboxGroup
           value={dietaryRestrictions}
           onChange={setDietaryRestrictions}
@@ -84,10 +89,9 @@ export default function OnboardingPage() {
           <Checkbox value="kosher">Casher</Checkbox>
           <Checkbox value="pescatarian">Pescatarien</Checkbox>
         </CheckboxGroup>
-      </div>
+      )}
 
-      <div className="mb-6">
-        <h2 className="font-semibold mb-2">Allergies</h2>
+      {currentStep === 1 && (
         <Textarea
           placeholder="Listez vos allergies ici..."
           value={allergies.join(", ")}
@@ -95,10 +99,23 @@ export default function OnboardingPage() {
             setAllergies(e.target.value.split(",").map((a) => a.trim()))
           }
         />
-      </div>
+      )}
 
-      <Button color="primary" onPress={handleSubmit} disabled={loading}>
-        {loading ? "Sauvegarde..." : "Terminer"}
+      {currentStep === 2 && (
+        <div>
+          <h2 className="font-semibold mb-2">Résumé</h2>
+          <p><strong>Restrictions alimentaires:</strong> {dietaryRestrictions.join(", ") || "Aucune"}</p>
+          <p><strong>Allergies:</strong> {allergies.join(", ") || "Aucune"}</p>
+        </div>
+      )}
+
+      <Button
+        color="primary"
+        onPress={handleNext}
+        disabled={loading}
+        className="mt-4"
+      >
+        {currentStep < steps.length - 1 ? "Suivant" : loading ? "Sauvegarde..." : "Terminer"}
       </Button>
     </div>
   );
