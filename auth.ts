@@ -3,6 +3,7 @@ import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { createClient } from "@supabase/supabase-js";
+import { generateUniqueUsername } from "@/utils/username-generator";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -90,6 +91,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           console.log("Provider:", account.provider);
           console.log("User email:", user.email);
 
+          // Check if profile exists
           const { data: existingProfile, error: profileCheckError } =
             await supabase
               .from("profiles")
@@ -108,6 +110,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
             console.log("✅ Existing profile found:", existingProfile.id);
             userId = existingProfile.id;
 
+            // Update profile if name/image changed
             if (
               (user.name && user.name !== existingProfile.name) ||
               (user.image && user.image !== existingProfile.image)
@@ -123,11 +126,6 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
             }
 
             user.id = userId;
-
-            // Set flag if username is missing
-            if (!existingProfile.username) {
-              user.needsUsername = true;
-            }
           } else {
             console.log("❌ No profile found, checking auth.users...");
 
@@ -148,14 +146,20 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
               console.log("✅ Found in auth.users:", existingAuthUser.id);
               userId = existingAuthUser.id;
 
-              // Create missing profile
+              // Generate unique username
+              const autoUsername = await generateUniqueUsername(
+                user.name,
+                user.email!,
+              );
+
+              // Create missing profile with auto-generated username
               const { error: profileInsertError } = await supabase
                 .from("profiles")
                 .insert({
                   id: userId,
                   email: user.email!,
                   name: user.name,
-                  username: null, // Will be set in complete-signup
+                  username: autoUsername,
                   image: user.image,
                   created_at: new Date().toISOString(),
                   updated_at: new Date().toISOString(),
@@ -166,7 +170,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
                 return false;
               }
 
-              console.log("✅ Profile created for existing auth user");
+              console.log("✅ Profile created with username:", autoUsername);
             } else {
               console.log("Creating new auth user...");
 
@@ -189,14 +193,20 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
               userId = authData.user.id;
               console.log("✅ Created new auth user:", userId);
 
-              // Create profile
+              // Generate unique username
+              const autoUsername = await generateUniqueUsername(
+                user.name,
+                user.email!,
+              );
+
+              // Create profile with auto-generated username
               const { error: profileError } = await supabase
                 .from("profiles")
                 .insert({
                   id: userId,
                   email: user.email!,
                   name: user.name,
-                  username: null, // Will be set in complete-signup
+                  username: autoUsername,
                   image: user.image,
                   created_at: new Date().toISOString(),
                   updated_at: new Date().toISOString(),
@@ -207,11 +217,10 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
                 return false;
               }
 
-              console.log("✅ Profile created");
+              console.log("✅ Profile created with username:", autoUsername);
             }
 
             user.id = userId;
-            user.needsUsername = true; // New user needs username
           }
 
           // Link OAuth account
@@ -241,7 +250,6 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
 
           if (accountError) {
             console.error("❌ Error linking account:", accountError);
-            // Don't fail signin if account linking fails
           } else {
             console.log("✅ OAuth account linked");
           }
@@ -262,7 +270,6 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         token.email = user.email;
         token.name = user.name;
         token.picture = user.image;
-        token.needsUsername = user.needsUsername || false;
       }
 
       if (trigger === "update" && session) {
@@ -281,7 +288,6 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         if (userData) {
           token.name = userData.name;
           token.picture = userData.image;
-          token.needsUsername = !userData.username;
         }
       }
 
@@ -294,7 +300,6 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         session.user.name = token.name as string;
         session.user.image = token.picture as string;
       }
-      session.needsUsername = token.needsUsername || false;
       return session;
     },
   },
