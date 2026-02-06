@@ -86,17 +86,23 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
     async signIn({ user, account, profile }) {
       if (account?.provider === "github" || account?.provider === "google") {
         try {
-          // ✅ FIX 1: Use 'ilike' for case-insensitive email search
           const { data: existingUser } = await supabase
             .from("profiles")
-            .select("id, name, image")
-            .ilike("email", user.email!) // Changed from .eq to .ilike
+            .select("id, name, image, username")
+            .ilike("email", user.email!)
             .single();
 
           let userId: string;
 
           if (existingUser) {
             userId = existingUser.id;
+
+            // Check if user has completed signup (has username)
+            if (!existingUser.username) {
+              // Redirect to complete signup page
+              return `/auth/complete-signup?provider=${account.provider}`;
+            }
+
             console.log(
               `Linking ${account.provider} to existing user ${userId}`,
             );
@@ -112,9 +118,8 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
                 .eq("id", userId);
             }
           } else {
-            console.log("Profile not found. Attempting to create user...");
+            console.log("Profile not found. Creating new user...");
 
-            // ✅ FIX 2: Handle 'User Already Registered' Error
             const { data: authData, error: authError } =
               await supabase.auth.admin.createUser({
                 email: user.email!,
@@ -130,12 +135,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
                 authError.code === "email_exists" ||
                 authError.status === 422
               ) {
-                console.log(
-                  "User exists in Auth but not Profiles. Recovering...",
-                );
-                console.error(
-                  "CRITICAL: User exists in Auth but has no Profile. Manual intervention or RPC needed to retrieve ID.",
-                );
+                console.error("User exists in Auth but not Profiles");
                 return false;
               } else {
                 console.error("Error creating auth user:", authError);
@@ -145,13 +145,14 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
               userId = authData.user.id;
             }
 
+            // Create profile WITHOUT username - user must complete signup
             const { error: profileError } = await supabase
               .from("profiles")
               .insert({
                 id: userId,
                 email: user.email!,
                 name: user.name,
-                username: user.name,
+                username: null, // Will be set in complete-signup flow
                 image: user.image,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
@@ -161,8 +162,12 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
               console.error("Error creating profile:", profileError);
               return false;
             }
+
+            // Redirect to complete signup
+            return `/auth/complete-signup?provider=${account.provider}`;
           }
 
+          // Link account
           const { error: accountError } = await supabase
             .from("accounts")
             .upsert(

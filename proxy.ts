@@ -13,6 +13,8 @@ export function proxy(req: NextRequest) {
     "/update-password",
   ];
 
+  const incompleteProfileRoutes = ["/auth/complete-signup"];
+
   const sessionToken =
     req.cookies.get("authjs.session-token")?.value ||
     req.cookies.get("__Secure-authjs.session-token")?.value;
@@ -22,6 +24,7 @@ export function proxy(req: NextRequest) {
   if (isLoggedIn && guestRoutes.some((route) => pathname.startsWith(route))) {
     return NextResponse.redirect(new URL("/", req.url));
   }
+
   if (
     !isLoggedIn &&
     protectedRoutes.some((route) => pathname.startsWith(route))
@@ -31,16 +34,23 @@ export function proxy(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  if (
+    !isLoggedIn &&
+    incompleteProfileRoutes.some((route) => pathname.startsWith(route))
+  ) {
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
   matcher: [
     "/profile/:path*",
-
     "/login",
     "/signup",
     "/forgot-password",
     "/update-password",
+    "/auth/complete-signup",
   ],
 };

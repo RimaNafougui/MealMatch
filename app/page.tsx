@@ -17,12 +17,14 @@ export default function Home() {
     },
     {
       title: "Budget-Friendly",
-      description: "Mange mieux sans te ruiner grâce à des recettes économiques",
+      description:
+        "Mange mieux sans te ruiner grâce à des recettes économiques",
       icon: <WalletCards className="w-6 h-6 text-danger" />,
     },
     {
       title: "Shopping Lists",
-      description: "Des listes d'épicerie automatiques et organisées pour gagner du temps",
+      description:
+        "Des listes d'épicerie automatiques et organisées pour gagner du temps",
       icon: <ShoppingCart className="w-6 h-6 text-warning" />,
     },
     {
@@ -49,18 +51,13 @@ export default function Home() {
             <Button
               as={Link}
               color="primary"
-              href="/signup" // TODO: Add signup page
+              href="/signup"
               size="lg"
               variant="solid"
             >
               Commencer
             </Button>
-            <Button
-              as={Link}
-              href="#features" // TODO: Add features section
-              size="lg"
-              variant="bordered"
-            >
+            <Button as={Link} href="#" size="lg" variant="bordered">
               En savoir plus
             </Button>
           </div>
@@ -126,7 +123,9 @@ export default function Home() {
                   </Badge>
                 </div>
                 <CardHeader className="flex-col !items-start gap-2">
-                  <p className="text-tiny text-primary uppercase font-bold">Étape {item.step}</p>
+                  <p className="text-tiny text-primary uppercase font-bold">
+                    Étape {item.step}
+                  </p>
                   <h4 className="font-bold text-large">{item.title}</h4>
                 </CardHeader>
               </Card>
@@ -143,11 +142,12 @@ export default function Home() {
               Prêt à mieux manger ?
             </h2>
             <p className="text-white/90 text-lg max-w-2xl">
-              Rejoignez MealMatch aujourd'hui et transformez votre façon de cuisiner.
+              Rejoignez MealMatch aujourd'hui et transformez votre façon de
+              cuisiner.
             </p>
             <Button
               as={Link}
-              href="/signup" // TODO: Add signup page
+              href="/signup"
               size="lg"
               className="bg-white text-primary font-bold"
             >

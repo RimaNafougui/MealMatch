@@ -65,7 +65,9 @@ export default function SignUpForm() {
           setUsernameAvailable(data.available);
           setUsernameError(data.available ? "" : "Nom d'utilisateur déjà pris");
         } else {
-          setUsernameError(data.error || "Échec de la vérification du nom d'utilisateur");
+          setUsernameError(
+            data.error || "Échec de la vérification du nom d'utilisateur",
+          );
           setUsernameAvailable(null);
         }
       } catch (err) {
@@ -260,8 +262,7 @@ export default function SignUpForm() {
           <Link className="font-bold" href="/privacy">
             Politique de confidentialité
           </Link>{" "}
-          et notre
-          {" "}
+          et notre{" "}
           <Link className="font-bold" href="#">
             Politique relative aux cookies
           </Link>
@@ -291,8 +292,8 @@ export default function SignUpForm() {
         </div>
 
         <div className="grid w-full grid-cols-2 gap-3">
-          <SignInButtonGoogle />
-          <SignInButtonGithub />
+          <SignInButtonGoogle isSignup={true} />
+          <SignInButtonGithub isSignup={true} />
         </div>
 
         <p className="text-center w-full text-sm text-default-500 pt-4">
