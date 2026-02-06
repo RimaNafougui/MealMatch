@@ -5,12 +5,18 @@ import { auth } from "@/auth";
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+<<<<<<< HEAD
   // Session Auth.js
+=======
+>>>>>>> b56e108f0177a381a6d8d1968dd82aa543bae5ad
   const session = await auth();
   const isLoggedIn = !!session;
   const needsUsername = (session as any)?.needsUsername === true;
 
+<<<<<<< HEAD
   // Routes
+=======
+>>>>>>> b56e108f0177a381a6d8d1968dd82aa543bae5ad
   const protectedRoutes = ["/profile"];
   const guestRoutes = [
     "/login",
@@ -19,9 +25,12 @@ export async function proxy(req: NextRequest) {
     "/update-password",
   ];
 
+<<<<<<< HEAD
   /*
    * 1️⃣ User logged in but needs username
    */
+=======
+>>>>>>> b56e108f0177a381a6d8d1968dd82aa543bae5ad
   if (
     isLoggedIn &&
     needsUsername &&
@@ -31,6 +40,7 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(new URL("/auth/complete-signup", req.url));
   }
 
+<<<<<<< HEAD
   /*
    * 2️⃣ User on complete-signup but shouldn't be
    */
@@ -44,6 +54,12 @@ export async function proxy(req: NextRequest) {
   /*
    * 3️⃣ Logged-in users shouldn't see guest pages
    */
+=======
+  if (pathname === "/auth/complete-signup" && (!isLoggedIn || !needsUsername)) {
+    return NextResponse.redirect(new URL("/", req.url));
+  }
+
+>>>>>>> b56e108f0177a381a6d8d1968dd82aa543bae5ad
   if (
     isLoggedIn &&
     !needsUsername &&
@@ -52,9 +68,12 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
+<<<<<<< HEAD
   /*
    * 4️⃣ Protected routes require login
    */
+=======
+>>>>>>> b56e108f0177a381a6d8d1968dd82aa543bae5ad
   if (
     !isLoggedIn &&
     protectedRoutes.some((route) => pathname.startsWith(route))
@@ -64,9 +83,12 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+<<<<<<< HEAD
   /*
    * 5️⃣ complete-signup requires login
    */
+=======
+>>>>>>> b56e108f0177a381a6d8d1968dd82aa543bae5ad
   if (pathname === "/auth/complete-signup" && !isLoggedIn) {
     return NextResponse.redirect(new URL("/login", req.url));
   }

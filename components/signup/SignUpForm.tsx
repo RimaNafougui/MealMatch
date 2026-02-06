@@ -292,8 +292,8 @@ export default function SignUpForm() {
         </div>
 
         <div className="grid w-full grid-cols-2 gap-3">
-          <SignInButtonGoogle isSignup={true} />
-          <SignInButtonGithub isSignup={true} />
+          <SignInButtonGoogle />
+          <SignInButtonGithub />
         </div>
 
         <p className="text-center w-full text-sm text-default-500 pt-4">
