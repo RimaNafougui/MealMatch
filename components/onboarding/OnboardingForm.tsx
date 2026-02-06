@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { OnboardingSteps } from "./OnboardingSteps";
 import {
   Button,
   CheckboxGroup,
@@ -10,6 +11,12 @@ import {
 } from "@heroui/react";
 import { createClient } from "@supabase/supabase-js";
 import { siteConfig } from "@/config/site";
+
+const steps = [
+  { label: "Restrictions alimentaires" },
+  { label: "Allergies" },
+  { label: "Résumé" },
+];
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -20,6 +27,7 @@ export default function OnboardingPage() {
   const [dietaryRestrictions, setDietaryRestrictions] = useState<string[]>([]);
   const [allergies, setAllergies] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
 
   // Récupérer l'utilisateur actuel
   const [userId, setUserId] = useState<string | null>(null);
