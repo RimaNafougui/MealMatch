@@ -86,11 +86,11 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
     async signIn({ user, account, profile }) {
       if (account?.provider === "github" || account?.provider === "google") {
         try {
-          // 1. Check if profile exists
+          // ✅ FIX 1: Use 'ilike' for case-insensitive email search
           const { data: existingUser } = await supabase
             .from("profiles")
             .select("id, name, image")
-            .eq("email", user.email!)
+            .ilike("email", user.email!) // Changed from .eq to .ilike
             .single();
 
           let userId: string;
@@ -112,7 +112,9 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
                 .eq("id", userId);
             }
           } else {
-            console.log("Creating new user in Supabase Auth...");
+            console.log("Profile not found. Attempting to create user...");
+
+            // ✅ FIX 2: Handle 'User Already Registered' Error
             const { data: authData, error: authError } =
               await supabase.auth.admin.createUser({
                 email: user.email!,
@@ -123,22 +125,42 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
                 },
               });
 
-            if (authError || !authData.user) {
-              console.error("Error creating auth user:", authError);
-              return false;
+            if (authError) {
+              if (
+                authError.code === "email_exists" ||
+                authError.status === 422
+              ) {
+                console.log(
+                  "User exists in Auth but not Profiles. Recovering...",
+                );
+                console.error(
+                  "CRITICAL: User exists in Auth but has no Profile. Manual intervention or RPC needed to retrieve ID.",
+                );
+                return false;
+              } else {
+                console.error("Error creating auth user:", authError);
+                return false;
+              }
+            } else {
+              userId = authData.user.id;
             }
 
-            userId = authData.user.id;
+            const { error: profileError } = await supabase
+              .from("profiles")
+              .insert({
+                id: userId,
+                email: user.email!,
+                name: user.name,
+                username: user.name,
+                image: user.image,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              });
 
-            await supabase.from("profiles").insert({
-              id: userId,
-              email: user.email!,
-              name: user.name,
-              username: user.name,
-              image: user.image,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            });
+            if (profileError) {
+              console.error("Error creating profile:", profileError);
+              return false;
+            }
           }
 
           const { error: accountError } = await supabase
@@ -156,11 +178,11 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
                 scope: account.scope,
                 id_token: account.id_token,
                 session_state: account.session_state,
-                created_at: new Date().toISOString(), // Fixed column name
-                updated_at: new Date().toISOString(), // Fixed column name
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
               },
               {
-                onConflict: "provider,provider_account_id", // Fixed constraint name
+                onConflict: "provider,provider_account_id",
               },
             );
 
@@ -185,20 +207,17 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         token.name = user.name;
         token.picture = user.image;
       }
-
       if (trigger === "update" && session) {
         token.name = session.user.name;
         token.picture = session.user.image;
         return token;
       }
-
       if (token.id) {
         const { data: userData } = await supabase
           .from("profiles")
           .select("name, image")
           .eq("id", token.id as string)
           .single();
-
         if (userData) {
           token.name = userData.name;
           token.picture = userData.image;
