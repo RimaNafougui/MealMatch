@@ -86,7 +86,7 @@ function LoginFormContent() {
         <Input
           isRequired
           label="Courriel"
-          name="Courriel"
+          name="email"
           placeholder="mealmatch@email.com"
           type="email"
           variant="bordered"
@@ -97,7 +97,7 @@ function LoginFormContent() {
         <Input
           isRequired
           label="Mot de passe"
-          name="Mot de passe"
+          name="password"
           placeholder="••••••••"
           variant="bordered"
           labelPlacement="outside"
