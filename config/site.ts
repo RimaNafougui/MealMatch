@@ -5,7 +5,7 @@ export const siteConfig = {
   description: "Plateforme d'aide à la préparation des repas pour étudiants",
   navItems: [
     {
-      label: "Accueil",
+      label: "Acceuil",
       href: "/",
     },
     {
