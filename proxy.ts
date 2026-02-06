@@ -1,8 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
 
-export async function proxy(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
 <<<<<<< HEAD
@@ -18,6 +17,7 @@ export async function proxy(req: NextRequest) {
 =======
 >>>>>>> b56e108f0177a381a6d8d1968dd82aa543bae5ad
   const protectedRoutes = ["/profile"];
+
   const guestRoutes = [
     "/login",
     "/signup",
@@ -103,6 +103,5 @@ export const config = {
     "/signup",
     "/forgot-password",
     "/update-password",
-    "/auth/complete-signup",
   ],
 };

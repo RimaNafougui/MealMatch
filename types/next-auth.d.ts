@@ -9,17 +9,15 @@ declare module "next-auth" {
       name?: string | null;
       image?: string | null;
     };
-    needsUsername?: boolean;
   }
 
   interface User extends DefaultUser {
-    needsUsername?: boolean;
+    id: string;
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
     id?: string;
-    needsUsername?: boolean;
   }
 }
