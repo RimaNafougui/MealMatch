@@ -97,9 +97,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           if (existingUser) {
             userId = existingUser.id;
 
-            // Check if user has completed signup (has username)
             if (!existingUser.username) {
-              // Redirect to complete signup page
               return `/auth/complete-signup?provider=${account.provider}`;
             }
 
@@ -145,14 +143,13 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
               userId = authData.user.id;
             }
 
-            // Create profile WITHOUT username - user must complete signup
             const { error: profileError } = await supabase
               .from("profiles")
               .insert({
                 id: userId,
                 email: user.email!,
                 name: user.name,
-                username: null, // Will be set in complete-signup flow
+                username: null,
                 image: user.image,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
@@ -163,11 +160,9 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
               return false;
             }
 
-            // Redirect to complete signup
             return `/auth/complete-signup?provider=${account.provider}`;
           }
 
-          // Link account
           const { error: accountError } = await supabase
             .from("accounts")
             .upsert(
