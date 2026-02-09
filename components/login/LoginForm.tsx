@@ -2,9 +2,9 @@
 import React, { Suspense, useState } from "react";
 import { Form, Input, Button, Link, Divider } from "@heroui/react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
-import { loginAndCheckOnboarding } from "@/utils/auth";
 
 import {
   SignInButtonGithub,
@@ -32,10 +32,13 @@ function LoginFormContent() {
     const password = formData.get("password") as string;
 
     try {
-      const result = await loginAndCheckOnboarding(email, password);
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
 
-      if (!result.success) {
-        setError(result.error ?? "Une erreur est survenue"); // <-- fallback si undefined
+      if (result?.error) {
         setIsLoading(false);
         if (result.error.includes("EmailNotVerified")) {
           setError(
@@ -48,19 +51,11 @@ function LoginFormContent() {
         router.push("/");
         router.refresh();
       }
-
-      // Redirection selon l'onboarding
-      if (!result.onboardingCompleted) router.push("/onboarding");
-      else router.push("/dashboard");
-
-      router.refresh();
     } catch (err) {
-      console.error(err);
       setError("An unexpected error occurred");
       setIsLoading(false);
     }
   };
-
 
   return (
     <motion.div
@@ -91,7 +86,7 @@ function LoginFormContent() {
         <Input
           isRequired
           label="Courriel"
-          name="Courriel"
+          name="email"
           placeholder="mealmatch@email.com"
           type="email"
           variant="bordered"
@@ -102,7 +97,7 @@ function LoginFormContent() {
         <Input
           isRequired
           label="Mot de passe"
-          name="Mot de passe"
+          name="password"
           placeholder="••••••••"
           variant="bordered"
           labelPlacement="outside"
