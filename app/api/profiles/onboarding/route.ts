@@ -1,26 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { getSupabaseServer } from "@/utils/supabase-server";
 
 export async function POST(req: NextRequest) {
   try {
-    const { dietary_restrictions, allergies } = await req.json();
+    const session = await auth();
 
-    const supabase = getSupabaseServer();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Utilisateur non authentifié" }, { status: 401 });
     }
+
+    const { dietary_restrictions, allergies, budget_min, budget_max } = await req.json();
+
+    const supabase = getSupabaseServer();
 
     const { error } = await supabase
       .from("profiles")
       .update({
         dietary_restrictions,
         allergies,
+        budget_min,
+        budget_max,
+        onboarding_completed: true,
       })
-      .eq("id", user.id); // Assurez-vous que votre champ primaire est "id"
+      .eq("id", session.user.id);
 
     if (error) {
       console.error("Supabase error:", error);

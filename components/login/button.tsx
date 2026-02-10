@@ -10,7 +10,7 @@ export const SignInButtonGoogle = () => {
       variant="bordered"
       className="w-full font-medium"
       startContent={<FaGoogle />}
-      onPress={() => signIn("google", { callbackUrl: "/" })}
+      onPress={() => signIn("google", { callbackUrl: "/onboarding" })}
     >
       Google
     </Button>
@@ -23,7 +23,7 @@ export const SignInButtonGithub = () => {
       variant="bordered"
       className="w-full font-medium"
       startContent={<FaGithub />}
-      onPress={() => signIn("github", { callbackUrl: "/" })}
+      onPress={() => signIn("github", { callbackUrl: "/onboarding" })}
     >
       GitHub
     </Button>
@@ -33,7 +33,7 @@ export const SignInButtonGithub = () => {
 export const SignOutButton = () => {
   return (
     <Link className="text-red-600" onPress={() => logout()}>
-      Déconnection
+      Déconnexion
     </Link>
   );
 };

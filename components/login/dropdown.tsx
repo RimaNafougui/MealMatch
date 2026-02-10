@@ -54,7 +54,7 @@ export function ProfileDropdown({ user }: { user: any }) {
           className="text-danger"
           onPress={() => logout()}
         >
-          Déconnection
+          Déconnexion
         </DropdownItem>
       </DropdownMenu>
     </Dropdown>

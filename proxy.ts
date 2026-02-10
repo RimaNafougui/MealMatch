@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  const protectedRoutes = ["/profile"];
+  const protectedRoutes = ["/profile", "/onboarding"];
 
   const guestRoutes = [
     "/login",
@@ -38,6 +38,7 @@ export function proxy(req: NextRequest) {
 export const config = {
   matcher: [
     "/profile/:path*",
+    "/onboarding",
     "/login",
     "/signup",
     "/forgot-password",

@@ -48,7 +48,7 @@ function LoginFormContent() {
           setError("Adresse e-mail ou mot de passe invalide.");
         }
       } else {
-        router.push("/");
+        router.push("/onboarding");
         router.refresh();
       }
     } catch (err) {
