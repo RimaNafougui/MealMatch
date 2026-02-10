@@ -12,14 +12,13 @@ import {
     Tab,
     CheckboxGroup,
     Checkbox,
-    Listbox,
-    ListboxItem,
     Table,
     TableHeader,
     TableColumn,
     TableBody,
     TableRow,
     TableCell,
+    Divider,
 } from "@heroui/react";
 import {
     Heart,
@@ -28,9 +27,6 @@ import {
     Users,
     ChefHat,
     Flame,
-    Wheat,
-    Milk,
-    Egg,
 } from "lucide-react";
 
 // Mock data
@@ -76,15 +72,16 @@ const mockRecipe = {
 export default function RecipeDetailPage() {
     const params = useParams();
     const [isFavorite, setIsFavorite] = React.useState(false);
-    // Default checked ingredients (all of them initially)
+
+    // Default checked ingredients
     const [selectedIngredients, setSelectedIngredients] = React.useState(
         mockRecipe.ingredients.map((i) => i.id)
     );
 
     return (
-        <div className="w-full min-h-screen pb-10">
+        <div className="w-full min-h-screen pb-10 bg-gray-50 dark:bg-zinc-950">
             {/* Hero Section */}
-            <div className="relative w-full h-[500px]">
+            <div className="relative w-full h-[400px] md:h-[500px]">
                 {/* Background Image */}
                 <Image
                     src={mockRecipe.image}
@@ -95,193 +92,151 @@ export default function RecipeDetailPage() {
                     isBlurred
                 />
 
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10 pointer-events-none" />
+                {/* Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent z-10 pointer-events-none" />
+            </div>
 
-                {/* Content Wrapper Card */}
-                <div className="absolute bottom-0 left-0 right-0 z-20 px-6 pb-6 translate-y-1/3 md:translate-y-12 max-w-7xl mx-auto w-full flex justify-center md:justify-start">
-                    <Card className="w-full md:max-w-3xl p-4 shadow-xl border border-white/20 backdrop-blur-md bg-background/90 dark:bg-background/80">
-                        <CardBody className="gap-4">
-                            {/* Title */}
-                            <h1 className="text-3xl md:text-4xl font-bold text-foreground">
+            {/* Main Content - Overlapping Card */}
+            <div className="relative z-20 px-4 md:px-6 -mt-24 md:-mt-32 max-w-5xl mx-auto w-full">
+                <Card className="w-full shadow-large border border-white/20 backdrop-blur-md bg-background/95">
+                    <CardBody className="p-6 md:p-8 gap-6">
+
+                        {/* Header Section */}
+                        <div className="flex flex-col gap-4">
+                            <h1 className="text-3xl md:text-5xl font-bold text-foreground">
                                 {mockRecipe.title}
                             </h1>
 
-                            {/* Metadata Row */}
                             <div className="flex flex-wrap gap-3 items-center">
-                                <Chip
-                                    variant="flat"
-                                    color="primary"
-                                    startContent={<Clock size={16} />}
-                                >
+                                <Chip variant="flat" color="primary" startContent={<Clock size={16} />}>
                                     Prep: {mockRecipe.prepTime}
                                 </Chip>
-                                <Chip
-                                    variant="flat"
-                                    color="warning"
-                                    startContent={<Flame size={16} />}
-                                >
+                                <Chip variant="flat" color="warning" startContent={<Flame size={16} />}>
                                     Cook: {mockRecipe.cookTime}
                                 </Chip>
-                                <Chip
-                                    variant="flat"
-                                    color="secondary"
-                                    startContent={<Users size={16} />}
-                                >
+                                <Chip variant="flat" color="secondary" startContent={<Users size={16} />}>
                                     {mockRecipe.servings} Servings
                                 </Chip>
-                                <Chip
-                                    variant="flat"
-                                    color="success"
-                                    startContent={<ChefHat size={16} />}
-                                >
+                                <Chip variant="flat" color="success" startContent={<ChefHat size={16} />}>
                                     {mockRecipe.difficulty}
                                 </Chip>
                             </div>
 
-                            {/* Actions Row */}
                             <div className="flex flex-wrap gap-3 pt-2">
                                 <Button
                                     color="danger"
                                     variant="bordered"
                                     radius="full"
-                                    startContent={
-                                        <Heart
-                                            size={20}
-                                            className={isFavorite ? "fill-current" : ""}
-                                        />
-                                    }
+                                    startContent={<Heart size={20} className={isFavorite ? "fill-current" : ""} />}
                                     onPress={() => setIsFavorite(!isFavorite)}
                                 >
                                     {isFavorite ? "Favorited" : "Add to Favorites"}
                                 </Button>
-                                <Button
-                                    variant="light"
-                                    radius="full"
-                                    startContent={<Share2 size={20} />}
-                                >
+                                <Button variant="light" radius="full" startContent={<Share2 size={20} />}>
                                     Share Recipe
                                 </Button>
                             </div>
-                        </CardBody>
-                    </Card>
-                </div>
-            </div>
+                        </div>
 
-            {/* Spacer to push content down because of the overlapping card and add separation */}
-            <div className="h-40 md:h-32"></div>
+                        <Divider className="my-2" />
 
-            {/* Tabs Section */}
-            <div className="max-w-7xl mx-auto px-6 mt-8">
-                <Tabs aria-label="Recipe details" color="primary" variant="underlined">
-                    {/* Ingredients Tab */}
-                    <Tab key="ingredients" title="Ingredients">
-                        <Card className="mt-4 shadow-sm">
-                            <CardBody>
-                                <CheckboxGroup
-                                    label="Select ingredients you have"
-                                    value={selectedIngredients}
-                                    onValueChange={setSelectedIngredients}
-                                    color="success"
-                                    classNames={{
-                                        base: "w-full",
-                                    }}
-                                >
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                                        {mockRecipe.ingredients.map((item) => (
-                                            <Checkbox
-                                                key={item.id}
-                                                value={item.id}
-                                                classNames={{
-                                                    label: "w-full",
-                                                    base: "w-full max-w-none border-b border-divider pb-2 mb-2",
-                                                }}
-                                            >
-                                                <div className="flex justify-between items-center w-full gap-4">
-                                                    <span className="text-base">
-                                                        <span className="font-semibold">
-                                                            {item.quantity} {item.unit}
-                                                        </span>{" "}
-                                                        {item.name}
-                                                    </span>
-                                                    {item.allergens.length > 0 && (
-                                                        <div className="flex gap-1">
-                                                            {item.allergens.map((allergen) => (
-                                                                <Chip
-                                                                    key={allergen}
-                                                                    color="danger"
-                                                                    size="sm"
-                                                                    variant="flat"
-                                                                >
-                                                                    {allergen}
-                                                                </Chip>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </Checkbox>
-                                        ))}
-                                    </div>
-                                </CheckboxGroup>
-                            </CardBody>
-                        </Card>
-                    </Tab>
+                        {/* Tabs Section within the Card */}
+                        <Tabs
+                            aria-label="Recipe details"
+                            color="primary"
+                            variant="underlined"
+                            classNames={{
+                                tabList: "gap-6 w-full relative rounded-none p-0 border-b border-divider",
+                                cursor: "w-full bg-primary",
+                                tab: "max-w-fit px-0 h-12",
+                                tabContent: "group-data-[selected=true]:text-primary font-medium text-lg"
+                            }}
+                        >
+                            {/* Ingredients Tab */}
+                            <Tab key="ingredients" title="Ingredients" className="pt-4">
+                                <div className="flex flex-col gap-4">
+                                    <h3 className="text-xl font-semibold">Shopping List</h3>
+                                    <CheckboxGroup
+                                        value={selectedIngredients}
+                                        onValueChange={setSelectedIngredients}
+                                        color="success"
+                                    >
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                                            {mockRecipe.ingredients.map((item) => (
+                                                <Checkbox
+                                                    key={item.id}
+                                                    value={item.id}
+                                                    classNames={{
+                                                        base: "max-w-full w-full",
+                                                        label: "w-full",
+                                                    }}
+                                                >
+                                                    <div className="flex justify-between items-center w-full gap-2">
+                                                        <span>
+                                                            <span className="font-bold">{item.quantity} {item.unit}</span> {item.name}
+                                                        </span>
+                                                        {item.allergens.length > 0 && (
+                                                            <div className="flex gap-1">
+                                                                {item.allergens.map((allergen) => (
+                                                                    <Chip key={allergen} color="danger" size="sm" variant="flat">
+                                                                        {allergen}
+                                                                    </Chip>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </Checkbox>
+                                            ))}
+                                        </div>
+                                    </CheckboxGroup>
+                                </div>
+                            </Tab>
 
-                    {/* Instructions Tab */}
-                    <Tab key="instructions" title="Instructions">
-                        <Card className="mt-4 shadow-sm">
-                            <CardBody>
-                                <Listbox
-                                    aria-label="Cooking instructions"
-                                    variant="flat"
-                                    itemClasses={{
-                                        base: "py-3 px-2 data-[hover=true]:bg-default-100",
-                                        title: "text-base",
-                                    }}
-                                    className="p-0"
-                                >
-                                    {mockRecipe.instructions.map((step, index) => (
-                                        <ListboxItem
-                                            key={index}
-                                            textValue={`Step ${index + 1}`}
-                                            startContent={
-                                                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold mr-2 shrink-0">
+                            {/* Instructions Tab */}
+                            <Tab key="instructions" title="Instructions" className="pt-4">
+                                <div className="flex flex-col gap-4">
+                                    <h3 className="text-xl font-semibold">Directions</h3>
+                                    <div className="space-y-4">
+                                        {mockRecipe.instructions.map((step, index) => (
+                                            <div key={index} className="flex gap-4 p-4 rounded-lg bg-default-50 hover:bg-default-100 transition-colors">
+                                                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold shrink-0">
                                                     {index + 1}
                                                 </div>
-                                            }
-                                            className="whitespace-normal h-auto"
-                                        >
-                                            <span className="text-lg leading-relaxed">{step}</span>
-                                        </ListboxItem>
-                                    ))}
-                                </Listbox>
-                            </CardBody>
-                        </Card>
-                    </Tab>
-
-                    {/* Nutrition Tab */}
-                    <Tab key="nutrition" title="Nutrition">
-                        <Card className="mt-4 shadow-sm">
-                            <CardBody>
-                                <Table aria-label="Nutrition Facts" isStriped shadow="none">
-                                    <TableHeader>
-                                        <TableColumn>NUTRIENT</TableColumn>
-                                        <TableColumn>AMOUNT</TableColumn>
-                                        <TableColumn>% DAILY VALUE</TableColumn>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {mockRecipe.nutrition.map((item, index) => (
-                                            <TableRow key={index}>
-                                                <TableCell className="font-medium">{item.label}</TableCell>
-                                                <TableCell>{item.amount}</TableCell>
-                                                <TableCell className="text-default-500">{item.dailyValue}</TableCell>
-                                            </TableRow>
+                                                <p className="text-base leading-relaxed text-default-800">
+                                                    {step}
+                                                </p>
+                                            </div>
                                         ))}
-                                    </TableBody>
-                                </Table>
-                            </CardBody>
-                        </Card>
-                    </Tab>
-                </Tabs>
+                                    </div>
+                                </div>
+                            </Tab>
+
+                            {/* Nutrition Tab */}
+                            <Tab key="nutrition" title="Nutrition" className="pt-4">
+                                <div className="flex flex-col gap-4">
+                                    <h3 className="text-xl font-semibold">Nutrition Facts</h3>
+                                    <Table aria-label="Nutrition Facts" isStriped shadow="none" removeWrapper>
+                                        <TableHeader>
+                                            <TableColumn>NUTRIENT</TableColumn>
+                                            <TableColumn>AMOUNT</TableColumn>
+                                            <TableColumn>% DAILY VALUE</TableColumn>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {mockRecipe.nutrition.map((item, index) => (
+                                                <TableRow key={index}>
+                                                    <TableCell className="font-medium">{item.label}</TableCell>
+                                                    <TableCell>{item.amount}</TableCell>
+                                                    <TableCell className="text-default-500">{item.dailyValue}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </Tab>
+                        </Tabs>
+
+                    </CardBody>
+                </Card>
             </div>
         </div>
     );
