@@ -3,13 +3,13 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { OnboardingSteps } from "./OnboardingSteps";
-import { Button, CheckboxGroup, Checkbox, Textarea } from "@heroui/react";
-import { supabase } from "@/utils/supabase";
+import { Button, CheckboxGroup, Checkbox, Textarea, Slider, Spinner } from "@heroui/react";
 import { siteConfig } from "@/config/site";
 
 const steps = [
   { label: "Restrictions alimentaires" },
   { label: "Allergies" },
+  { label: "Budget" },
   { label: "Résumé" },
 ];
 
@@ -18,16 +18,25 @@ export default function OnboardingPage() {
 
   const [dietaryRestrictions, setDietaryRestrictions] = useState<string[]>([]);
   const [allergies, setAllergies] = useState<string[]>([]);
+  const [budgetRange, setBudgetRange] = useState<[number, number]>([20, 100]);
   const [loading, setLoading] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
 
-  const [userId, setUserId] = useState<string | null>(null);
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) router.push("/login");
-      else setUserId(user.id);
-    });
-  }, []);
+    fetch("/api/profiles/onboarding-status")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.onboardingCompleted) {
+          router.push("/dashboard");
+        } else {
+          setCheckingStatus(false);
+        }
+      })
+      .catch(() => {
+        setCheckingStatus(false);
+      });
+  }, [router]);
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
@@ -38,14 +47,17 @@ export default function OnboardingPage() {
   };
 
   const handleSubmit = async () => {
-    if (!userId) return;
-
     setLoading(true);
     try {
-      const res = await fetch("/api/profile/onboarding", {
+      const res = await fetch("/api/profiles/onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dietary_restrictions: dietaryRestrictions, allergies }),
+        body: JSON.stringify({
+          dietary_restrictions: dietaryRestrictions,
+          allergies,
+          budget_min: budgetRange[0],
+          budget_max: budgetRange[1],
+        }),
       });
 
       const data = await res.json();
@@ -56,7 +68,6 @@ export default function OnboardingPage() {
         return;
       }
 
-      // Redirection vers dashboard
       router.push(siteConfig.navMenuItems.find(item => item.label === "Dashboard")?.href || "/dashboard");
     } catch (err) {
       console.error("Erreur onboarding:", err);
@@ -64,14 +75,20 @@ export default function OnboardingPage() {
     }
   };
 
+  if (checkingStatus) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-xl mx-auto mt-16 p-6 bg-background rounded-lg shadow-md">
       <h1 className="text-h1 font-bold mb-6">Bienvenue sur MealMatch !</h1>
 
-      {/* Stepper */}
       <OnboardingSteps steps={steps} currentStep={currentStep} />
 
-      {/* Step content */}
       {currentStep === 0 && (
         <CheckboxGroup
           value={dietaryRestrictions}
@@ -99,10 +116,29 @@ export default function OnboardingPage() {
       )}
 
       {currentStep === 2 && (
+        <div className="space-y-4">
+          <h2 className="font-semibold">Budget hebdomadaire</h2>
+          <Slider
+            label="Sélectionnez votre fourchette de budget"
+            step={5}
+            minValue={0}
+            maxValue={200}
+            value={budgetRange}
+            onChange={(value) => setBudgetRange(value as [number, number])}
+            formatOptions={{ style: "currency", currency: "CAD" }}
+          />
+          <p className="text-sm text-default-500">
+            {budgetRange[0]}$ — {budgetRange[1]}$ par semaine
+          </p>
+        </div>
+      )}
+
+      {currentStep === 3 && (
         <div>
           <h2 className="font-semibold mb-2">Résumé</h2>
           <p><strong>Restrictions alimentaires:</strong> {dietaryRestrictions.join(", ") || "Aucune"}</p>
           <p><strong>Allergies:</strong> {allergies.join(", ") || "Aucune"}</p>
+          <p><strong>Budget:</strong> {budgetRange[0]}$ — {budgetRange[1]}$ par semaine</p>
         </div>
       )}
 

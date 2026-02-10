@@ -1,27 +1,26 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { getSupabaseServer } from "@/utils/supabase-server";
 
 export async function GET() {
-    const supabase = getSupabaseServer();
+  const session = await auth();
 
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { onboardingCompleted: false },
+      { status: 401 }
+    );
+  }
 
-    if (!user) {
-        return NextResponse.json(
-            { onboardingCompleted: false },
-            { status: 401 }
-        );
-    }
+  const supabase = getSupabaseServer();
 
-    const { data } = await supabase
-        .from("profiles")
-        .select("onboarding_completed")
-        .eq("id", user.id)
-        .single();
+  const { data } = await supabase
+    .from("profiles")
+    .select("onboarding_completed")
+    .eq("id", session.user.id)
+    .single();
 
-    return NextResponse.json({
-        onboardingCompleted: data?.onboarding_completed ?? false,
-    });
+  return NextResponse.json({
+    onboardingCompleted: data?.onboarding_completed ?? false,
+  });
 }
