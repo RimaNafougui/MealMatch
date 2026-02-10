@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint --fix"
+    "lint": "eslint --fix",
+    "seed:recipes": "tsx --env-file=.env scripts/seed-recipes.ts"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
@@ -98,6 +99,7 @@
     "prettier": "3.5.3",
     "tailwind-variants": "3.2.2",
     "tailwindcss": "4.1.11",
+    "tsx": "^4.21.0",
     "typescript": "5.6.3"
   }
 }
