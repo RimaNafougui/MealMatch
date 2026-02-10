@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { OnboardingSteps } from "./OnboardingSteps";
 import { Button, CheckboxGroup, Checkbox, Textarea } from "@heroui/react";
-import { supabase } from "@/utils/supabase"; // <-- Utilisation de ton client centralisé
+import { supabase } from "@/utils/supabase";
 import { siteConfig } from "@/config/site";
 
 const steps = [
