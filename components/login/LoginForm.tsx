@@ -2,9 +2,9 @@
 import React, { Suspense, useState } from "react";
 import { Form, Input, Button, Link, Divider } from "@heroui/react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
-import { loginAndCheckOnboarding } from "@/utils/auth";
 
 import {
   SignInButtonGithub,
@@ -32,14 +32,14 @@ function LoginFormContent() {
     const password = formData.get("password") as string;
 
     try {
-      const result = await loginAndCheckOnboarding(email, password);
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
 
-      if (!result.success) {
-        setError(result.error ?? "Une erreur est survenue"); // <-- fallback si undefined
+      if (result?.error) {
         setIsLoading(false);
-<<<<<<< HEAD
-        return;
-=======
         if (result.error.includes("EmailNotVerified")) {
           setError(
             "Veuillez consulter votre messagerie électronique pour vérifier votre compte avant de vous connecter.",
@@ -50,21 +50,12 @@ function LoginFormContent() {
       } else {
         router.push("/");
         router.refresh();
->>>>>>> 3c8903c75df4c74413b345be996fd3a49a605cd3
       }
-
-      // Redirection selon l'onboarding
-      if (!result.onboardingCompleted) router.push("/onboarding");
-      else router.push("/dashboard");
-
-      router.refresh();
     } catch (err) {
-      console.error(err);
       setError("An unexpected error occurred");
       setIsLoading(false);
     }
   };
-
 
   return (
     <motion.div
