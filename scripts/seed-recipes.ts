@@ -1,17 +1,18 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Config
+// ── Config ──────────────────────────────────────────────────────────────────
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const SPOONACULAR_KEY = process.env.SPOONACULAR_API_KEY!;
 const SPOONACULAR_BASE = "https://api.spoonacular.com";
 
+// 🎯 Target: 100 recipes per run
 const TARGET_COUNT = 100;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-// Types
+// ── Types ───────────────────────────────────────────────────────────────────
 
 interface SpoonacularRecipeDetail {
   id: number;
@@ -49,7 +50,8 @@ interface SpoonacularRecipeDetail {
   };
 }
 
-interface SavedRecipe {
+// Matches your "recipes_catalog" table schema
+interface RecipeCatalogItem {
   spoonacular_id: number;
   title: string;
   image_url: string | null;
@@ -66,7 +68,7 @@ interface SavedRecipe {
   spoonacular_data: object;
 }
 
-// Helpers
+// ── Helpers ─────────────────────────────────────────────────────────────────
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -130,13 +132,22 @@ function parseInstructions(recipe: SpoonacularRecipeDetail) {
   }));
 }
 
-function toSavedRecipe(detail: SpoonacularRecipeDetail): SavedRecipe {
+function toRecipeCatalogItem(
+  detail: SpoonacularRecipeDetail,
+): RecipeCatalogItem {
   const nutrients = detail.nutrition?.nutrients;
+
+  // Ensure we have a valid prep time (constraint: prep_time > 0)
+  let prepTime = detail.readyInMinutes;
+  if (!prepTime || prepTime <= 0) {
+    prepTime = 15; // Default fallback
+  }
+
   return {
     spoonacular_id: detail.id,
     title: detail.title,
     image_url: detail.image || null,
-    prep_time: detail.readyInMinutes > 0 ? detail.readyInMinutes : null,
+    prep_time: prepTime,
     servings: detail.servings || 4,
     calories: getNutrient(nutrients, "Calories"),
     protein: getNutrient(nutrients, "Protein"),
@@ -152,7 +163,8 @@ function toSavedRecipe(detail: SpoonacularRecipeDetail): SavedRecipe {
   };
 }
 
-// API Logic
+// ── API Logic ───────────────────────────────────────────────────────────────
+
 async function getRandomRecipes(
   number: number,
 ): Promise<SpoonacularRecipeDetail[]> {
@@ -175,10 +187,12 @@ async function getRandomRecipes(
 // ── Main Seed Loop ──────────────────────────────────────────────────────────
 
 async function seed() {
-  console.log(`Starting seed for ${TARGET_COUNT} recipes...`);
+  console.log(
+    `🚀 Starting seed for ${TARGET_COUNT} recipes into 'recipes_catalog'...`,
+  );
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !SPOONACULAR_KEY) {
-    console.error("Missing env vars.");
+    console.error("❌ Missing env vars.");
     process.exit(1);
   }
 
@@ -191,52 +205,52 @@ async function seed() {
     const batchSize = Math.min(remaining, 100);
 
     console.log(
-      `\nFetching batch of ${batchSize} (Progress: ${totalFetched}/${TARGET_COUNT})...`,
+      `\n📦 Fetching batch of ${batchSize} (Progress: ${totalFetched}/${TARGET_COUNT})...`,
     );
 
     try {
       const recipes = await getRandomRecipes(batchSize);
 
       if (!recipes || recipes.length === 0) {
-        console.log("API returned no recipes. Stopping.");
+        console.log("   ⚠️ API returned no recipes. Stopping.");
         break;
       }
 
       for (const detail of recipes) {
         try {
-          const row = toSavedRecipe(detail);
+          const row = toRecipeCatalogItem(detail);
 
-          if (!row.prep_time || row.prep_time <= 0) row.prep_time = 15;
-
+          // Upsert into 'recipes_catalog'
+          // We use spoonacular_id as the conflict key
           const { error } = await supabase
-            .from("saved_recipes")
+            .from("recipes_catalog")
             .upsert(row, { onConflict: "spoonacular_id" });
 
           if (error) {
-            console.error(`DB Error (${detail.title}): ${error.message}`);
+            console.error(`   ❌ DB Error (${detail.title}): ${error.message}`);
             failed++;
           } else {
             inserted++;
           }
         } catch (err: any) {
+          console.error(`   ❌ Processing Error: ${err.message}`);
           failed++;
         }
       }
 
       totalFetched += recipes.length;
 
-      // polite pause between batches if we have more to go
       if (totalFetched < TARGET_COUNT) {
-        console.log("Pausing 2s before next batch...");
+        console.log("   ⏳ Pausing 2s before next batch...");
         await sleep(2000);
       }
     } catch (err: any) {
-      console.error(`Batch failed: ${err.message}`);
-      break; // Stop on API error
+      console.error(`   ❌ Batch failed: ${err.message}`);
+      break;
     }
   }
 
-  console.log(`\nSeed complete!`);
+  console.log(`\n✅ Seed complete!`);
   console.log(`   Target:   ${TARGET_COUNT}`);
   console.log(`   Inserted: ${inserted}`);
   console.log(`   Failed:   ${failed}`);
