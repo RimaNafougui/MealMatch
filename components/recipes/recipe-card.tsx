@@ -63,12 +63,7 @@ export function RecipeCard({
     }
 
     return (
-        <Card
-            isPressable
-            isHoverable
-            onPress={() => router.push(`/recipes/${recipe.id}`)}
-            className="w-full"
-        >
+        <Card isHoverable className="w-full" onClick={() => router.push(`/recipes/${recipe.id}`)}>
             {/* IMAGE */}
             <CardHeader className="p-0">
                 <Image
