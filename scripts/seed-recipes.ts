@@ -1,21 +1,17 @@
 import { createClient } from "@supabase/supabase-js";
 
-// ── Config ──────────────────────────────────────────────────────────────────
+// Config
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const SPOONACULAR_KEY = process.env.SPOONACULAR_API_KEY!;
 const SPOONACULAR_BASE = "https://api.spoonacular.com";
 
+const TARGET_COUNT = 100;
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-// ── Types ───────────────────────────────────────────────────────────────────
-
-interface SpoonacularSearchResult {
-  id: number;
-  title: string;
-  image: string;
-}
+// Types
 
 interface SpoonacularRecipeDetail {
   id: number;
@@ -70,7 +66,7 @@ interface SavedRecipe {
   spoonacular_data: object;
 }
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
+// Helpers
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -81,9 +77,7 @@ function getNutrient(
   name: string,
 ): number | null {
   if (!nutrients) return null;
-  const n = nutrients.find(
-    (x) => x.name.toLowerCase() === name.toLowerCase(),
-  );
+  const n = nutrients.find((x) => x.name.toLowerCase() === name.toLowerCase());
   return n ? Math.round(n.amount) : null;
 }
 
@@ -158,176 +152,93 @@ function toSavedRecipe(detail: SpoonacularRecipeDetail): SavedRecipe {
   };
 }
 
-// ── API calls ───────────────────────────────────────────────────────────────
-
-async function searchRecipes(
-  diet: string | null,
-  mealType: string | null,
+// API Logic
+async function getRandomRecipes(
   number: number,
-  offset: number = 0,
-): Promise<SpoonacularSearchResult[]> {
+): Promise<SpoonacularRecipeDetail[]> {
   const params = new URLSearchParams({
     apiKey: SPOONACULAR_KEY,
     number: String(number),
-    offset: String(offset),
-    sort: "random",
-    addRecipeInformation: "false",
+    includeNutrition: "true",
+    limitLicense: "true",
   });
-  if (diet) params.set("diet", diet);
-  if (mealType) params.set("type", mealType);
 
-  const url = `${SPOONACULAR_BASE}/recipes/complexSearch?${params}`;
+  const url = `${SPOONACULAR_BASE}/recipes/random?${params}`;
   const res = await fetch(url);
   if (!res.ok) {
-    throw new Error(
-      `Search failed (${res.status}): ${await res.text()}`,
-    );
+    throw new Error(`Random fetch failed (${res.status}): ${await res.text()}`);
   }
   const data = await res.json();
-  return data.results as SpoonacularSearchResult[];
+  return data.recipes as SpoonacularRecipeDetail[];
 }
 
-async function fetchRecipeDetail(
-  id: number,
-): Promise<SpoonacularRecipeDetail> {
-  const params = new URLSearchParams({
-    apiKey: SPOONACULAR_KEY,
-    includeNutrition: "true",
-  });
-  const url = `${SPOONACULAR_BASE}/recipes/${id}/information?${params}`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(
-      `Detail fetch failed for ${id} (${res.status}): ${await res.text()}`,
-    );
-  }
-  return (await res.json()) as SpoonacularRecipeDetail;
-}
-
-// ── Seed logic ──────────────────────────────────────────────────────────────
-
-interface BatchConfig {
-  label: string;
-  diet: string | null;
-  mealType: string | null;
-  count: number;
-}
-
-const BATCHES: BatchConfig[] = [
-  // 30 vegetarian — spread across meal types
-  { label: "vegetarian/breakfast", diet: "vegetarian", mealType: "breakfast", count: 8 },
-  { label: "vegetarian/main course", diet: "vegetarian", mealType: "main course", count: 12 },
-  { label: "vegetarian/snack", diet: "vegetarian", mealType: "snack", count: 5 },
-  { label: "vegetarian/dessert", diet: "vegetarian", mealType: "dessert", count: 5 },
-
-  // 20 vegan
-  { label: "vegan/main course", diet: "vegan", mealType: "main course", count: 10 },
-  { label: "vegan/breakfast", diet: "vegan", mealType: "breakfast", count: 5 },
-  { label: "vegan/snack", diet: "vegan", mealType: "snack", count: 5 },
-
-  // 20 gluten-free
-  { label: "gluten-free/main course", diet: "gluten free", mealType: "main course", count: 10 },
-  { label: "gluten-free/breakfast", diet: "gluten free", mealType: "breakfast", count: 5 },
-  { label: "gluten-free/dessert", diet: "gluten free", mealType: "dessert", count: 5 },
-
-  // 30 omnivore (no diet filter) — varied meal types
-  { label: "omnivore/breakfast", diet: null, mealType: "breakfast", count: 8 },
-  { label: "omnivore/main course", diet: null, mealType: "main course", count: 12 },
-  { label: "omnivore/snack", diet: null, mealType: "snack", count: 5 },
-  { label: "omnivore/dessert", diet: null, mealType: "dessert", count: 5 },
-];
+// ── Main Seed Loop ──────────────────────────────────────────────────────────
 
 async function seed() {
-  console.log("🚀 Starting recipe seed...\n");
+  console.log(`Starting seed for ${TARGET_COUNT} recipes...`);
 
-  // Validate env
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !SPOONACULAR_KEY) {
-    console.error(
-      "❌ Missing env vars. Need NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SPOONACULAR_API_KEY",
-    );
+    console.error("Missing env vars.");
     process.exit(1);
   }
 
-  // Collect all unique recipe IDs across batches
-  const collectedIds = new Set<number>();
-  const batchIds: Map<string, number[]> = new Map();
-
-  for (const batch of BATCHES) {
-    console.log(
-      `🔍 Searching ${batch.count} recipes [${batch.label}]...`,
-    );
-    // Fetch a bit more than needed to allow for dedup
-    const results = await searchRecipes(
-      batch.diet,
-      batch.mealType,
-      batch.count + 10,
-    );
-    await sleep(300);
-
-    const ids: number[] = [];
-    for (const r of results) {
-      if (!collectedIds.has(r.id) && ids.length < batch.count) {
-        collectedIds.add(r.id);
-        ids.push(r.id);
-      }
-    }
-    batchIds.set(batch.label, ids);
-    console.log(`   → Found ${ids.length} unique IDs`);
-  }
-
-  const allIds = Array.from(collectedIds);
-  console.log(`\n📋 Total unique recipe IDs collected: ${allIds.length}\n`);
-
-  // Fetch details + insert one by one with rate limiting
+  let totalFetched = 0;
   let inserted = 0;
-  let skipped = 0;
   let failed = 0;
 
-  for (let i = 0; i < allIds.length; i++) {
-    const id = allIds[i];
+  while (totalFetched < TARGET_COUNT) {
+    const remaining = TARGET_COUNT - totalFetched;
+    const batchSize = Math.min(remaining, 100);
+
+    console.log(
+      `\nFetching batch of ${batchSize} (Progress: ${totalFetched}/${TARGET_COUNT})...`,
+    );
+
     try {
-      const detail = await fetchRecipeDetail(id);
-      await sleep(250); // ~4 requests/sec to stay under rate limit
+      const recipes = await getRandomRecipes(batchSize);
 
-      const row = toSavedRecipe(detail);
-
-      // Skip recipes with prep_time <= 0 (constraint check)
-      if (!row.prep_time || row.prep_time <= 0) {
-        row.prep_time = 15; // default fallback
+      if (!recipes || recipes.length === 0) {
+        console.log("API returned no recipes. Stopping.");
+        break;
       }
 
-      const { error } = await supabase
-        .from("saved_recipes")
-        .upsert(row, { onConflict: "spoonacular_id" });
+      for (const detail of recipes) {
+        try {
+          const row = toSavedRecipe(detail);
 
-      if (error) {
-        console.error(`   ❌ Insert failed for "${detail.title}": ${error.message}`);
-        failed++;
-      } else {
-        inserted++;
+          if (!row.prep_time || row.prep_time <= 0) row.prep_time = 15;
+
+          const { error } = await supabase
+            .from("saved_recipes")
+            .upsert(row, { onConflict: "spoonacular_id" });
+
+          if (error) {
+            console.error(`DB Error (${detail.title}): ${error.message}`);
+            failed++;
+          } else {
+            inserted++;
+          }
+        } catch (err: any) {
+          failed++;
+        }
+      }
+
+      totalFetched += recipes.length;
+
+      // polite pause between batches if we have more to go
+      if (totalFetched < TARGET_COUNT) {
+        console.log("Pausing 2s before next batch...");
+        await sleep(2000);
       }
     } catch (err: any) {
-      console.error(`   ❌ Error for ID ${id}: ${err.message}`);
-      failed++;
-      // If rate limited, wait longer
-      if (err.message?.includes("402") || err.message?.includes("429")) {
-        console.log("   ⏳ Rate limited — waiting 60s...");
-        await sleep(60_000);
-      }
-    }
-
-    // Log progress every 10 recipes
-    const total = i + 1;
-    if (total % 10 === 0 || total === allIds.length) {
-      console.log(
-        `📊 Progress: ${total}/${allIds.length} processed (${inserted} inserted, ${skipped} skipped, ${failed} failed)`,
-      );
+      console.error(`Batch failed: ${err.message}`);
+      break; // Stop on API error
     }
   }
 
-  console.log(`\n✅ Seed complete!`);
+  console.log(`\nSeed complete!`);
+  console.log(`   Target:   ${TARGET_COUNT}`);
   console.log(`   Inserted: ${inserted}`);
-  console.log(`   Skipped:  ${skipped}`);
   console.log(`   Failed:   ${failed}`);
 }
 
