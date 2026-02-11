@@ -23,7 +23,7 @@ jobs:
           npm install -g tsx
 
       - name: Run Seed Script
-        run: tsx scripts/seed.ts 
+        run: tsx scripts/seed-recipes.ts 
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
