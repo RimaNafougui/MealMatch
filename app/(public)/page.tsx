@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { Link } from "@heroui/link";
 import { Button } from "@heroui/button";
 import { Image } from "@heroui/image";
@@ -6,9 +7,17 @@ import { Avatar } from "@heroui/avatar";
 import { Badge } from "@heroui/badge";
 import { Bot, WalletCards, ShoppingCart, Heart } from "lucide-react";
 
+import { auth } from "@/auth";
+
 // Page d'accueil
 
-export default function Home() {
+export default async function Home() {
+  const session = await auth();
+
+  if (session?.user) {
+    redirect("/dashboard");
+  }
+
   const features = [
     {
       title: "AI Meal Plans",

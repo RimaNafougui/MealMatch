@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServer } from "@/utils/supabase-server";
+import { generateUniqueUsername } from "@/utils/username-generator";
 
 export async function POST(req: Request) {
   try {
@@ -16,52 +17,45 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!username) {
-      return NextResponse.json(
-        { error: "Username is required" },
-        { status: 400 },
-      );
-    }
+    if (username) {
+      if (username.length < 3 || username.length > 30) {
+        return NextResponse.json(
+          { error: "Username must be 3-30 characters" },
+          { status: 400 },
+        );
+      }
 
-    // Validate username format
-    if (username.length < 3 || username.length > 30) {
-      return NextResponse.json(
-        { error: "Username must be 3-30 characters" },
-        { status: 400 },
-      );
-    }
+      if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+        return NextResponse.json(
+          {
+            error:
+              "Username can only contain letters, numbers, dashes, and underscores",
+          },
+          { status: 400 },
+        );
+      }
 
-    if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-      return NextResponse.json(
-        {
-          error:
-            "Username can only contain letters, numbers, dashes, and underscores",
-        },
-        { status: 400 },
-      );
-    }
+      if (/^[-_]|[-_]$/.test(username)) {
+        return NextResponse.json(
+          {
+            error: "Username cannot start or end with a dash or underscore",
+          },
+          { status: 400 },
+        );
+      }
 
-    if (/^[-_]|[-_]$/.test(username)) {
-      return NextResponse.json(
-        {
-          error: "Username cannot start or end with a dash or underscore",
-        },
-        { status: 400 },
-      );
-    }
+      const { data: existingUser } = await supabase
+        .from("profiles")
+        .select("id")
+        .ilike("username", username)
+        .single();
 
-    // Check if username is already taken
-    const { data: existingUser } = await supabase
-      .from("profiles")
-      .select("id")
-      .ilike("username", username)
-      .single();
-
-    if (existingUser) {
-      return NextResponse.json(
-        { error: "Username is already taken" },
-        { status: 400 },
-      );
+      if (existingUser) {
+        return NextResponse.json(
+          { error: "Username is already taken" },
+          { status: 400 },
+        );
+      }
     }
 
     const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -70,7 +64,7 @@ export async function POST(req: Request) {
       options: {
         data: {
           name: name || null,
-          username: username.toLowerCase(),
+          username: username ? username.toLowerCase() : null,
         },
         emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/auth/callback`,
       },
@@ -109,15 +103,23 @@ export async function POST(req: Request) {
       error: dbError?.message,
     });
 
-    if (dbError) {
+    if (dbError || !userRecord) {
       console.error("Database record check error:", dbError);
       console.log("Attempting manual user creation...");
 
-      const { error: insertError } = await supabase.from("User").insert({
+      let finalUsername: string;
+      if (username) {
+        finalUsername = username.toLowerCase();
+      } else {
+        finalUsername = await generateUniqueUsername(name, email);
+        console.log("Auto-generated username:", finalUsername);
+      }
+
+      const { error: insertError } = await supabase.from("profiles").insert({
         id: authData.user.id,
         email: authData.user.email!,
         name: name || null,
-        username: username.toLowerCase(),
+        username: finalUsername,
       });
 
       if (insertError) {
@@ -133,8 +135,27 @@ export async function POST(req: Request) {
           );
         }
       } else {
-        console.log("User manually created in User table");
+        console.log(
+          "User manually created in profiles table with username:",
+          finalUsername,
+        );
       }
+    } else if (userRecord && !userRecord.username) {
+      const autoUsername = await generateUniqueUsername(name, email);
+      console.log(
+        "Updating profile with auto-generated username:",
+        autoUsername,
+      );
+
+      await supabase
+        .from("profiles")
+        .update({
+          username: autoUsername,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", authData.user.id);
+
+      console.log("Profile updated with username");
     } else {
       console.log("User record found:", userRecord);
     }
@@ -149,7 +170,7 @@ export async function POST(req: Request) {
           id: authData.user.id,
           email: authData.user.email,
           name: name,
-          username: username.toLowerCase(),
+          username: username || "auto-generated",
         },
       },
       { status: 201 },

@@ -1,15 +1,12 @@
 import "@/styles/globals.css";
 import { Metadata, Viewport } from "next";
-import { Link } from "@heroui/link";
 import clsx from "clsx";
 
 import { Providers } from "./providers";
 
 import { siteConfig } from "@/config/site";
 import { fontSans } from "@/config/fonts";
-import Header from "@/components/layout/Header";
 import { Toaster } from "sonner";
-import Footer from "@/components/layout/Footer";
 
 export const metadata: Metadata = {
   title: {
@@ -44,14 +41,8 @@ export default function RootLayout({
         )}
       >
         <Providers themeProps={{ attribute: "class", defaultTheme: "dark" }}>
-          <div className="relative flex flex-col h-screen">
-            <Header />
-            <main className="container mx-auto max-w-7xl pt-16 px-6 flex-grow">
-              {children}
-              <Toaster position="top-right" richColors />
-            </main>
-            <Footer />
-          </div>
+          {children}
+          <Toaster position="top-right" richColors />
         </Providers>
       </body>
     </html>

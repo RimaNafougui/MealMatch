@@ -11,6 +11,8 @@ create table profiles (
   premium_expires_at timestamp with time zone, -- AJOUT: expiration premium
   created_at timestamp with time zone default now(),
   updated_at timestamp with time zone default now() -- AJOUT: tracking modifications
+  onboarding_completed boolean default false
+
 );
 
 -- SAVED RECIPES

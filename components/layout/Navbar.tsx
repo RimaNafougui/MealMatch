@@ -19,11 +19,18 @@ import { ThemeSwitch } from "@/components/theme-switch";
 import { ProfileDropdown } from "@/components/login/dropdown";
 import { Logo } from "@/components/logo";
 
+const privateNavItems = [
+  { label: "Dashboard", href: "/dashboard" },
+  { label: "Explorer", href: "/explore" },
+];
+
 export const AppNavbar = ({ user }: { user: any }) => {
   const [isMenuOpen, setIsMenuOpen] = React.useReducer(
     (current) => !current,
     false,
   );
+
+  const navItems = user ? privateNavItems : siteConfig.navItems;
 
   return (
     <HeroUINavbar
@@ -41,28 +48,29 @@ export const AppNavbar = ({ user }: { user: any }) => {
 
       <NavbarContent justify="start">
         <NavbarBrand as="li" className="gap-3 max-w-fit">
-          <NextLink className="flex justify-start items-center gap-1" href="/">
+          <NextLink
+            className="flex justify-start items-center gap-1"
+            href={user ? "/dashboard" : "/"}
+          >
             <Logo />
           </NextLink>
         </NavbarBrand>
 
-        {user && (
-          <ul className="hidden lg:flex gap-4 ml-4">
-            {siteConfig.navItems.map((item) => (
-              <NavbarItem key={item.href}>
-                <NextLink
-                  className={clsx(
-                    linkStyles({ color: "foreground" }),
-                    "text-sm uppercase tracking-widest font-medium",
-                  )}
-                  href={item.href}
-                >
-                  {item.label}
-                </NextLink>
-              </NavbarItem>
-            ))}
-          </ul>
-        )}
+        <ul className="hidden lg:flex gap-4 ml-4">
+          {navItems.map((item) => (
+            <NavbarItem key={item.href}>
+              <NextLink
+                className={clsx(
+                  linkStyles({ color: "foreground" }),
+                  "text-sm uppercase tracking-widest font-medium",
+                )}
+                href={item.href}
+              >
+                {item.label}
+              </NextLink>
+            </NavbarItem>
+          ))}
+        </ul>
       </NavbarContent>
 
       <NavbarContent justify="end">
@@ -96,7 +104,7 @@ export const AppNavbar = ({ user }: { user: any }) => {
       <NavbarMenu className="pt-6">
         <div className="flex flex-col gap-4">
           {user ? (
-            siteConfig.navItems.map((item, index) => (
+            navItems.map((item, index) => (
               <NavbarMenuItem key={`${item.label}-${index}`}>
                 <NextLink
                   className="w-full text-2xl font-light uppercase tracking-tighter py-2"
