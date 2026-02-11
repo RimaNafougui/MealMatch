@@ -18,9 +18,7 @@ export default async function PrivateLayout({
   return (
     <div className="relative flex flex-col h-screen">
       <Header />
-      <div className="flex-1 overflow-hidden">
-        {children}
-      </div>
+      <div className="flex-1">{children}</div>
       <Footer />
     </div>
   );

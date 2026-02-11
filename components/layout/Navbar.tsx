@@ -9,10 +9,12 @@ import {
   NavbarItem,
   NavbarMenuItem,
   Button,
+  Badge,
 } from "@heroui/react";
 import { link as linkStyles } from "@heroui/theme";
 import NextLink from "next/link";
 import clsx from "clsx";
+import { Sparkles } from "lucide-react";
 
 import { siteConfig } from "@/config/site";
 import { ThemeSwitch } from "@/components/theme-switch";
@@ -38,7 +40,10 @@ export const AppNavbar = ({ user }: { user: any }) => {
       onMenuOpenChange={setIsMenuOpen}
       maxWidth="xl"
       position="sticky"
-      className="border-b border-divider"
+      classNames={{
+        base: "backdrop-blur-md bg-background/80 border-b border-divider/50",
+        wrapper: "px-4 sm:px-6",
+      }}
     >
       <NavbarContent className="sm:hidden" justify="start">
         <NavbarMenuToggle
@@ -56,24 +61,25 @@ export const AppNavbar = ({ user }: { user: any }) => {
           </NextLink>
         </NavbarBrand>
 
-        <ul className="hidden lg:flex gap-4 ml-4">
+        <ul className="hidden lg:flex gap-6 ml-6">
           {navItems.map((item) => (
             <NavbarItem key={item.href}>
               <NextLink
                 className={clsx(
                   linkStyles({ color: "foreground" }),
-                  "text-sm uppercase tracking-widest font-medium",
+                  "text-sm font-medium hover:text-success transition-colors relative group",
                 )}
                 href={item.href}
               >
                 {item.label}
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-success group-hover:w-full transition-all duration-300" />
               </NextLink>
             </NavbarItem>
           ))}
         </ul>
       </NavbarContent>
 
-      <NavbarContent justify="end">
+      <NavbarContent justify="end" className="gap-3">
         <NavbarItem className="hidden sm:flex">
           <ThemeSwitch />
         </NavbarItem>
@@ -84,16 +90,40 @@ export const AppNavbar = ({ user }: { user: any }) => {
           </NavbarItem>
         ) : (
           <div className="flex gap-2">
-            <Button as={NextLink} href="/login" variant="light" size="sm">
+            <Button
+              as={NextLink}
+              href="/login"
+              variant="light"
+              size="sm"
+              className="font-medium"
+            >
               Connexion
             </Button>
+            <Badge
+              content={<Sparkles size={10} />}
+              color="success"
+              size="sm"
+              placement="top-right"
+              className="hidden sm:flex"
+            >
+              <Button
+                as={NextLink}
+                href="/signup"
+                color="success"
+                variant="flat"
+                size="sm"
+                className="font-semibold"
+              >
+                Commencer
+              </Button>
+            </Badge>
             <Button
               as={NextLink}
               href="/signup"
-              color="primary"
+              color="success"
               variant="flat"
               size="sm"
-              className="hidden sm:flex"
+              className="font-semibold sm:hidden"
             >
               Inscription
             </Button>
@@ -101,13 +131,13 @@ export const AppNavbar = ({ user }: { user: any }) => {
         )}
       </NavbarContent>
 
-      <NavbarMenu className="pt-6">
+      <NavbarMenu className="pt-8 pb-6 bg-background/95 backdrop-blur-lg">
         <div className="flex flex-col gap-4">
           {user ? (
             navItems.map((item, index) => (
               <NavbarMenuItem key={`${item.label}-${index}`}>
                 <NextLink
-                  className="w-full text-2xl font-light uppercase tracking-tighter py-2"
+                  className="w-full text-2xl font-medium tracking-tight py-2 hover:text-success transition-colors"
                   href={item.href}
                   onClick={() => setIsMenuOpen()}
                 >
@@ -119,27 +149,28 @@ export const AppNavbar = ({ user }: { user: any }) => {
             <>
               <NavbarMenuItem>
                 <NextLink
-                  className="text-2xl font-light uppercase tracking-tighter py-2"
+                  className="text-2xl font-medium tracking-tight py-2 hover:text-success transition-colors"
                   href="/login"
+                  onClick={() => setIsMenuOpen()}
                 >
-                  Connection
+                  Connexion
                 </NextLink>
               </NavbarMenuItem>
               <NavbarMenuItem>
                 <NextLink
-                  className="text-2xl font-light uppercase tracking-tighter py-2"
+                  className="text-2xl font-medium tracking-tight py-2 text-success flex items-center gap-2"
                   href="/signup"
+                  onClick={() => setIsMenuOpen()}
                 >
-                  Inscription
+                  <Sparkles size={20} />
+                  Commencer
                 </NextLink>
               </NavbarMenuItem>
             </>
           )}
 
-          <div className="pt-4 border-t border-divider flex items-center justify-between">
-            <span className="text-sm font-medium uppercase opacity-50">
-              Apparence
-            </span>
+          <div className="pt-6 mt-4 border-t border-divider/50 flex items-center justify-between">
+            <span className="text-sm font-medium text-default-600">Thème</span>
             <ThemeSwitch />
           </div>
         </div>
