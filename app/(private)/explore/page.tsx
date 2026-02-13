@@ -6,16 +6,13 @@ import {
   Select,
   SelectItem,
   Button,
-  Spinner,
   Card,
   CardBody,
   Chip,
 } from "@heroui/react";
 import { Search, Filter, X, Leaf } from "lucide-react";
-import {
-  RecipeCard,
-  RecipeCardSkeleton,
-} from "@/components/recipes/recipe-card";
+import { RecipeCard, RecipeCardSkeleton } from "@/components/recipes/recipe-card";
+import { useFavoriteToggle } from "@/hooks/useFavoritesToggle";
 
 interface Recipe {
   id: string;
@@ -84,25 +81,24 @@ export default function ExplorePage() {
       const params = new URLSearchParams();
 
       if (searchQuery) params.append("search", searchQuery);
-      if (selectedDietaryTags.length > 0) {
+      if (selectedDietaryTags.length > 0)
         params.append("dietary_tags", selectedDietaryTags.join(","));
-      }
       if (maxPrepTime) params.append("max_prep_time", maxPrepTime);
       if (maxCalories) params.append("max_calories", maxCalories);
       params.append("page", pagination.page.toString());
       params.append("limit", pagination.limit.toString());
 
-      const response = await fetch(`/api/recipes/catalog?${params.toString()}`);
-      const data = await response.json();
+      const res = await fetch(`/api/recipes/catalog?${params.toString()}`);
+      const data = await res.json();
 
-      if (response.ok) {
+      if (res.ok) {
         setRecipes(data.recipes);
         setPagination(data.pagination);
       } else {
         console.error("Failed to fetch recipes:", data.error);
       }
-    } catch (error) {
-      console.error("Error fetching recipes:", error);
+    } catch (err) {
+      console.error("Error fetching recipes:", err);
     } finally {
       setLoading(false);
     }
@@ -110,17 +106,13 @@ export default function ExplorePage() {
 
   useEffect(() => {
     fetchRecipes();
-  }, [
-    searchQuery,
-    selectedDietaryTags,
-    maxPrepTime,
-    maxCalories,
-    pagination.page,
-  ]);
+  }, [searchQuery, selectedDietaryTags, maxPrepTime, maxCalories, pagination.page]);
 
-  const toggleFavorite = (id: string) => {
+  const toggleFavoriteLocal = (recipeId: string) => {
     setFavorites((prev) =>
-      prev.includes(id) ? prev.filter((fid) => fid !== id) : [...prev, id],
+      prev.includes(recipeId)
+        ? prev.filter((id) => id !== recipeId)
+        : [...prev, recipeId]
     );
   };
 
@@ -235,7 +227,7 @@ export default function ExplorePage() {
                         setSelectedDietaryTags((prev) =>
                           prev.includes(option.value)
                             ? prev.filter((tag) => tag !== option.value)
-                            : [...prev, option.value],
+                            : [...prev, option.value]
                         );
                         setPagination({ ...pagination, page: 1 });
                       }}
@@ -349,12 +341,7 @@ export default function ExplorePage() {
               Aucune recette trouvée. Essayez de modifier vos filtres.
             </p>
             {hasActiveFilters && (
-              <Button
-                color="success"
-                variant="flat"
-                className="mt-4"
-                onPress={clearFilters}
-              >
+              <Button color="success" variant="flat" className="mt-4" onPress={clearFilters}>
                 Effacer les filtres
               </Button>
             )}
@@ -362,14 +349,22 @@ export default function ExplorePage() {
         </Card>
       ) : (
         <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {recipes.map((recipe) => (
-            <RecipeCard
-              key={recipe.id}
-              recipe={recipe}
-              isFavorite={favorites.includes(recipe.id)}
-              onFavoriteToggle={() => toggleFavorite(recipe.id)}
-            />
-          ))}
+          {recipes.map((recipe) => {
+            const isFav = favorites.includes(recipe.id);
+            const favoriteToggle = useFavoriteToggle(recipe.id, isFav);
+
+            return (
+              <RecipeCard
+                key={recipe.id}
+                recipe={recipe}
+                isFavorite={isFav}
+                onFavoriteToggle={() => {
+                  favoriteToggle.mutate();
+                  toggleFavoriteLocal(recipe.id); // mise à jour immédiate côté UI
+                }}
+              />
+            );
+          })}
         </div>
       )}
 
@@ -380,9 +375,7 @@ export default function ExplorePage() {
             size="sm"
             variant="flat"
             isDisabled={pagination.page === 1}
-            onPress={() =>
-              setPagination({ ...pagination, page: pagination.page - 1 })
-            }
+            onPress={() => setPagination({ ...pagination, page: pagination.page - 1 })}
           >
             Précédent
           </Button>
@@ -395,9 +388,7 @@ export default function ExplorePage() {
             size="sm"
             variant="flat"
             isDisabled={pagination.page === pagination.totalPages}
-            onPress={() =>
-              setPagination({ ...pagination, page: pagination.page + 1 })
-            }
+            onPress={() => setPagination({ ...pagination, page: pagination.page + 1 })}
           >
             Suivant
           </Button>
