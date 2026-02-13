@@ -8,7 +8,9 @@ import { Badge } from "@heroui/badge";
 import { Bot, WalletCards, ShoppingCart, Heart } from "lucide-react";
 import { FloatingFood } from "@/components/FloatingFood";
 import { FloatingHeroImage } from "@/components/FloatingHeroImage";
-
+import { GradientBlobs } from "@/components/GradientBlobs";
+import { ParallaxLayer } from "@/components/ParallaxLayer";
+import { motion } from "framer-motion";
 import { auth } from "@/auth";
 
 // Page d'accueil
@@ -46,50 +48,56 @@ export default async function Home() {
   ];
 
   return (
-          <div className="flex flex-col gap-8 md:gap-16 py-8 md:py-10">
-       <section className="relative overflow-hidden py-16">
+    <div className="flex flex-col gap-20 relative overflow-hidden">
+      <section className="relative min-h-[90vh] overflow-hidden flex items-center">
         <div className="mealmatch-animated-bg" />
+        <GradientBlobs />
         <FloatingFood />
-        
-        <div className="relative flex flex-col-reverse md:flex-row items-center justify-between gap-8 max-w-7xl mx-auto px-6">
+
+        <div className="relative z-10 max-w-7xl mx-auto px-6 flex flex-col-reverse md:flex-row items-center gap-12">
           <div className="flex flex-col gap-6 text-center md:text-left md:w-1/2">
-            <div className="flex flex-col gap-2">
-              <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-                Bienvenue, étudiant!
-              </h1>
-              <p className="text-lg text-default-500">
-                Faisons des repas faciles et adaptés à vos besoins
-              </p>
-            </div>
-        
+            <h1 className="text-5xl md:text-6xl font-bold tracking-tight">
+              Bien manger.
+              <br />
+              Sans réfléchir.
+            </h1>
+
+            <p className="text-lg text-default-500">
+              MealMatch génère des repas intelligents, économiques et adaptés à
+              ton rythme étudiant.
+            </p>
+
             <div className="flex gap-4 justify-center md:justify-start">
               <Button
                 as={Link}
-                color="primary"
                 href="/signup"
                 size="lg"
-                variant="solid"
+                className="bg-gradient-to-r from-green-400 to-green-500 text-white font-bold shadow-lg hover:opacity-90 transition"
               >
                 Commencer
               </Button>
-              <Button as={Link} href="#features" size="lg" variant="bordered">
+              <Button as={Link} href="#features" variant="bordered" size="lg">
                 En savoir plus
               </Button>
             </div>
           </div>
-        
-          <div className="flex justify-center md:w-1/2">
-            <FloatingHeroImage />
+
+          <div className="md:w-1/2 flex justify-center">
+            <ParallaxLayer>
+              <FloatingHeroImage />
+            </ParallaxLayer>
           </div>
         </div>
       </section>
 
-
-      {/* Features */}
-      <section id="features" className="max-w-7xl mx-auto px-6 w-full">
+      <section id="features" className="max-w-7xl mx-auto px-6 w-full relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {features.map((feature, index) => (
-            <Card key={index} isHoverable className="p-4">
+            <Card
+              key={index}
+              isHoverable
+              className="p-4 backdrop-blur-xl bg-white/70 dark:bg-black/40"
+            >
               <CardHeader className="flex gap-3">
                 <Avatar
                   isBordered
@@ -110,17 +118,22 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Comment ça marche */}
-      <section className="max-w-7xl mx-auto px-6 w-full py-12">
+      <section className="max-w-7xl mx-auto px-6 w-full py-12 relative z-10">
         <div className="flex flex-col gap-8">
-          <h2 className="text-3xl font-bold text-center">Comment ça marche?</h2>
+          <h2 className="text-3xl font-bold text-center">
+            Comment ça marche?
+          </h2>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               { title: "Entrez vos préférences", step: "1" },
               { title: "Obtenez votre plan de repas", step: "2" },
               { title: "Achetez et cuisinez", step: "3" },
             ].map((item, index) => (
-              <Card key={index} className="p-6 relative overflow-visible">
+              <Card
+                key={index}
+                className="p-6 relative backdrop-blur-xl bg-white/70 dark:bg-black/40"
+              >
                 <div className="absolute -top-4 -left-4">
                   <Badge
                     content={item.step}
@@ -144,16 +157,14 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="max-w-7xl mx-auto px-6 w-full pb-12">
-        <Card className="bg-gradient-to-r from-primary to-secondary p-12 text-center border-none">
+      <section className="max-w-7xl mx-auto px-6 w-full pb-20 relative z-10">
+        <Card className="bg-gradient-to-r from-green-400 to-green-500 p-14 text-center border-none">
           <CardBody className="gap-6 items-center justify-center">
-            <h2 className="text-3xl md:text-4xl font-bold text-white">
+            <h2 className="text-4xl font-bold text-white">
               Prêt à mieux manger ?
             </h2>
             <p className="text-white/90 text-lg max-w-2xl">
-              Rejoignez MealMatch aujourd'hui et transformez votre façon de
-              cuisiner.
+              Rejoignez MealMatch aujourd'hui et laissez l'IA gérer vos repas.
             </p>
             <Button
               as={Link}

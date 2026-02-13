@@ -10,7 +10,7 @@ const items = [
 
 export function FloatingFood() {
   return (
-    <div className="absolute inset-0 overflow-hidden -z-20 pointer-events-none">
+    <div className="absolute inset-0 -z-20 overflow-hidden pointer-events-none">
       {items.map((item, i) => (
         <motion.img
           key={i}
@@ -19,12 +19,16 @@ export function FloatingFood() {
           className="absolute opacity-20"
           style={{ left: item.left, width: item.size }}
           initial={{ y: "110vh" }}
-          animate={{ y: "-20vh" }}
+          animate={{
+            y: "-20vh",
+            rotate: [0, 8, -8, 0],
+            x: [0, 20, -20, 0],
+          }}
           transition={{
-            duration: 22,
+            duration: 26,
             delay: item.delay,
             repeat: Infinity,
-            ease: "linear",
+            ease: "easeInOut",
           }}
         />
       ))}
