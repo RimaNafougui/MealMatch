@@ -1,7 +1,8 @@
 export { queryKeys } from "./queryKeys";
 export { useRecipes } from "./useRecipes";
 export { useRecipeDetail } from "./useRecipeDetail";
-export { useFavorites, useToggleFavorite } from "./useFavorites";
+export { useFavorites } from "./useFavorites";
+export { useFavoriteToggle } from "./useFavoritesToggle";
 export {
   useMealPlans,
   useMealPlanDetail,
