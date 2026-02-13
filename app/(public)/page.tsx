@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { Link } from "@heroui/link";
 import { Button } from "@heroui/button";
-import { Image } from "@heroui/image";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Avatar } from "@heroui/avatar";
 import { Badge } from "@heroui/badge";
@@ -10,7 +9,6 @@ import { FloatingFood } from "@/components/FloatingFood";
 import { FloatingHeroImage } from "@/components/FloatingHeroImage";
 import { GradientBlobs } from "@/components/GradientBlobs";
 import { ParallaxLayer } from "@/components/ParallaxLayer";
-import { motion } from "framer-motion";
 import { auth } from "@/auth";
 
 // Page d'accueil
