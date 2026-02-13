@@ -7,6 +7,27 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-    --font-sans: "font", sans-serif;
-    --font-mono: "monospace", monospace;
+  --font-sans: "font", sans-serif;
+  --font-mono: "monospace", monospace;
+}
+
+.mealmatch-animated-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -30;
+  background: linear-gradient(
+    120deg,
+    #fef3c7,
+    #fde68a,
+    #bbf7d0,
+    #bae6fd
+  );
+  background-size: 300% 300%;
+  animation: mealmatchGradient 18s ease infinite;
+}
+
+@keyframes mealmatchGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
