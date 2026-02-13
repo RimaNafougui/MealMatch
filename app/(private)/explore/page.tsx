@@ -66,18 +66,17 @@ const RecipeItem = ({
 }: {
   recipe: Recipe;
   isFav: boolean;
-  onToggle: (id: string) => void;
+  onToggle: (id: string, currentValue: boolean) => void;
 }) => {
-  // Hook is now called at the top level of this child component
-  const favoriteToggle = useFavoriteToggle(recipe.id, isFav);
+  const favoriteToggle = useFavoriteToggle(recipe.id);
 
   return (
     <RecipeCard
       recipe={recipe}
       isFavorite={isFav}
       onFavoriteToggle={() => {
-        favoriteToggle.mutate();
-        onToggle(recipe.id);
+        onToggle(recipe.id, isFav); // toggle local state
+        favoriteToggle.mutate(isFav); // passe la valeur actuelle
       }}
     />
   );
@@ -142,11 +141,11 @@ export default function ExplorePage() {
     pagination.page,
   ]);
 
-  const toggleFavoriteLocal = (recipeId: string) => {
+  const toggleFavoriteLocal = (recipeId: string, wasFavorite: boolean) => {
     setFavorites((prev) =>
-      prev.includes(recipeId)
+      wasFavorite
         ? prev.filter((id) => id !== recipeId)
-        : [...prev, recipeId],
+        : [...prev, recipeId]
     );
   };
 
