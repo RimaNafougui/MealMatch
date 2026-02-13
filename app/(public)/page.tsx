@@ -5,10 +5,10 @@ import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Avatar } from "@heroui/avatar";
 import { Badge } from "@heroui/badge";
 import { Bot, WalletCards, ShoppingCart, Heart } from "lucide-react";
-import { FloatingFood } from "@/components/FloatingFood";
-import { FloatingHeroImage } from "@/components/FloatingHeroImage";
-import { GradientBlobs } from "@/components/GradientBlobs";
-import { ParallaxLayer } from "@/components/ParallaxLayer";
+import { FloatingFood } from "@/components/Landing-page/FloatingFood";
+import { FloatingHeroImage } from "@/components/Landing-page/FloatingHeroImage";
+import { GradientBlobs } from "@/components/Landing-page/GradientBlobs";
+import { ParallaxLayer } from "@/components/Landing-page/ParallaxLayer";
 import { auth } from "@/auth";
 
 // Page d'accueil
