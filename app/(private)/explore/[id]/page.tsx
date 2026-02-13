@@ -25,6 +25,8 @@ import {
   DollarSign,
   Leaf,
 } from "lucide-react";
+import { useFavoriteToggle } from "@/hooks/useFavoritesToggle";
+
 
 interface Ingredient {
   name: string;
@@ -63,6 +65,8 @@ export default function RecipeDetailPage() {
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
+  // hook mutation avec toast
+  const { mutate } = useFavoriteToggle(recipe?.id || "", isFavorite);
   const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
 
   useEffect(() => {
@@ -113,6 +117,15 @@ export default function RecipeDetailPage() {
     }
   };
 
+  const toggleFavorite = () => {
+    if (!recipe) return;
+    const newValue = !isFavorite;
+    setIsFavorite(newValue);
+
+    mutate(); // appelle ton hook
+    alert(newValue ? "Ajouté aux favoris" : "Retiré des favoris");
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -141,7 +154,6 @@ export default function RecipeDetailPage() {
   const servings = recipe.servings || 4;
   const calories = recipe.calories || 0;
   const pricePerServing = recipe.price_per_serving || 0;
-
   return (
     <div className="w-full min-h-screen pb-10 bg-gray-50 dark:bg-zinc-950">
       {/* Hero Section */}
@@ -232,16 +244,13 @@ export default function RecipeDetailPage() {
                   color="danger"
                   variant="bordered"
                   radius="full"
-                  startContent={
-                    <Heart
-                      size={20}
-                      className={isFavorite ? "fill-current" : ""}
-                    />
-                  }
-                  onPress={() => setIsFavorite(!isFavorite)}
+                  startContent={<Heart size={20} className={isFavorite ? "fill-current" : ""} />}
+                  onPress={toggleFavorite}
                 >
                   {isFavorite ? "Ajouté aux favoris" : "Ajouter aux favoris"}
                 </Button>
+
+
                 <Button
                   variant="light"
                   radius="full"
@@ -358,9 +367,9 @@ export default function RecipeDetailPage() {
                     Valeurs nutritionnelles
                   </h3>
                   {recipe.calories ||
-                  recipe.protein ||
-                  recipe.carbs ||
-                  recipe.fat ? (
+                    recipe.protein ||
+                    recipe.carbs ||
+                    recipe.fat ? (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {calories > 0 && (
                         <Card className="bg-warning-50 border-warning-200">
