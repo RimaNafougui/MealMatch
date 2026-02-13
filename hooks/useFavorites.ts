@@ -1,27 +1,25 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-
-import { apiFetch } from "@/lib/api";
-import { queryKeys } from "@/hooks/queryKeys";
-import type { Favorite, ToggleFavoritePayload } from "@/types";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/utils/supabase";
+import { useCurrentUser } from "./useCurrentUser";
+import { use } from "react";
 
 export function useFavorites() {
+  const user = useCurrentUser();
+
   return useQuery({
-    queryKey: queryKeys.favorites.list(),
-    queryFn: () => apiFetch<Favorite[]>("/api/favorites"),
-  });
-}
+    queryKey: ["favorites", use],
+    queryFn: async () => {
+      if (!user?.id) return [];
 
-export function useToggleFavorite() {
-  const queryClient = useQueryClient();
+      const { data, error } = await supabase
+        .from("user_favorites")
+        .select("recipe_catalog(*)")
+        .eq("user_id", user.id);
 
-  return useMutation({
-    mutationFn: (payload: ToggleFavoritePayload) =>
-      apiFetch<{ added: boolean }>("/api/favorites", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.favorites.all });
+      if (error) throw error;
+
+      return data?.map((item: any) => item.recipe_catalog) ?? [];
     },
+    enabled: !!user?.id,
   });
 }
