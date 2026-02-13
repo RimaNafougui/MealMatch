@@ -11,7 +11,10 @@ import {
   Chip,
 } from "@heroui/react";
 import { Search, Filter, X, Leaf } from "lucide-react";
-import { RecipeCard, RecipeCardSkeleton } from "@/components/recipes/recipe-card";
+import {
+  RecipeCard,
+  RecipeCardSkeleton,
+} from "@/components/recipes/recipe-card";
 import { useFavoriteToggle } from "@/hooks/useFavoritesToggle";
 
 interface Recipe {
@@ -54,6 +57,31 @@ const calorieOptions = [
   { value: "500", label: "< 500 cal" },
   { value: "700", label: "< 700 cal" },
 ];
+
+// 1. Create a sub-component to handle the hook logic for each recipe
+const RecipeItem = ({
+  recipe,
+  isFav,
+  onToggle,
+}: {
+  recipe: Recipe;
+  isFav: boolean;
+  onToggle: (id: string) => void;
+}) => {
+  // Hook is now called at the top level of this child component
+  const favoriteToggle = useFavoriteToggle(recipe.id, isFav);
+
+  return (
+    <RecipeCard
+      recipe={recipe}
+      isFavorite={isFav}
+      onFavoriteToggle={() => {
+        favoriteToggle.mutate();
+        onToggle(recipe.id);
+      }}
+    />
+  );
+};
 
 export default function ExplorePage() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -106,13 +134,19 @@ export default function ExplorePage() {
 
   useEffect(() => {
     fetchRecipes();
-  }, [searchQuery, selectedDietaryTags, maxPrepTime, maxCalories, pagination.page]);
+  }, [
+    searchQuery,
+    selectedDietaryTags,
+    maxPrepTime,
+    maxCalories,
+    pagination.page,
+  ]);
 
   const toggleFavoriteLocal = (recipeId: string) => {
     setFavorites((prev) =>
       prev.includes(recipeId)
         ? prev.filter((id) => id !== recipeId)
-        : [...prev, recipeId]
+        : [...prev, recipeId],
     );
   };
 
@@ -203,7 +237,6 @@ export default function ExplorePage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Dietary Tags */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-default-700">
                   Restrictions alimentaires
@@ -227,7 +260,7 @@ export default function ExplorePage() {
                         setSelectedDietaryTags((prev) =>
                           prev.includes(option.value)
                             ? prev.filter((tag) => tag !== option.value)
-                            : [...prev, option.value]
+                            : [...prev, option.value],
                         );
                         setPagination({ ...pagination, page: 1 });
                       }}
@@ -238,7 +271,6 @@ export default function ExplorePage() {
                 </div>
               </div>
 
-              {/* Prep Time */}
               <Select
                 label="Temps de préparation"
                 placeholder="Sélectionner"
@@ -257,7 +289,6 @@ export default function ExplorePage() {
                 ))}
               </Select>
 
-              {/* Calories */}
               <Select
                 label="Calories"
                 placeholder="Sélectionner"
@@ -280,7 +311,6 @@ export default function ExplorePage() {
         </Card>
       )}
 
-      {/* Active Filters Display */}
       {hasActiveFilters && (
         <div className="flex flex-wrap gap-2 items-center">
           <span className="text-sm text-default-500">Filtres actifs:</span>
@@ -341,7 +371,12 @@ export default function ExplorePage() {
               Aucune recette trouvée. Essayez de modifier vos filtres.
             </p>
             {hasActiveFilters && (
-              <Button color="success" variant="flat" className="mt-4" onPress={clearFilters}>
+              <Button
+                color="success"
+                variant="flat"
+                className="mt-4"
+                onPress={clearFilters}
+              >
                 Effacer les filtres
               </Button>
             )}
@@ -349,33 +384,27 @@ export default function ExplorePage() {
         </Card>
       ) : (
         <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {recipes.map((recipe) => {
-            const isFav = favorites.includes(recipe.id);
-            const favoriteToggle = useFavoriteToggle(recipe.id, isFav);
-
-            return (
-              <RecipeCard
-                key={recipe.id}
-                recipe={recipe}
-                isFavorite={isFav}
-                onFavoriteToggle={() => {
-                  favoriteToggle.mutate();
-                  toggleFavoriteLocal(recipe.id); // mise à jour immédiate côté UI
-                }}
-              />
-            );
-          })}
+          {recipes.map((recipe) => (
+            // 2. Use the new RecipeItem component here
+            <RecipeItem
+              key={recipe.id}
+              recipe={recipe}
+              isFav={favorites.includes(recipe.id)}
+              onToggle={toggleFavoriteLocal}
+            />
+          ))}
         </div>
       )}
 
-      {/* Pagination */}
       {!loading && recipes.length > 0 && pagination.totalPages > 1 && (
         <div className="flex justify-center items-center gap-2 mt-8">
           <Button
             size="sm"
             variant="flat"
             isDisabled={pagination.page === 1}
-            onPress={() => setPagination({ ...pagination, page: pagination.page - 1 })}
+            onPress={() =>
+              setPagination({ ...pagination, page: pagination.page - 1 })
+            }
           >
             Précédent
           </Button>
@@ -388,7 +417,9 @@ export default function ExplorePage() {
             size="sm"
             variant="flat"
             isDisabled={pagination.page === pagination.totalPages}
-            onPress={() => setPagination({ ...pagination, page: pagination.page + 1 })}
+            onPress={() =>
+              setPagination({ ...pagination, page: pagination.page + 1 })
+            }
           >
             Suivant
           </Button>
