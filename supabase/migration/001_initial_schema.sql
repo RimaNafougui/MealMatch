@@ -10,7 +10,7 @@ create table profiles (
   is_premium boolean default false, -- AJOUT: gestion premium
   premium_expires_at timestamp with time zone, -- AJOUT: expiration premium
   created_at timestamp with time zone default now(),
-  updated_at timestamp with time zone default now() -- AJOUT: tracking modifications
+  updated_at timestamp with time zone default now(), -- AJOUT: tracking modifications
   onboarding_completed boolean default false
 
 );

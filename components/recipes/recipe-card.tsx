@@ -13,6 +13,9 @@ import {
   Skeleton,
 } from "@heroui/react";
 import { Heart, Clock, Users, DollarSign, Flame } from "lucide-react";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useFavoriteToggle } from "@/hooks/useFavoritesToggle";
+
 
 /* =========================
    Skeleton (loading state)
@@ -59,7 +62,10 @@ export function RecipeCard({
   isLoading = false,
 }: RecipeCardProps) {
   const router = useRouter();
+  const user = useCurrentUser();
 
+  // hook mutation ici
+  const { mutate } = useFavoriteToggle(recipe.id, isFavorite);
   if (isLoading) {
     return <RecipeCardSkeleton />;
   }
@@ -180,6 +186,7 @@ export function RecipeCard({
               size="sm"
               onPress={(e) => {
                 //e.stopPropagation();
+                mutate();
                 onFavoriteToggle();
               }}
             >
