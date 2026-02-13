@@ -4,10 +4,16 @@ import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const SPOONACULAR_KEY = process.env.SPOONACULAR_API_KEY!;
 const SPOONACULAR_BASE = "https://api.spoonacular.com";
 
-const TARGET_COUNT = 40;
+// Collect all available keys from environment variables
+const API_KEYS = [
+  process.env.SPOONACULAR_API_KEY,
+  process.env.SPOONACULAR_API_KEY_2,
+  process.env.SPOONACULAR_API_KEY_3,
+].filter((key): key is string => !!key && key.length > 0);
+
+const TARGET_COUNT_PER_KEY = 40;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
@@ -163,10 +169,11 @@ function toRecipeCatalogItem(
 // API Logic
 
 async function getRandomRecipes(
+  apiKey: string,
   number: number,
 ): Promise<SpoonacularRecipeDetail[]> {
   const params = new URLSearchParams({
-    apiKey: SPOONACULAR_KEY,
+    apiKey: apiKey,
     number: String(number),
     includeNutrition: "true",
     limitLicense: "true",
@@ -181,35 +188,30 @@ async function getRandomRecipes(
   return data.recipes as SpoonacularRecipeDetail[];
 }
 
-// Main Seed Loop
-
-async function seed() {
+async function runBatch(apiKey: string, batchIndex: number) {
+  const keySnippet = apiKey.slice(0, 4) + "...";
   console.log(
-    `Starting seed for ${TARGET_COUNT} recipes into 'recipes_catalog'...`,
+    `\n--- Starting Batch ${batchIndex + 1} (Key: ${keySnippet}) ---`,
   );
-
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !SPOONACULAR_KEY) {
-    console.error("Missing env vars.");
-    process.exit(1);
-  }
+  console.log(`Target: ${TARGET_COUNT_PER_KEY} recipes for this key.`);
 
   let totalFetched = 0;
   let inserted = 0;
   let failed = 0;
 
-  while (totalFetched < TARGET_COUNT) {
-    const remaining = TARGET_COUNT - totalFetched;
-    const batchSize = Math.min(remaining, 100);
+  while (totalFetched < TARGET_COUNT_PER_KEY) {
+    const remaining = TARGET_COUNT_PER_KEY - totalFetched;
+    const requestSize = Math.min(remaining, 100);
 
     console.log(
-      `\nFetching batch of ${batchSize} (Progress: ${totalFetched}/${TARGET_COUNT})...`,
+      `Fetching ${requestSize} recipes (Progress: ${totalFetched}/${TARGET_COUNT_PER_KEY})...`,
     );
 
     try {
-      const recipes = await getRandomRecipes(batchSize);
+      const recipes = await getRandomRecipes(apiKey, requestSize);
 
       if (!recipes || recipes.length === 0) {
-        console.log("API returned no recipes. Stopping.");
+        console.log("API returned no recipes. Stopping this batch.");
         break;
       }
 
@@ -235,23 +237,49 @@ async function seed() {
 
       totalFetched += recipes.length;
 
-      if (totalFetched < TARGET_COUNT) {
-        console.log("Pausing 2s before next batch...");
-        await sleep(2000);
+      if (totalFetched < TARGET_COUNT_PER_KEY) {
+        await sleep(1000);
       }
     } catch (err: any) {
-      console.error(`Batch failed: ${err.message}`);
+      console.error(`Batch execution failed: ${err.message}`);
       break;
     }
   }
 
-  console.log(`\nSeed complete!`);
-  console.log(`   Target:   ${TARGET_COUNT}`);
+  console.log(`\nBatch ${batchIndex + 1} complete!`);
   console.log(`   Inserted: ${inserted}`);
   console.log(`   Failed:   ${failed}`);
 }
 
-seed().catch((err) => {
+// Main Execution Loop
+async function main() {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+    console.error("Missing Supabase env vars.");
+    process.exit(1);
+  }
+
+  if (API_KEYS.length === 0) {
+    console.error("No Spoonacular API keys found in env vars.");
+    console.error(
+      "Please set SPOONACULAR_API_KEY, SPOONACULAR_API_KEY_2, etc.",
+    );
+    process.exit(1);
+  }
+
+  console.log(`Starting multi-key seed with ${API_KEYS.length} keys found.`);
+
+  for (let i = 0; i < API_KEYS.length; i++) {
+    await runBatch(API_KEYS[i], i);
+    if (i < API_KEYS.length - 1) {
+      console.log("Switching keys in 2 seconds...");
+      await sleep(2000);
+    }
+  }
+
+  console.log("\nAll seed batches finished.");
+}
+
+main().catch((err) => {
   console.error("Fatal error:", err);
   process.exit(1);
 });
