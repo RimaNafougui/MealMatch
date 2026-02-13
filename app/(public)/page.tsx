@@ -6,6 +6,8 @@ import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Avatar } from "@heroui/avatar";
 import { Badge } from "@heroui/badge";
 import { Bot, WalletCards, ShoppingCart, Heart } from "lucide-react";
+import { FloatingFood } from "@/components/FloatingFood";
+import { FloatingHeroImage } from "@/components/FloatingHeroImage";
 
 import { auth } from "@/auth";
 
@@ -44,45 +46,44 @@ export default async function Home() {
   ];
 
   return (
-    <div className="flex flex-col gap-8 md:gap-16 py-8 md:py-10">
-      <section className="flex flex-col-reverse md:flex-row items-center justify-between gap-8 max-w-7xl mx-auto px-6">
-        <div className="flex flex-col gap-6 text-center md:text-left md:w-1/2">
-          <div className="flex flex-col gap-2">
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-              Bienvenue, étudiant!
-            </h1>
-            <p className="text-lg text-default-500">
-              Faisons des repas faciles et adaptés à vos besoins
-            </p>
+          <div className="flex flex-col gap-8 md:gap-16 py-8 md:py-10">
+       <section className="relative overflow-hidden py-16">
+        <div className="mealmatch-animated-bg" />
+        <FloatingFood />
+        
+        <div className="relative flex flex-col-reverse md:flex-row items-center justify-between gap-8 max-w-7xl mx-auto px-6">
+          <div className="flex flex-col gap-6 text-center md:text-left md:w-1/2">
+            <div className="flex flex-col gap-2">
+              <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
+                Bienvenue, étudiant!
+              </h1>
+              <p className="text-lg text-default-500">
+                Faisons des repas faciles et adaptés à vos besoins
+              </p>
+            </div>
+        
+            <div className="flex gap-4 justify-center md:justify-start">
+              <Button
+                as={Link}
+                color="primary"
+                href="/signup"
+                size="lg"
+                variant="solid"
+              >
+                Commencer
+              </Button>
+              <Button as={Link} href="#features" size="lg" variant="bordered">
+                En savoir plus
+              </Button>
+            </div>
           </div>
-
-          <div className="flex gap-4 justify-center md:justify-start">
-            <Button
-              as={Link}
-              color="primary"
-              href="/signup"
-              size="lg"
-              variant="solid"
-            >
-              Commencer
-            </Button>
-            <Button as={Link} href="#" size="lg" variant="bordered">
-              En savoir plus
-            </Button>
+        
+          <div className="flex justify-center md:w-1/2">
+            <FloatingHeroImage />
           </div>
-        </div>
-
-        <div className="flex justify-center md:w-1/2">
-          <Image
-            isBlurred
-            alt="Meal prep containers with healthy food"
-            className="object-cover rounded-xl shadow-lg"
-            height={400}
-            src="/foodPuzzle.png"
-            width={600}
-          />
         </div>
       </section>
+
 
       {/* Features */}
       <section id="features" className="max-w-7xl mx-auto px-6 w-full">
