@@ -22,24 +22,24 @@ export default async function Home() {
 
   const features = [
     {
-      title: "AI Meal Plans",
+      title: "Plans de repas IA",
       description: "Des plans de repas intelligents générés par l'IA",
       icon: <Bot className="w-6 h-6 text-primary" />,
     },
     {
-      title: "Budget-Friendly",
+      title: "Économique",
       description:
         "Mange mieux sans te ruiner grâce à des recettes économiques",
       icon: <WalletCards className="w-6 h-6 text-danger" />,
     },
     {
-      title: "Shopping Lists",
+      title: "Listes d'épicerie",
       description:
         "Des listes d'épicerie automatiques et organisées pour gagner du temps",
       icon: <ShoppingCart className="w-6 h-6 text-warning" />,
     },
     {
-      title: "Nutrition Tracking",
+      title: "Suivi nutritionnel",
       description: "Suis tes calories et nutriments facilement",
       icon: <Heart className="w-6 h-6 text-secondary" />,
     },
