@@ -2,7 +2,7 @@
 
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod/v4";
+import * as z from "zod";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -18,16 +18,25 @@ import {
     Spacer,
 } from "@heroui/react";
 import { Sparkles } from "lucide-react";
+import type { Selection } from "@react-types/shared";
+import type { FieldErrors } from "react-hook-form";
 
 // Zod Schema for meal plan form validation
 const mealPlanSchema = z.object({
     dietType: z.string().min(1, "Please select a diet type"),
-    targetCalories: z.number().min(1200).max(3500),
+
+    targetCalories: z
+        .union([z.number(), z.array(z.number())])
+        .transform((val) => (Array.isArray(val) ? val[0] : val))
+        .pipe(z.number().min(1200).max(3500)),
+
     excludeIngredients: z.string().optional(),
     useProfilePreferences: z.boolean().default(false),
 });
 
-type MealPlanFormValues = z.infer<typeof mealPlanSchema>;
+type MealPlanFormInput = z.input<typeof mealPlanSchema>;
+type MealPlanFormValues = z.output<typeof mealPlanSchema>;
+
 
 export default function GenerateMealPlanPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,20 +48,56 @@ export default function GenerateMealPlanPage() {
         setValue,
         watch,
         formState: { errors },
-    } = useForm<MealPlanFormValues>({
+    } = useForm<MealPlanFormInput>({
         resolver: zodResolver(mealPlanSchema),
         defaultValues: {
+            dietType: "",
             targetCalories: 2000,
             excludeIngredients: "",
             useProfilePreferences: false,
         },
     });
 
+
     const useProfilePreferences = watch("useProfilePreferences");
 
-    // TODO: Implement onSubmit handler
+    // Auto-fill from profile when checkbox is checked
+    const handleProfilePrefChange = (isSelected: boolean) => {
+        if (isSelected) {
+            // Mock data from user profile
+            setValue("dietType", "vegetarian");
+            setValue("targetCalories", 1800 as MealPlanFormInput["targetCalories"]);
+            setValue("excludeIngredients", "peanuts");
+        }
+    };
+
+    // Submit handler with simulated API call
     const onSubmit = async (data: MealPlanFormValues) => {
-        console.log("Form data:", data);
+        setIsSubmitting(true);
+
+        try {
+            console.log("Form Data:", data);
+
+            await new Promise<string>((resolve, reject) => {
+                setTimeout(() => {
+                    const isSuccess = Math.random() > 0.1;
+                    if (isSuccess) resolve("Success");
+                    else reject(new Error("Failed to generate meal plan. Please try again."));
+                }, 1500);
+            });
+
+            const mockPlanId = "plan-" + Date.now();
+            router.push(`/dashboard/meal-plans/${mockPlanId}`);
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "An unexpected error occurred.";
+            console.error("Generation error:", error);
+            alert(message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+    const onError = (errors: FieldErrors<MealPlanFormValues>) => {
+        console.log("VALIDATION ERRORS:", errors);
     };
 
     return (
@@ -65,7 +110,7 @@ export default function GenerateMealPlanPage() {
                     </p>
                 </CardHeader>
                 <CardBody className="gap-6 py-6">
-                    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
+                    <form onSubmit={handleSubmit(onSubmit, onError)} className="flex flex-col gap-6">
                         {/* Use Profile Preferences Checkbox */}
                         <Controller
                             name="useProfilePreferences"
@@ -73,7 +118,10 @@ export default function GenerateMealPlanPage() {
                             render={({ field }) => (
                                 <Checkbox
                                     isSelected={field.value}
-                                    onValueChange={field.onChange}
+                                    onValueChange={(isSelected: boolean) => {
+                                        field.onChange(isSelected);
+                                        handleProfilePrefChange(isSelected);
+                                    }}
                                     name={field.name}
                                     ref={field.ref}
                                     onBlur={field.onBlur}
@@ -87,27 +135,29 @@ export default function GenerateMealPlanPage() {
                         <Controller
                             name="dietType"
                             control={control}
-                            render={({ field }) => (
+                            render={({ field, fieldState }) => (
                                 <Select
                                     label="Diet Type"
                                     placeholder="Select a diet"
-                                    selectedKeys={field.value ? [field.value] : []}
-                                    onSelectionChange={(keys) => {
-                                        const selected = Array.from(keys)[0] as string;
-                                        field.onChange(selected);
+                                    selectedKeys={field.value ? new Set([field.value]) : new Set()}
+                                    onSelectionChange={(keys: Selection) => {
+                                        if (keys === "all") return;
+                                        const value = Array.from(keys)[0];
+                                        if (typeof value === "string") {
+                                            field.onChange(value);
+                                        }
                                     }}
                                     onBlur={field.onBlur}
-                                    name={field.name}
-                                    errorMessage={errors.dietType?.message}
-                                    isInvalid={!!errors.dietType}
+                                    isInvalid={!!fieldState.error}
+                                    errorMessage={fieldState.error?.message}
                                     isDisabled={useProfilePreferences}
                                 >
-                                    <SelectItem key="vegetarian" textValue="Vegetarian">Vegetarian</SelectItem>
-                                    <SelectItem key="vegan" textValue="Vegan">Vegan</SelectItem>
-                                    <SelectItem key="gluten_free" textValue="Gluten Free">Gluten Free</SelectItem>
-                                    <SelectItem key="ketogenic" textValue="Ketogenic">Ketogenic</SelectItem>
-                                    <SelectItem key="paleo" textValue="Paleo">Paleo</SelectItem>
-                                    <SelectItem key="omnivore" textValue="Omnivore">Omnivore</SelectItem>
+                                    <SelectItem key="vegetarian">Vegetarian</SelectItem>
+                                    <SelectItem key="vegan">Vegan</SelectItem>
+                                    <SelectItem key="gluten_free">Gluten Free</SelectItem>
+                                    <SelectItem key="ketogenic">Ketogenic</SelectItem>
+                                    <SelectItem key="paleo">Paleo</SelectItem>
+                                    <SelectItem key="omnivore">Omnivore</SelectItem>
                                 </Select>
                             )}
                         />
@@ -124,14 +174,13 @@ export default function GenerateMealPlanPage() {
                                         minValue={1200}
                                         maxValue={3500}
                                         value={field.value}
-                                        onChange={(val) => field.onChange(val as number)}
+                                        onChange={(val: number | number[]) => field.onChange(val)}
                                         isDisabled={useProfilePreferences}
                                         className="max-w-full"
-                                        getValue={(v) => `${v} kcal`}
-                                        name={field.name}
+                                        getValue={(v) => `${Array.isArray(v) ? v[0] : v} kcal`}
                                     />
                                     <p className="text-default-500 text-small">
-                                        Selected: {field.value} kcal
+                                        Selected: {Array.isArray(field.value) ? field.value[0] : field.value} kcal
                                     </p>
                                 </div>
                             )}
