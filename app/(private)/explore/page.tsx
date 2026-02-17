@@ -85,7 +85,6 @@ const RecipeItem = ({
 export default function ExplorePage() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
-  const [favorites, setFavorites] = useState<string[]>([]);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -102,10 +101,7 @@ export default function ExplorePage() {
     totalPages: 0,
   });
   const { data: favoriteRecipes = [] } = useFavorites();
-  useEffect(() => {
-    setFavorites(favoriteRecipes.map((r: Recipe) => r.id));
-  }, [favoriteRecipes]);
-
+  const favoriteIds = favoriteRecipes.map((r: Recipe) => r.id);
 
   const fetchRecipes = async () => {
     setLoading(true);
@@ -146,12 +142,8 @@ export default function ExplorePage() {
     pagination.page,
   ]);
 
-  const toggleFavoriteLocal = (recipeId: string, wasFavorite: boolean) => {
-    setFavorites((prev) =>
-      wasFavorite
-        ? prev.filter((id) => id !== recipeId)
-        : [...prev, recipeId]
-    );
+  const toggleFavoriteLocal = (recipeId: string) => {
+    // si tu veux un effet instantané côté UI, sinon peut être vide
   };
 
   const clearFilters = () => {
@@ -393,7 +385,7 @@ export default function ExplorePage() {
             <RecipeItem
               key={recipe.id}
               recipe={recipe}
-              isFav={favorites.includes(recipe.id)}
+              isFav={favoriteIds.includes(recipe.id)}
               onToggle={toggleFavoriteLocal}
             />
           ))}
