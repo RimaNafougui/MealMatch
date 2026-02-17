@@ -26,7 +26,7 @@ import {
   Leaf,
 } from "lucide-react";
 import { useFavoriteToggle } from "@/hooks/useFavoritesToggle";
-
+import { useFavorites } from "@/hooks/useFavorites"; // hook global des favoris
 
 interface Ingredient {
   name: string;
@@ -64,16 +64,9 @@ export default function RecipeDetailPage() {
   const router = useRouter();
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isFavorite, setIsFavorite] = useState(false);
-  // hook mutation avec toast
-  const { mutate } = useFavoriteToggle(recipe?.id || "", isFavorite);
   const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
-
-  useEffect(() => {
-    if (params.id) {
-      fetchRecipe(params.id as string);
-    }
-  }, [params.id]);
+  const [optimisticFavorite, setOptimisticFavorite] = useState<boolean | null>(null);
+  const { data: favoriteRecipes = [], isLoading: favoritesLoading } = useFavorites();
 
   const fetchRecipe = async (id: string) => {
     setLoading(true);
@@ -90,6 +83,9 @@ export default function RecipeDetailPage() {
             ),
           );
         }
+
+
+
       } else {
         console.error("Failed to fetch recipe:", data.error);
       }
@@ -99,7 +95,33 @@ export default function RecipeDetailPage() {
       setLoading(false);
     }
   };
+  useEffect(() => {
+    if (params.id) {
+      fetchRecipe(params.id as string);
+    }
+  }, [params.id]);
+  useEffect(() => {
+    if (recipe && !favoritesLoading && optimisticFavorite === null) {
+      setOptimisticFavorite(favoriteRecipes.includes(recipe.id));
+    }
+  }, [recipe, favoriteRecipes, favoritesLoading, optimisticFavorite]);
+  const isFavorite = recipe
+    ? optimisticFavorite ?? favoriteRecipes.includes(recipe.id)
+    : false;
 
+  // Crée mutate uniquement si recipe existe
+  const { mutate: toggleFavoriteRemote } = useFavoriteToggle(recipe ? recipe.id : "");
+
+
+
+  /// toggle favori
+  const toggleFavorite = () => {
+    if (!recipe) return;
+
+    const nextValue = !isFavorite;
+    setOptimisticFavorite(nextValue);      // effet immédiat sur UI
+    toggleFavoriteRemote(nextValue);        // envoi au serveur
+  };
   const handleShare = async () => {
     if (navigator.share && recipe) {
       try {
@@ -117,14 +139,7 @@ export default function RecipeDetailPage() {
     }
   };
 
-  const toggleFavorite = () => {
-    if (!recipe) return;
-    const newValue = !isFavorite;
-    setIsFavorite(newValue);
 
-    mutate(); // appelle ton hook
-    alert(newValue ? "Ajouté aux favoris" : "Retiré des favoris");
-  };
 
   if (loading) {
     return (
@@ -241,14 +256,15 @@ export default function RecipeDetailPage() {
 
               <div className="flex flex-wrap gap-3 pt-2">
                 <Button
-                  color="danger"
+                  color={isFavorite ? "danger" : "default"}
                   variant="bordered"
                   radius="full"
                   startContent={<Heart size={20} className={isFavorite ? "fill-current" : ""} />}
                   onPress={toggleFavorite}
                 >
-                  {isFavorite ? "Ajouté aux favoris" : "Ajouter aux favoris"}
+                  {isFavorite ? "Retirer des Favoris" : "Ajouter aux Favoris"}
                 </Button>
+
 
 
                 <Button
