@@ -1,12 +1,26 @@
 "use client";
 
-import { useFavorites } from "@/hooks/useFavorites";
 import { Spinner } from "@heroui/react";
 import { RecipeCard } from "@/components/recipes/recipe-card";
+import { useFavorites } from "@/hooks/useFavorites";
+import { useFavoriteToggle } from "@/hooks/useFavoritesToggle";
+
+function FavoritesRecipeItem({ recipe }: { recipe: any }) {
+  const favoriteToggle = useFavoriteToggle(recipe.id);
+
+  return (
+    <RecipeCard
+      recipe={recipe}
+      isFavorite={true}
+      onFavoriteToggle={() => {
+        favoriteToggle.mutate(true); // ← on passe "currently favorite"
+      }}
+    />
+  );
+}
 
 export default function FavoritesPage() {
-
-  const { data, isLoading } = useFavorites();
+  const { data: favorites, isLoading } = useFavorites();
 
   if (isLoading)
     return (
@@ -15,13 +29,17 @@ export default function FavoritesPage() {
       </div>
     );
 
-  if (!data?.length)
-    return <p className="text-center py-12">Vous n'avez pas encore de favoris.</p>;
+  if (!favorites?.length)
+    return (
+      <p className="text-center py-12">
+        Vous n'avez pas encore de favoris.
+      </p>
+    );
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {data.map((recipe) => (
-        <RecipeCard key={recipe.id} recipe={recipe} isFavorite={true} onFavoriteToggle={() => { }} />
+      {favorites.map((recipe: any) => (
+        <FavoritesRecipeItem key={recipe.id} recipe={recipe} />
       ))}
     </div>
   );

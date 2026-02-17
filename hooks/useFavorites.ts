@@ -1,25 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/utils/supabase";
-import { useCurrentUser } from "./useCurrentUser";
-import { use } from "react";
 
 export function useFavorites() {
-  const user = useCurrentUser();
-
   return useQuery({
-    queryKey: ["favorites", use],
+    queryKey: ["favorites"],
     queryFn: async () => {
-      if (!user?.id) return [];
+      const res = await fetch("/api/favorites");
 
-      const { data, error } = await supabase
-        .from("user_favorites")
-        .select("recipe_catalog(*)")
-        .eq("user_id", user.id);
+      if (!res.ok) throw new Error("Failed to fetch favorites");
 
-      if (error) throw error;
-
-      return data?.map((item: any) => item.recipe_catalog) ?? [];
+      return res.json();
     },
-    enabled: !!user?.id,
   });
 }

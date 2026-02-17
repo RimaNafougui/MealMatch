@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import {
   Card,
   CardHeader,
@@ -13,8 +12,7 @@ import {
   Skeleton,
 } from "@heroui/react";
 import { Heart, Clock, Users, DollarSign, Flame } from "lucide-react";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useFavoriteToggle } from "@/hooks/useFavoritesToggle";
+
 
 
 /* =========================

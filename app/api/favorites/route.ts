@@ -52,3 +52,31 @@ export async function DELETE(req: Request) {
 
     return NextResponse.json({ success: true });
 }
+
+// GET favorites
+export async function GET() {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const supabase = getSupabaseServer();
+
+    const { data, error } = await supabase
+        .from("user_favorites")
+        .select(`
+      recipes_catalog (*)
+    `)
+        .eq("user_id", session.user.id);
+
+    if (error) {
+        console.error("Supabase Error:", error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json(
+        data?.map((item: any) => item.recipes_catalog) ?? []
+    );
+}
+

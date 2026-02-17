@@ -16,6 +16,7 @@ import {
   RecipeCardSkeleton,
 } from "@/components/recipes/recipe-card";
 import { useFavoriteToggle } from "@/hooks/useFavoritesToggle";
+import { useFavorites } from "@/hooks/useFavorites";
 
 interface Recipe {
   id: string;
@@ -69,14 +70,13 @@ const RecipeItem = ({
   onToggle: (id: string, currentValue: boolean) => void;
 }) => {
   const favoriteToggle = useFavoriteToggle(recipe.id);
-
   return (
     <RecipeCard
       recipe={recipe}
       isFavorite={isFav}
       onFavoriteToggle={() => {
-        onToggle(recipe.id, isFav); // toggle local state
-        favoriteToggle.mutate(isFav); // passe la valeur actuelle
+        favoriteToggle.mutate(isFav); // 1️⃣ API avec état actuel
+        onToggle(recipe.id, isFav);   // 2️⃣ update local UI
       }}
     />
   );
@@ -101,6 +101,11 @@ export default function ExplorePage() {
     total: 0,
     totalPages: 0,
   });
+  const { data: favoriteRecipes = [] } = useFavorites();
+  useEffect(() => {
+    setFavorites(favoriteRecipes.map((r: Recipe) => r.id));
+  }, [favoriteRecipes]);
+
 
   const fetchRecipes = async () => {
     setLoading(true);

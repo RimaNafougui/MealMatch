@@ -17,7 +17,7 @@ export function useFavoriteToggle(recipeId: string) {
 
         onSuccess: (_data, wasFavorite) => {
             queryClient.invalidateQueries({ queryKey: ["favorites"] });
-
+            queryClient.invalidateQueries({ queryKey: ["recipes"] });
             toast.success(
                 wasFavorite
                     ? "Removed from favorites"
