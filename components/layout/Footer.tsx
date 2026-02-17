@@ -9,27 +9,27 @@ export default function Footer() {
 
   const footerLinks = [
     {
-      title: "Product",
+      title: "Produit",
       links: [
-        { name: "Features", href: "/features" },
-        { name: "Pricing", href: "/pricing" },
-        { name: "Nutrition Guide", href: "/nutrition" },
+        { name: "Fonctionnalités", href: "/features" },
+        { name: "Tarification", href: "/pricing" },
+        { name: "Guide nutritionnel", href: "/nutrition" },
       ],
     },
     {
-      title: "Resources",
+      title: "Ressources",
       links: [
         { name: "Blog", href: "/blog" },
-        { name: "Recipes", href: "/explore" },
+        { name: "Recettes", href: "/explore" },
         { name: "Support", href: "/support" },
       ],
     },
     {
-      title: "Legal",
+      title: "Légal",
       links: [
-        { name: "Privacy", href: "/privacy" },
-        { name: "Terms", href: "/terms" },
-        { name: "Refund Policy", href: "/refund-policy" },
+        { name: "Confidentialité", href: "/privacy" },
+        { name: "Conditions d'utilisation", href: "/terms" },
+        { name: "Politique de remboursement", href: "/refund-policy" },
       ],
     },
   ];
