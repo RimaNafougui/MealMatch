@@ -9,6 +9,7 @@ import {
     Card,
     CardBody,
     CardHeader,
+    CardFooter,
     Button,
     Select,
     SelectItem,
@@ -16,6 +17,12 @@ import {
     Textarea,
     Checkbox,
     Spacer,
+    Modal,
+    ModalContent,
+    ModalHeader,
+    ModalBody,
+    ModalFooter,
+    useDisclosure,
 } from "@heroui/react";
 import { Sparkles } from "lucide-react";
 import type { Selection } from "@react-types/shared";
@@ -24,23 +31,19 @@ import type { FieldErrors } from "react-hook-form";
 // Zod Schema for meal plan form validation
 const mealPlanSchema = z.object({
     dietType: z.string().min(1, "Please select a diet type"),
-
-    targetCalories: z
-        .union([z.number(), z.array(z.number())])
-        .transform((val) => (Array.isArray(val) ? val[0] : val))
-        .pipe(z.number().min(1200).max(3500)),
-
+    targetCalories: z.number().min(1200).max(3500),
     excludeIngredients: z.string().optional(),
-    useProfilePreferences: z.boolean().default(false),
+    useProfilePreferences: z.boolean(),
 });
 
-type MealPlanFormInput = z.input<typeof mealPlanSchema>;
-type MealPlanFormValues = z.output<typeof mealPlanSchema>;
+type MealPlanFormValues = z.infer<typeof mealPlanSchema>;
 
 
 export default function GenerateMealPlanPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const router = useRouter();
+    const { isOpen, onOpen, onOpenChange } = useDisclosure();
+    const [errorMessage, setErrorMessage] = useState("");
 
     const {
         control,
@@ -48,7 +51,7 @@ export default function GenerateMealPlanPage() {
         setValue,
         watch,
         formState: { errors },
-    } = useForm<MealPlanFormInput>({
+    } = useForm<MealPlanFormValues>({
         resolver: zodResolver(mealPlanSchema),
         defaultValues: {
             dietType: "",
@@ -66,7 +69,7 @@ export default function GenerateMealPlanPage() {
         if (isSelected) {
             // Mock data from user profile
             setValue("dietType", "vegetarian");
-            setValue("targetCalories", 1800 as MealPlanFormInput["targetCalories"]);
+            setValue("targetCalories", 1800);
             setValue("excludeIngredients", "peanuts");
         }
     };
@@ -91,7 +94,8 @@ export default function GenerateMealPlanPage() {
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : "An unexpected error occurred.";
             console.error("Generation error:", error);
-            alert(message);
+            setErrorMessage(message);
+            onOpen();
         } finally {
             setIsSubmitting(false);
         }
@@ -104,9 +108,9 @@ export default function GenerateMealPlanPage() {
         <div className="max-w-3xl mx-auto p-4">
             <Card className="w-full">
                 <CardHeader className="flex flex-col gap-1 pb-0">
-                    <h1 className="text-2xl font-bold">Generate Meal Plan</h1>
+                    <h1 className="text-2xl font-bold">Générer un plan de repas</h1>
                     <p className="text-sm text-default-500">
-                        Customize your weekly meal plan
+                        Personnalisez votre plan de repas hebdomadaire
                     </p>
                 </CardHeader>
                 <CardBody className="gap-6 py-6">
@@ -126,7 +130,7 @@ export default function GenerateMealPlanPage() {
                                     ref={field.ref}
                                     onBlur={field.onBlur}
                                 >
-                                    Use my profile preferences
+                                    Utiliser mes préférences de profil
                                 </Checkbox>
                             )}
                         />
@@ -152,11 +156,11 @@ export default function GenerateMealPlanPage() {
                                     errorMessage={fieldState.error?.message}
                                     isDisabled={useProfilePreferences}
                                 >
-                                    <SelectItem key="vegetarian">Vegetarian</SelectItem>
-                                    <SelectItem key="vegan">Vegan</SelectItem>
-                                    <SelectItem key="gluten_free">Gluten Free</SelectItem>
-                                    <SelectItem key="ketogenic">Ketogenic</SelectItem>
-                                    <SelectItem key="paleo">Paleo</SelectItem>
+                                    <SelectItem key="vegetarian">Végétarien</SelectItem>
+                                    <SelectItem key="vegan">Végétalien</SelectItem>
+                                    <SelectItem key="gluten_free">Sans Gluten</SelectItem>
+                                    <SelectItem key="ketogenic">Cétogène</SelectItem>
+                                    <SelectItem key="paleo">Paléo</SelectItem>
                                     <SelectItem key="omnivore">Omnivore</SelectItem>
                                 </Select>
                             )}
@@ -174,7 +178,7 @@ export default function GenerateMealPlanPage() {
                                         minValue={1200}
                                         maxValue={3500}
                                         value={field.value}
-                                        onChange={(val: number | number[]) => field.onChange(val)}
+                                        onChange={(val) => field.onChange(Array.isArray(val) ? val[0] : val)}
                                         isDisabled={useProfilePreferences}
                                         className="max-w-full"
                                         getValue={(v) => `${Array.isArray(v) ? v[0] : v} kcal`}
@@ -209,20 +213,44 @@ export default function GenerateMealPlanPage() {
 
                         <Spacer y={2} />
 
-                        {/* Submit Button */}
-                        <Button
-                            type="submit"
-                            color="primary"
-                            size="lg"
-                            isLoading={isSubmitting}
-                            startContent={!isSubmitting ? <Sparkles size={20} /> : undefined}
-                            className="w-full sm:w-auto self-end font-semibold"
-                        >
-                            {isSubmitting ? "Generating..." : "Generate Meal Plan"}
-                        </Button>
+                        <CardFooter className="px-0 pb-0 justify-end">
+                            {/* Submit Button */}
+                            <Button
+                                type="submit"
+                                color="primary"
+                                size="lg"
+                                isLoading={isSubmitting}
+                                startContent={!isSubmitting ? <Sparkles size={20} /> : undefined}
+                                className="w-full sm:w-auto font-semibold"
+                            >
+                                {isSubmitting ? "Générer le plan" : "Générer le plan de repas"}
+                            </Button>
+                        </CardFooter>
                     </form>
                 </CardBody>
             </Card>
+
+            {/* Error Modal */}
+            <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+                <ModalContent>
+                    {(onClose) => (
+                        <>
+                            <ModalHeader className="flex flex-col gap-1 text-danger">Génération échouée</ModalHeader>
+                            <ModalBody>
+                                <p>{errorMessage}</p>
+                            </ModalBody>
+                            <ModalFooter>
+                                <Button color="danger" variant="light" onPress={onClose}>
+                                    Fermer
+                                </Button>
+                                <Button color="primary" onPress={onClose}>
+                                    Essayer à nouveau
+                                </Button>
+                            </ModalFooter>
+                        </>
+                    )}
+                </ModalContent>
+            </Modal>
         </div>
     );
 }
