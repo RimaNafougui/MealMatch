@@ -13,13 +13,8 @@ import {
   Skeleton,
 } from "@heroui/react";
 import { Heart, Clock, Users, DollarSign, Flame } from "lucide-react";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useFavoriteToggle } from "@/hooks/useFavoritesToggle";
+// REMOVED: import { useFavoriteToggle } ... (Logic moves to parent)
 
-
-/* =========================
-   Skeleton (loading state)
-========================= */
 export function RecipeCardSkeleton() {
   return (
     <Card className="w-full space-y-4 p-3">
@@ -33,10 +28,6 @@ export function RecipeCardSkeleton() {
     </Card>
   );
 }
-
-/* =========================
-   RecipeCard
-========================= */
 
 export interface RecipeCardProps {
   recipe: {
@@ -62,10 +53,7 @@ export function RecipeCard({
   isLoading = false,
 }: RecipeCardProps) {
   const router = useRouter();
-  const user = useCurrentUser();
 
-  // hook mutation ici
-  const { mutate } = useFavoriteToggle(recipe.id, isFavorite);
   if (isLoading) {
     return <RecipeCardSkeleton />;
   }
@@ -78,12 +66,10 @@ export function RecipeCard({
 
   return (
     <Card isHoverable className="w-full group">
-      {/* Clickable wrapper - not using Card's isPressable to avoid nested button issue */}
       <div
         className="cursor-pointer"
         onClick={() => router.push(`/explore/${recipe.id}`)}
       >
-        {/* IMAGE */}
         <CardHeader className="p-0 relative">
           <Image
             src={imageUrl}
@@ -91,8 +77,6 @@ export function RecipeCard({
             radius="none"
             className="aspect-video object-cover w-full group-hover:scale-105 transition-transform duration-300"
           />
-
-          {/* Dietary Tags Overlay */}
           {recipe.dietary_tags && recipe.dietary_tags.length > 0 && (
             <div className="absolute top-2 left-2 flex flex-wrap gap-1 max-w-[calc(100%-1rem)]">
               {recipe.dietary_tags.slice(0, 2).map((tag) => (
@@ -120,7 +104,6 @@ export function RecipeCard({
           )}
         </CardHeader>
 
-        {/* BODY */}
         <CardBody className="space-y-3 p-4">
           <h3 className="font-semibold text-base line-clamp-2 min-h-[3rem]">
             {recipe.title}
@@ -137,7 +120,6 @@ export function RecipeCard({
                 {prepTime} min
               </Chip>
             )}
-
             <Chip
               size="sm"
               variant="flat"
@@ -146,7 +128,6 @@ export function RecipeCard({
             >
               {servings} portions
             </Chip>
-
             {calories > 0 && (
               <Chip
                 size="sm"
@@ -159,7 +140,6 @@ export function RecipeCard({
               </Chip>
             )}
           </div>
-
           {pricePerServing > 0 && (
             <div className="flex items-center gap-1 text-success font-semibold">
               <DollarSign size={16} />
@@ -171,7 +151,6 @@ export function RecipeCard({
         </CardBody>
       </div>
 
-      {/* FOOTER - Outside clickable wrapper to prevent nested button */}
       {onFavoriteToggle && (
         <CardFooter className="justify-end pt-0 pb-4 px-4">
           <motion.div
@@ -184,11 +163,7 @@ export function RecipeCard({
               variant="light"
               color={isFavorite ? "danger" : "default"}
               size="sm"
-              onPress={(e) => {
-                //e.stopPropagation();
-                mutate();
-                onFavoriteToggle();
-              }}
+              onPress={() => onFavoriteToggle()}
             >
               <Heart size={20} fill={isFavorite ? "currentColor" : "none"} />
             </Button>
