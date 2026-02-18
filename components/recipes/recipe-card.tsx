@@ -14,10 +14,6 @@ import {
 import { Heart, Clock, Users, DollarSign, Flame } from "lucide-react";
 
 
-
-/* =========================
-   Skeleton (loading state)
-========================= */
 export function RecipeCardSkeleton() {
   return (
     <Card className="w-full space-y-4 p-3">
@@ -31,10 +27,6 @@ export function RecipeCardSkeleton() {
     </Card>
   );
 }
-
-/* =========================
-   RecipeCard
-========================= */
 
 export interface RecipeCardProps {
   recipe: {

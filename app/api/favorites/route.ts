@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { getSupabaseServer } from "@/utils/supabase-server"; // CHANGED: Import server admin client
+import { getSupabaseServer } from "@/utils/supabase-server";
 
 // POST favorite
 export async function POST(req: Request) {
