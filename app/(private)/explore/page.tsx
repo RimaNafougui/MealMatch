@@ -352,7 +352,76 @@ export default function ExplorePage() {
           )}
         </div>
       )}
+      {!loading && recipes.length > 0 && pagination.totalPages > 1 && (
+        <div className="flex flex-wrap justify-center items-center gap-2 mt-8">
 
+
+          {/* Page précédente */}
+          <Button
+            size="sm"
+            variant="flat"
+            isDisabled={pagination.page === 1}
+            onPress={() =>
+              setPagination({ ...pagination, page: pagination.page - 1 })
+            }
+          >
+            Précédent
+          </Button>
+
+          {/* Numéros de page dynamiques */}
+          <div className="flex items-center gap-1">
+            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(
+              (num) => {
+                // Pour limiter le nombre de boutons affichés, on peut montrer seulement
+                // 2 avant et 2 après la page actuelle + la première et la dernière
+                if (
+                  num === 1 ||
+                  num === pagination.totalPages ||
+                  (num >= pagination.page - 2 && num <= pagination.page + 2)
+                ) {
+                  return (
+                    <Button
+                      key={num}
+                      size="sm"
+                      variant={num === pagination.page ? "solid" : "flat"}
+                      color={num === pagination.page ? "success" : "default"}
+                      onPress={() => setPagination({ ...pagination, page: num })}
+                    >
+                      {num}
+                    </Button>
+                  );
+                } else if (
+                  num === pagination.page - 3 ||
+                  num === pagination.page + 3
+                ) {
+                  // Affiche "..." si pages sautées
+                  return (
+                    <span key={num} className="px-1 text-sm text-default-500">
+                      ...
+                    </span>
+                  );
+                } else {
+                  return null;
+                }
+              }
+            )}
+          </div>
+
+          {/* Page suivante */}
+          <Button
+            size="sm"
+            variant="flat"
+            isDisabled={pagination.page === pagination.totalPages}
+            onPress={() =>
+              setPagination({ ...pagination, page: pagination.page + 1 })
+            }
+          >
+            Suivant
+          </Button>
+
+
+        </div>
+      )}
       {/* Recipe Grid */}
       {loading ? (
         <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
@@ -392,35 +461,9 @@ export default function ExplorePage() {
         </div>
       )}
 
-      {!loading && recipes.length > 0 && pagination.totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2 mt-8">
-          <Button
-            size="sm"
-            variant="flat"
-            isDisabled={pagination.page === 1}
-            onPress={() =>
-              setPagination({ ...pagination, page: pagination.page - 1 })
-            }
-          >
-            Précédent
-          </Button>
 
-          <span className="text-sm text-default-500">
-            Page {pagination.page} sur {pagination.totalPages}
-          </span>
 
-          <Button
-            size="sm"
-            variant="flat"
-            isDisabled={pagination.page === pagination.totalPages}
-            onPress={() =>
-              setPagination({ ...pagination, page: pagination.page + 1 })
-            }
-          >
-            Suivant
-          </Button>
-        </div>
-      )}
+
     </div>
   );
 }
