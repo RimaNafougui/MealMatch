@@ -102,12 +102,16 @@ export default function RecipeDetailPage() {
   }, [params.id]);
   useEffect(() => {
     if (recipe && !favoritesLoading && optimisticFavorite === null) {
-      setOptimisticFavorite(favoriteRecipes.includes(recipe.id));
+      setOptimisticFavorite(favoriteRecipes.some((r: any) => r.id === recipe.id)
+      );
     }
   }, [recipe, favoriteRecipes, favoritesLoading, optimisticFavorite]);
-  const isFavorite = recipe
-    ? optimisticFavorite ?? favoriteRecipes.includes(recipe.id)
-    : false;
+  const isFavorite =
+    recipe && !favoritesLoading
+      ? optimisticFavorite ?? favoriteRecipes.some((r: any) => r.id === recipe.id)
+
+      : null;
+
 
   // Crée mutate uniquement si recipe existe
   const { mutate: toggleFavoriteRemote } = useFavoriteToggle(recipe ? recipe.id : "");
@@ -120,7 +124,7 @@ export default function RecipeDetailPage() {
 
     const nextValue = !isFavorite;
     setOptimisticFavorite(nextValue);      // effet immédiat sur UI
-    toggleFavoriteRemote(nextValue);        // envoi au serveur
+    toggleFavoriteRemote(isFavorite);        // envoi au serveur
   };
   const handleShare = async () => {
     if (navigator.share && recipe) {
@@ -259,11 +263,21 @@ export default function RecipeDetailPage() {
                   color={isFavorite ? "danger" : "default"}
                   variant="bordered"
                   radius="full"
-                  startContent={<Heart size={20} className={isFavorite ? "fill-current" : ""} />}
+                  startContent={
+                    isFavorite === null
+                      ? <Spinner size="sm" />
+                      : <Heart size={20} className={isFavorite ? "fill-current" : ""} />
+                  }
                   onPress={toggleFavorite}
+                  isDisabled={isFavorite === null}
                 >
-                  {isFavorite ? "Retirer des Favoris" : "Ajouter aux Favoris"}
+                  {isFavorite === null
+                    ? "Chargement..."
+                    : isFavorite
+                      ? "Retirer des Favoris"
+                      : "Ajouter aux Favoris"}
                 </Button>
+
 
 
 
