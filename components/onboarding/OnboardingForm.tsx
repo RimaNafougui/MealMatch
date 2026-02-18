@@ -3,7 +3,13 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { OnboardingSteps } from "./OnboardingSteps";
-import { Button, CheckboxGroup, Checkbox, Textarea, Slider, Spinner } from "@heroui/react";
+import {
+  Button,
+  CheckboxGroup,
+  Checkbox,
+  Slider,
+  Spinner,
+} from "@heroui/react";
 import { siteConfig } from "@/config/site";
 
 const steps = [
@@ -68,7 +74,10 @@ export default function OnboardingPage() {
         return;
       }
 
-      router.push(siteConfig.navMenuItems.find(item => item.label === "Dashboard")?.href || "/dashboard");
+      router.push(
+        siteConfig.navMenuItems.find((item) => item.label === "Dashboard")
+          ?.href || "/dashboard",
+      );
     } catch (err) {
       console.error("Erreur onboarding:", err);
       setLoading(false);
@@ -106,13 +115,23 @@ export default function OnboardingPage() {
       )}
 
       {currentStep === 1 && (
-        <Textarea
-          placeholder="Listez vos allergies ici..."
-          value={allergies.join(", ")}
-          onChange={(e) =>
-            setAllergies(e.target.value.split(",").map((a) => a.trim()))
-          }
-        />
+        <CheckboxGroup
+          value={dietaryRestrictions}
+          onChange={setAllergies}
+          orientation="vertical"
+        >
+          <Checkbox value="Dairy">Produit Laitier</Checkbox>
+          <Checkbox value="Egg">Oeufs</Checkbox>
+          <Checkbox value="Gluten">Gluten</Checkbox>
+          <Checkbox value="Grain">Grain</Checkbox>
+          <Checkbox value="Peanut">Arachides</Checkbox>
+          <Checkbox value="Seafood">Fruit de Mer</Checkbox>
+          <Checkbox value="Sesame">Sésame</Checkbox>
+          <Checkbox value="Shellfish">Coquillages</Checkbox>
+          <Checkbox value="Soy">Soya</Checkbox>
+          <Checkbox value="Tree Nut">Noix</Checkbox>
+          <Checkbox value="Wheat">Blé</Checkbox>
+        </CheckboxGroup>
       )}
 
       {currentStep === 2 && (
@@ -136,9 +155,17 @@ export default function OnboardingPage() {
       {currentStep === 3 && (
         <div>
           <h2 className="font-semibold mb-2">Résumé</h2>
-          <p><strong>Restrictions alimentaires:</strong> {dietaryRestrictions.join(", ") || "Aucune"}</p>
-          <p><strong>Allergies:</strong> {allergies.join(", ") || "Aucune"}</p>
-          <p><strong>Budget:</strong> {budgetRange[0]}$ — {budgetRange[1]}$ par semaine</p>
+          <p>
+            <strong>Restrictions alimentaires:</strong>{" "}
+            {dietaryRestrictions.join(", ") || "Aucune"}
+          </p>
+          <p>
+            <strong>Allergies:</strong> {allergies.join(", ") || "Aucune"}
+          </p>
+          <p>
+            <strong>Budget:</strong> {budgetRange[0]}$ — {budgetRange[1]}$ par
+            semaine
+          </p>
         </div>
       )}
 
@@ -148,7 +175,11 @@ export default function OnboardingPage() {
         disabled={loading}
         className="mt-4"
       >
-        {currentStep < steps.length - 1 ? "Suivant" : loading ? "Sauvegarde..." : "Terminer"}
+        {currentStep < steps.length - 1
+          ? "Suivant"
+          : loading
+            ? "Sauvegarde..."
+            : "Terminer"}
       </Button>
     </div>
   );

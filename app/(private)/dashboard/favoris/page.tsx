@@ -13,7 +13,7 @@ function FavoritesRecipeItem({ recipe }: { recipe: any }) {
       recipe={recipe}
       isFavorite={true}
       onFavoriteToggle={() => {
-        favoriteToggle.mutate(true); // ← on passe "currently favorite"
+        favoriteToggle.mutate(true);
       }}
     />
   );
@@ -31,9 +31,7 @@ export default function FavoritesPage() {
 
   if (!favorites?.length)
     return (
-      <p className="text-center py-12">
-        Vous n'avez pas encore de favoris.
-      </p>
+      <p className="text-center py-12">Vous n'avez pas encore de favoris.</p>
     );
 
   return (
