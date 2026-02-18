@@ -1,16 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-export function useFavoriteToggle(
-    recipeId: string,
-    isFavorite: boolean
-) {
+export function useFavoriteToggle(recipeId: string) {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async () => {
+        mutationFn: async (wasFavorite: boolean) => {
             const res = await fetch("/api/favorites", {
-                method: isFavorite ? "DELETE" : "POST",
+                method: wasFavorite ? "DELETE" : "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ recipeId }),
             });
@@ -18,11 +15,11 @@ export function useFavoriteToggle(
             if (!res.ok) throw new Error("Failed");
         },
 
-        onSuccess: () => {
+        onSuccess: (_data, wasFavorite) => {
             queryClient.invalidateQueries({ queryKey: ["favorites"] });
-
+            queryClient.invalidateQueries({ queryKey: ["recipes"] });
             toast.success(
-                isFavorite
+                wasFavorite
                     ? "Removed from favorites"
                     : "Added to favorites"
             );

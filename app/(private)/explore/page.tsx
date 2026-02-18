@@ -16,6 +16,7 @@ import {
   RecipeCardSkeleton,
 } from "@/components/recipes/recipe-card";
 import { useFavoriteToggle } from "@/hooks/useFavoritesToggle";
+import { useFavorites } from "@/hooks/useFavorites";
 
 interface Recipe {
   id: string;
@@ -66,18 +67,16 @@ const RecipeItem = ({
 }: {
   recipe: Recipe;
   isFav: boolean;
-  onToggle: (id: string) => void;
+  onToggle: (id: string, currentValue: boolean) => void;
 }) => {
-  // Hook is now called at the top level of this child component
-  const favoriteToggle = useFavoriteToggle(recipe.id, isFav);
-
+  const favoriteToggle = useFavoriteToggle(recipe.id);
   return (
     <RecipeCard
       recipe={recipe}
       isFavorite={isFav}
       onFavoriteToggle={() => {
-        favoriteToggle.mutate();
-        onToggle(recipe.id);
+        favoriteToggle.mutate(isFav); // 1️⃣ API avec état actuel
+        onToggle(recipe.id, isFav);   // 2️⃣ update local UI
       }}
     />
   );
@@ -86,7 +85,6 @@ const RecipeItem = ({
 export default function ExplorePage() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
-  const [favorites, setFavorites] = useState<string[]>([]);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -102,6 +100,8 @@ export default function ExplorePage() {
     total: 0,
     totalPages: 0,
   });
+  const { data: favoriteRecipes = [] } = useFavorites();
+  const favoriteIds = favoriteRecipes.map((r: Recipe) => r.id);
 
   const fetchRecipes = async () => {
     setLoading(true);
@@ -143,11 +143,7 @@ export default function ExplorePage() {
   ]);
 
   const toggleFavoriteLocal = (recipeId: string) => {
-    setFavorites((prev) =>
-      prev.includes(recipeId)
-        ? prev.filter((id) => id !== recipeId)
-        : [...prev, recipeId],
-    );
+    // si tu veux un effet instantané côté UI, sinon peut être vide
   };
 
   const clearFilters = () => {
@@ -389,7 +385,7 @@ export default function ExplorePage() {
             <RecipeItem
               key={recipe.id}
               recipe={recipe}
-              isFav={favorites.includes(recipe.id)}
+              isFav={favoriteIds.includes(recipe.id)}
               onToggle={toggleFavoriteLocal}
             />
           ))}

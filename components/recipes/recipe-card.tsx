@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import {
   Card,
   CardHeader,
@@ -13,7 +12,7 @@ import {
   Skeleton,
 } from "@heroui/react";
 import { Heart, Clock, Users, DollarSign, Flame } from "lucide-react";
-// REMOVED: import { useFavoriteToggle } ... (Logic moves to parent)
+
 
 export function RecipeCardSkeleton() {
   return (
@@ -53,10 +52,7 @@ export function RecipeCard({
   isLoading = false,
 }: RecipeCardProps) {
   const router = useRouter();
-
-  if (isLoading) {
-    return <RecipeCardSkeleton />;
-  }
+  if (isLoading) return <RecipeCardSkeleton />;
 
   const imageUrl = recipe.image_url || "/foodPuzzle.png";
   const prepTime = recipe.prep_time || 0;
@@ -77,75 +73,21 @@ export function RecipeCard({
             radius="none"
             className="aspect-video object-cover w-full group-hover:scale-105 transition-transform duration-300"
           />
-          {recipe.dietary_tags && recipe.dietary_tags.length > 0 && (
-            <div className="absolute top-2 left-2 flex flex-wrap gap-1 max-w-[calc(100%-1rem)]">
-              {recipe.dietary_tags.slice(0, 2).map((tag) => (
-                <Chip
-                  key={tag}
-                  size="sm"
-                  variant="flat"
-                  color="success"
-                  className="text-xs capitalize backdrop-blur-sm bg-success/80 text-white"
-                >
-                  {tag.replace(/_/g, " ")}
-                </Chip>
-              ))}
-              {recipe.dietary_tags.length > 2 && (
-                <Chip
-                  size="sm"
-                  variant="flat"
-                  color="success"
-                  className="text-xs backdrop-blur-sm bg-success/80 text-white"
-                >
-                  +{recipe.dietary_tags.length - 2}
-                </Chip>
-              )}
-            </div>
-          )}
         </CardHeader>
 
         <CardBody className="space-y-3 p-4">
           <h3 className="font-semibold text-base line-clamp-2 min-h-[3rem]">
             {recipe.title}
           </h3>
-
           <div className="flex items-center gap-2 flex-wrap">
-            {prepTime > 0 && (
-              <Chip
-                size="sm"
-                variant="flat"
-                startContent={<Clock size={14} />}
-                className="text-xs"
-              >
-                {prepTime} min
-              </Chip>
-            )}
-            <Chip
-              size="sm"
-              variant="flat"
-              startContent={<Users size={14} />}
-              className="text-xs"
-            >
-              {servings} portions
-            </Chip>
-            {calories > 0 && (
-              <Chip
-                size="sm"
-                variant="flat"
-                color="warning"
-                startContent={<Flame size={14} />}
-                className="text-xs"
-              >
-                {calories} cal
-              </Chip>
-            )}
+            {prepTime > 0 && <Chip size="sm" variant="flat" startContent={<Clock size={14} />}>{prepTime} min</Chip>}
+            <Chip size="sm" variant="flat" startContent={<Users size={14} />}>{servings} portions</Chip>
+            {calories > 0 && <Chip size="sm" variant="flat" color="warning" startContent={<Flame size={14} />}>{calories} cal</Chip>}
           </div>
           {pricePerServing > 0 && (
             <div className="flex items-center gap-1 text-success font-semibold">
               <DollarSign size={16} />
-              <span className="text-sm">
-                {pricePerServing.toFixed(2)} / portion
-              </span>
+              <span className="text-sm">{pricePerServing.toFixed(2)} / portion</span>
             </div>
           )}
         </CardBody>
@@ -153,23 +95,21 @@ export function RecipeCard({
 
       {onFavoriteToggle && (
         <CardFooter className="justify-end pt-0 pb-4 px-4">
-          <motion.div
-            whileTap={{ scale: 0.85 }}
-            animate={{ scale: isFavorite ? 1.2 : 1 }}
-            transition={{ type: "spring", stiffness: 300 }}
+          <Button
+            isIconOnly
+            variant="light"
+            color={isFavorite ? "danger" : "default"}
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation?.(); // sécuritaire
+              onFavoriteToggle();
+            }}
           >
-            <Button
-              isIconOnly
-              variant="light"
-              color={isFavorite ? "danger" : "default"}
-              size="sm"
-              onPress={() => onFavoriteToggle()}
-            >
-              <Heart size={20} fill={isFavorite ? "currentColor" : "none"} />
-            </Button>
-          </motion.div>
+            <Heart size={20} fill={isFavorite ? "currentColor" : "none"} />
+          </Button>
         </CardFooter>
       )}
     </Card>
   );
 }
+
