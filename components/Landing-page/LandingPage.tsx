@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { motion, useInView } from "framer-motion";
+import { motion, useInView, type Variants } from "framer-motion";
 import { Link } from "@heroui/link";
 import { Button } from "@heroui/button";
 import { Card, CardBody } from "@heroui/card";
@@ -57,7 +57,7 @@ function ScrollReveal({
   children: React.ReactNode;
   className?: string;
   delay?: number;
-  variants?: Record<string, Record<string, unknown>>;
+  variants?: Variants;
   once?: boolean;
 }) {
   const ref = useRef(null);
