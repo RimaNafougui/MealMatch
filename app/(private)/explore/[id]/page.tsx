@@ -65,8 +65,11 @@ export default function RecipeDetailPage() {
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
-  const [optimisticFavorite, setOptimisticFavorite] = useState<boolean | null>(null);
-  const { data: favoriteRecipes = [], isLoading: favoritesLoading } = useFavorites();
+  const [optimisticFavorite, setOptimisticFavorite] = useState<boolean | null>(
+    null,
+  );
+  const { data: favoriteRecipes = [], isLoading: favoritesLoading } =
+    useFavorites();
 
   const fetchRecipe = async (id: string) => {
     setLoading(true);
@@ -83,9 +86,6 @@ export default function RecipeDetailPage() {
             ),
           );
         }
-
-
-
       } else {
         console.error("Failed to fetch recipe:", data.error);
       }
@@ -102,29 +102,29 @@ export default function RecipeDetailPage() {
   }, [params.id]);
   useEffect(() => {
     if (recipe && !favoritesLoading && optimisticFavorite === null) {
-      setOptimisticFavorite(favoriteRecipes.some((r: any) => r.id === recipe.id)
+      setOptimisticFavorite(
+        favoriteRecipes.some((r: any) => r.id === recipe.id),
       );
     }
   }, [recipe, favoriteRecipes, favoritesLoading, optimisticFavorite]);
   const isFavorite =
     recipe && !favoritesLoading
-      ? optimisticFavorite ?? favoriteRecipes.some((r: any) => r.id === recipe.id)
-
+      ? (optimisticFavorite ??
+        favoriteRecipes.some((r: any) => r.id === recipe.id))
       : null;
 
-
   // Crée mutate uniquement si recipe existe
-  const { mutate: toggleFavoriteRemote } = useFavoriteToggle(recipe ? recipe.id : "");
-
-
+  const { mutate: toggleFavoriteRemote } = useFavoriteToggle(
+    recipe ? recipe.id : "",
+  );
 
   /// toggle favori
   const toggleFavorite = () => {
     if (!recipe) return;
 
     const nextValue = !isFavorite;
-    setOptimisticFavorite(nextValue);      // effet immédiat sur UI
-    toggleFavoriteRemote(isFavorite);        // envoi au serveur
+    setOptimisticFavorite(nextValue); // effet immédiat sur UI
+    toggleFavoriteRemote(isFavorite); // envoi au serveur
   };
   const handleShare = async () => {
     if (navigator.share && recipe) {
@@ -142,8 +142,6 @@ export default function RecipeDetailPage() {
       alert("Lien copié!");
     }
   };
-
-
 
   if (loading) {
     return (
@@ -236,7 +234,7 @@ export default function RecipeDetailPage() {
                     color="success"
                     startContent={<DollarSign size={16} />}
                   >
-                    ${pricePerServing.toFixed(2)} / portion
+                    {pricePerServing.toFixed(2)} / portion
                   </Chip>
                 )}
               </div>
@@ -264,9 +262,14 @@ export default function RecipeDetailPage() {
                   variant="bordered"
                   radius="full"
                   startContent={
-                    isFavorite === null
-                      ? <Spinner size="sm" />
-                      : <Heart size={20} className={isFavorite ? "fill-current" : ""} />
+                    isFavorite === null ? (
+                      <Spinner size="sm" />
+                    ) : (
+                      <Heart
+                        size={20}
+                        className={isFavorite ? "fill-current" : ""}
+                      />
+                    )
                   }
                   onPress={toggleFavorite}
                   isDisabled={isFavorite === null}
@@ -277,9 +280,6 @@ export default function RecipeDetailPage() {
                       ? "Retirer des Favoris"
                       : "Ajouter aux Favoris"}
                 </Button>
-
-
-
 
                 <Button
                   variant="light"
@@ -397,9 +397,9 @@ export default function RecipeDetailPage() {
                     Valeurs nutritionnelles
                   </h3>
                   {recipe.calories ||
-                    recipe.protein ||
-                    recipe.carbs ||
-                    recipe.fat ? (
+                  recipe.protein ||
+                  recipe.carbs ||
+                  recipe.fat ? (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {calories > 0 && (
                         <Card className="bg-warning-50 border-warning-200">
