@@ -200,11 +200,31 @@ export default async function Home() {
 
               {/* Orbiting icons */}
               {[
-                { icon: <Leaf size={18} className="text-success" />, top: "2%", left: "50%" },
-                { icon: <Fish size={18} className="text-primary" />, top: "50%", left: "96%" },
-                { icon: <Apple size={18} className="text-danger" />, top: "90%", left: "60%" },
-                { icon: <Carrot size={18} className="text-warning" />, top: "75%", left: "4%" },
-                { icon: <Grape size={18} className="text-secondary" />, top: "20%", left: "4%" },
+                {
+                  icon: <Leaf size={18} className="text-success" />,
+                  top: "2%",
+                  left: "50%",
+                },
+                {
+                  icon: <Fish size={18} className="text-primary" />,
+                  top: "50%",
+                  left: "96%",
+                },
+                {
+                  icon: <Apple size={18} className="text-danger" />,
+                  top: "90%",
+                  left: "60%",
+                },
+                {
+                  icon: <Carrot size={18} className="text-warning" />,
+                  top: "75%",
+                  left: "4%",
+                },
+                {
+                  icon: <Grape size={18} className="text-secondary" />,
+                  top: "20%",
+                  left: "4%",
+                },
               ].map((item, i) => (
                 <div
                   key={i}
@@ -228,8 +248,7 @@ export default async function Home() {
               À propos de MealMatch
             </Chip>
             <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-              Mangez mieux,{" "}
-              <span className="text-success">sans effort</span>
+              Mangez mieux, <span className="text-success">sans effort</span>
             </h2>
             <div className="space-y-4 text-default-500 leading-relaxed">
               <p>
@@ -238,9 +257,9 @@ export default async function Home() {
                 intolérances et votre budget.
               </p>
               <p>
-                Notre IA analyse des milliers de recettes pour vous proposer
-                les combinaisons les plus nutritives, savoureuses et
-                économiques — adaptées à votre style de vie.
+                Notre IA analyse des milliers de recettes pour vous proposer les
+                combinaisons les plus nutritives, savoureuses et économiques —
+                adaptées à votre style de vie.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-4 pt-2">
@@ -359,8 +378,7 @@ export default async function Home() {
                 Comment ça marche ?
               </Chip>
               <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-                Prêt en{" "}
-                <span className="text-success">3 étapes</span>
+                Prêt en <span className="text-success">3 étapes</span>
               </h2>
             </div>
 
@@ -576,8 +594,8 @@ export default async function Home() {
                   Prêt à mieux manger ?
                 </h2>
                 <p className="text-white/80 text-lg max-w-xl mx-auto">
-                  Rejoignez MealMatch aujourd&apos;hui et laissez l&apos;IA gérer
-                  vos repas — gratuitement.
+                  Rejoignez MealMatch aujourd&apos;hui et laissez l&apos;IA
+                  gérer vos repas — gratuitement.
                 </p>
               </div>
             </div>

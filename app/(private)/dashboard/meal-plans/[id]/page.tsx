@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Button } from "@heroui/button";
 import { Divider } from "@heroui/divider";
@@ -18,6 +18,7 @@ import {
   DollarSign,
   AlertTriangle,
   ChefHat,
+  RotateCcw,
 } from "lucide-react";
 import type { SavedMealPlan, GeneratedMeal, GeneratedDay } from "@/types/meal-plan";
 
@@ -126,23 +127,30 @@ function SkeletonPlan() {
   );
 }
 
+function isCurrentWeek(weekStart: string) {
+  const now = new Date();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  monday.setHours(0, 0, 0, 0);
+  const planDate = new Date(weekStart);
+  planDate.setHours(0, 0, 0, 0);
+  return planDate.getTime() === monday.getTime();
+}
+
 export default function MealPlanDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const planId = params.id as string;
 
   const [plan, setPlan] = useState<SavedMealPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [repeating, setRepeating] = useState(false);
 
   useEffect(() => {
     async function fetchPlan() {
       try {
         const res = await fetch(`/api/meal-plan/${planId}`);
-        if (res.status === 404) {
-          setNotFound(true);
-          return;
-        }
+        if (res.status === 404) { setNotFound(true); return; }
         if (!res.ok) throw new Error();
         const { plan: data } = await res.json();
         setPlan(data);
@@ -154,6 +162,42 @@ export default function MealPlanDetailPage() {
     }
     if (planId) fetchPlan();
   }, [planId]);
+
+  const handleRepeat = async () => {
+    if (!plan) return;
+    setRepeating(true);
+    try {
+      const res = await fetch("/api/meal-plan/repeat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan_id: plan.id, target_week_offset: 1 }),
+      });
+      const data = await res.json();
+
+      if (res.status === 409) {
+        toast.error("Un plan existe déjà pour la semaine prochaine.", {
+          description: "Supprimez ou remplacez-le avant de répéter.",
+        });
+        return;
+      }
+      if (!res.ok) {
+        toast.error(data.error ?? "Impossible de répéter ce plan");
+        return;
+      }
+
+      toast.success("Plan répété avec succès !", {
+        description: "Copié pour la semaine prochaine et activé.",
+        action: {
+          label: "Voir",
+          onClick: () => (window.location.href = `/dashboard/meal-plans/${data.plan.id}`),
+        },
+      });
+    } catch {
+      toast.error("Une erreur s'est produite");
+    } finally {
+      setRepeating(false);
+    }
+  };
 
   if (loading) return <SkeletonPlan />;
 
@@ -181,31 +225,29 @@ export default function MealPlanDetailPage() {
   const totalMeals = days.reduce((sum, d) => sum + d.meals.length, 0);
   const avgCalories = Math.round(plan.meals?.total_calories_per_day_avg ?? 0);
 
-  const weekStart = new Date(plan.week_start_date).toLocaleDateString("fr-CA", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
+  const weekStartLabel = new Date(plan.week_start_date).toLocaleDateString("fr-CA", {
+    day: "numeric", month: "long", year: "numeric",
   });
-  const weekEnd = new Date(plan.week_end_date).toLocaleDateString("fr-CA", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
+  const weekEndLabel = new Date(plan.week_end_date).toLocaleDateString("fr-CA", {
+    day: "numeric", month: "long", year: "numeric",
   });
+
+  const isPast =
+    !isCurrentWeek(plan.week_start_date) &&
+    new Date(plan.week_start_date) < new Date();
 
   return (
     <div className="max-w-5xl mx-auto flex flex-col gap-6">
       {/* Back */}
-      <div>
-        <Button
-          as={Link}
-          href="/dashboard/meal-plans"
-          variant="light"
-          startContent={<ArrowLeft size={16} />}
-          className="text-default-500"
-        >
-          Retour aux plans
-        </Button>
-      </div>
+      <Button
+        as={Link}
+        href="/dashboard/meal-plans"
+        variant="light"
+        startContent={<ArrowLeft size={16} />}
+        className="text-default-500 w-fit"
+      >
+        Retour aux plans
+      </Button>
 
       {/* Header card */}
       <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
@@ -218,17 +260,24 @@ export default function MealPlanDetailPage() {
               <div>
                 <h1 className="text-2xl font-bold">Plan de repas</h1>
                 <p className="text-default-400 text-sm">
-                  {weekStart} → {weekEnd}
+                  {weekStartLabel} → {weekEndLabel}
                 </p>
               </div>
             </div>
-            <Chip
-              color={plan.status === "active" ? "success" : "default"}
-              variant="flat"
-              size="sm"
-            >
-              {plan.status === "active" ? "Actif" : "Brouillon"}
-            </Chip>
+            <div className="flex items-center gap-2">
+              {isPast && (
+                <Chip color="default" variant="flat" size="sm">
+                  Passé
+                </Chip>
+              )}
+              <Chip
+                color={plan.status === "active" ? "success" : "default"}
+                variant="flat"
+                size="sm"
+              >
+                {plan.status === "active" ? "Actif" : "Brouillon"}
+              </Chip>
+            </div>
           </div>
         </CardHeader>
 
@@ -270,17 +319,15 @@ export default function MealPlanDetailPage() {
       ) : (
         <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
           <Utensils size={40} className="text-default-300" />
-          <p className="text-default-500">
-            Aucun repas trouvé dans ce plan.
-          </p>
+          <p className="text-default-500">Aucun repas trouvé dans ce plan.</p>
         </div>
       )}
 
       {/* Actions */}
-      <div className="flex gap-3 flex-wrap">
+      <div className="flex gap-3 flex-wrap pb-8">
         <Button
           as={Link}
-          href="/dashboard/meal-plan/generate"
+          href="/meal-plan/generate"
           color="success"
           variant="flat"
           startContent={<Utensils size={16} />}
@@ -296,6 +343,16 @@ export default function MealPlanDetailPage() {
           className="font-semibold"
         >
           Voir la liste d&apos;épicerie
+        </Button>
+        <Button
+          color="success"
+          variant="shadow"
+          startContent={<RotateCcw size={16} />}
+          isLoading={repeating}
+          onPress={handleRepeat}
+          className="font-semibold text-white"
+        >
+          {repeating ? "Répétition…" : "Répéter pour la semaine prochaine"}
         </Button>
       </div>
     </div>
