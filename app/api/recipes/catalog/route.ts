@@ -9,10 +9,15 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search") || "";
     const dietaryTags =
       searchParams.get("dietary_tags")?.split(",").filter(Boolean) || [];
+    const intolerances =
+      searchParams.get("intolerances")?.split(",").filter(Boolean) || [];
     const maxPrepTime = searchParams.get("max_prep_time");
     const maxCalories = searchParams.get("max_calories");
     const minCalories = searchParams.get("min_calories");
     const maxPrice = searchParams.get("max_price");
+    const minServings = searchParams.get("min_servings");
+    const maxServings = searchParams.get("max_servings");
+    const mealType = searchParams.get("meal_type"); // breakfast | lunch | dinner | snack
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "12");
 
@@ -26,8 +31,37 @@ export async function GET(req: NextRequest) {
       query = query.ilike("title", `%${search}%`);
     }
 
-    if (dietaryTags.length > 0) {
-      query = query.contains("dietary_tags", dietaryTags);
+    // Combine dietary tags + meal type into one contains filter
+    const allTags = [...dietaryTags];
+    if (mealType) allTags.push(mealType);
+    if (allTags.length > 0) {
+      query = query.contains("dietary_tags", allTags);
+    }
+
+    // Intolerances — exclude recipes that contain any of these tags
+    // dietary_tags already has things like "dairy free", "gluten free"
+    // We map intolerances to their corresponding "free" tags and require them
+    if (intolerances.length > 0) {
+      const intoleranceTagMap: Record<string, string> = {
+        dairy: "dairy free",
+        gluten: "gluten free",
+        grain: "grain free",
+        peanut: "peanut free",
+        seafood: "seafood free",
+        sesame: "sesame free",
+        shellfish: "shellfish free",
+        soy: "soy free",
+        sulfite: "sulfite free",
+        "tree nut": "tree nut free",
+        wheat: "wheat free",
+        egg: "egg free",
+      };
+      const freeTagsRequired = intolerances
+        .map((i) => intoleranceTagMap[i])
+        .filter(Boolean);
+      if (freeTagsRequired.length > 0) {
+        query = query.contains("dietary_tags", freeTagsRequired);
+      }
     }
 
     if (maxPrepTime) {
@@ -43,6 +77,13 @@ export async function GET(req: NextRequest) {
 
     if (maxPrice) {
       query = query.lte("price_per_serving", parseFloat(maxPrice));
+    }
+
+    if (minServings) {
+      query = query.gte("servings", parseInt(minServings));
+    }
+    if (maxServings) {
+      query = query.lte("servings", parseInt(maxServings));
     }
 
     query = query

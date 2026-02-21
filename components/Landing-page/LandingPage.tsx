@@ -57,7 +57,7 @@ function ScrollReveal({
   children: React.ReactNode;
   className?: string;
   delay?: number;
-  variants?: typeof fadeUp;
+  variants?: Record<string, Record<string, unknown>>;
   once?: boolean;
 }) {
   const ref = useRef(null);
