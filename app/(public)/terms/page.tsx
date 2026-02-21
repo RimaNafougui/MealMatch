@@ -2,7 +2,16 @@ import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Link } from "@heroui/link";
 import { Chip } from "@heroui/chip";
 import { Button } from "@heroui/button";
-import { FileText, Shield, User, CreditCard, AlertTriangle, Scale, RefreshCw, Mail } from "lucide-react";
+import {
+  FileText,
+  Shield,
+  User,
+  CreditCard,
+  AlertTriangle,
+  Scale,
+  RefreshCw,
+  Mail,
+} from "lucide-react";
 
 const sections = [
   {
@@ -93,16 +102,20 @@ export default function TermsPage() {
     <div className="flex flex-col gap-16 py-12">
       {/* Hero */}
       <section className="text-center flex flex-col items-center gap-4">
-        <Chip color="primary" variant="flat" size="sm" className="font-semibold">
+        <Chip
+          color="primary"
+          variant="flat"
+          size="sm"
+          className="font-semibold"
+        >
           Légal
         </Chip>
         <h1 className="text-4xl lg:text-6xl font-bold tracking-tight">
-          Conditions d&apos;{" "}
-          <span className="text-primary">Utilisation</span>
+          Conditions d&apos; <span className="text-primary">Utilisation</span>
         </h1>
         <p className="text-default-500 text-lg max-w-2xl">
-          Veuillez lire attentivement ces conditions avant d&apos;utiliser MealMatch.
-          Dernière mise à jour : 21 février 2025.
+          Veuillez lire attentivement ces conditions avant d&apos;utiliser
+          MealMatch. Dernière mise à jour : 21 février 2026.
         </p>
       </section>
 
@@ -121,11 +134,16 @@ export default function TermsPage() {
               <h2 className="font-bold text-base">{section.title}</h2>
             </CardHeader>
             <CardBody className="flex flex-col gap-3">
-              <p className="text-default-500 text-sm leading-relaxed">{section.content}</p>
+              <p className="text-default-500 text-sm leading-relaxed">
+                {section.content}
+              </p>
               {section.list && (
                 <ul className="flex flex-col gap-1.5 mt-1">
                   {section.list.map((item, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-default-500">
+                    <li
+                      key={i}
+                      className="flex items-start gap-2 text-sm text-default-500"
+                    >
                       <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 mt-1.5" />
                       {item}
                     </li>
@@ -142,11 +160,10 @@ export default function TermsPage() {
         <Card className="bg-gradient-to-r from-blue-500 to-primary p-12 text-center border-none">
           <CardBody className="gap-6 items-center justify-center">
             <Mail className="w-10 h-10 text-white/80" />
-            <h2 className="text-3xl font-bold text-white">
-              Des questions ?
-            </h2>
+            <h2 className="text-3xl font-bold text-white">Des questions ?</h2>
             <p className="text-white/90 text-lg max-w-xl">
-              Notre équipe est disponible pour répondre à toutes vos questions concernant ces conditions.
+              Notre équipe est disponible pour répondre à toutes vos questions
+              concernant ces conditions.
             </p>
             <Button
               as={Link}

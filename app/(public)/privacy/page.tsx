@@ -2,14 +2,25 @@ import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Link } from "@heroui/link";
 import { Chip } from "@heroui/chip";
 import { Button } from "@heroui/button";
-import { Database, Eye, Share2, Lock, Clock, UserCheck, Cookie, RefreshCw, Mail } from "lucide-react";
+import {
+  Database,
+  Eye,
+  Share2,
+  Lock,
+  Clock,
+  UserCheck,
+  Cookie,
+  RefreshCw,
+  Mail,
+} from "lucide-react";
 
 const sections = [
   {
     icon: <Eye className="w-6 h-6 text-primary" />,
     color: "primary" as const,
     title: "1. Données collectées",
-    content: "Nous collectons uniquement les informations nécessaires au bon fonctionnement de nos services :",
+    content:
+      "Nous collectons uniquement les informations nécessaires au bon fonctionnement de nos services :",
     list: [
       "Informations de compte : nom, adresse courriel, mot de passe (chiffré)",
       "Préférences alimentaires : restrictions, allergies, objectifs nutritionnels",
@@ -100,16 +111,20 @@ export default function PrivacyPage() {
     <div className="flex flex-col gap-16 py-12">
       {/* Hero */}
       <section className="text-center flex flex-col items-center gap-4">
-        <Chip color="primary" variant="flat" size="sm" className="font-semibold">
+        <Chip
+          color="primary"
+          variant="flat"
+          size="sm"
+          className="font-semibold"
+        >
           Légal
         </Chip>
         <h1 className="text-4xl lg:text-6xl font-bold tracking-tight">
-          Politique de{" "}
-          <span className="text-primary">Confidentialité</span>
+          Politique de <span className="text-primary">Confidentialité</span>
         </h1>
         <p className="text-default-500 text-lg max-w-2xl">
           Vos données vous appartiennent. Découvrez comment nous les protégeons.
-          Dernière mise à jour : 21 février 2025.
+          Dernière mise à jour : 21 février 2026.
         </p>
       </section>
 
@@ -128,11 +143,16 @@ export default function PrivacyPage() {
               <h2 className="font-bold text-base">{section.title}</h2>
             </CardHeader>
             <CardBody className="flex flex-col gap-3">
-              <p className="text-default-500 text-sm leading-relaxed">{section.content}</p>
+              <p className="text-default-500 text-sm leading-relaxed">
+                {section.content}
+              </p>
               {section.list && (
                 <ul className="flex flex-col gap-1.5 mt-1">
                   {section.list.map((item, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-default-500">
+                    <li
+                      key={i}
+                      className="flex items-start gap-2 text-sm text-default-500"
+                    >
                       <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 mt-1.5" />
                       {item}
                     </li>
@@ -153,7 +173,8 @@ export default function PrivacyPage() {
               Questions sur vos données ?
             </h2>
             <p className="text-white/90 text-lg max-w-xl">
-              Contactez notre responsable de la confidentialité pour toute question ou pour exercer vos droits.
+              Contactez notre responsable de la confidentialité pour toute
+              question ou pour exercer vos droits.
             </p>
             <Button
               as={Link}

@@ -2,7 +2,16 @@ import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Link } from "@heroui/link";
 import { Chip } from "@heroui/chip";
 import { Button } from "@heroui/button";
-import { BadgeCheck, CalendarX, XCircle, Send, CreditCard, ToggleLeft, Gift, Mail } from "lucide-react";
+import {
+  BadgeCheck,
+  CalendarX,
+  XCircle,
+  Send,
+  CreditCard,
+  ToggleLeft,
+  Gift,
+  Mail,
+} from "lucide-react";
 
 const sections = [
   {
@@ -39,7 +48,8 @@ const sections = [
     icon: <Send className="w-6 h-6 text-warning" />,
     color: "warning" as const,
     title: "4. Comment faire une demande",
-    content: "Pour initier un remboursement, contactez-nous avec les informations suivantes :",
+    content:
+      "Pour initier un remboursement, contactez-nous avec les informations suivantes :",
     list: [
       "L'adresse courriel associée à votre compte MealMatch",
       "La date de votre paiement",
@@ -74,16 +84,20 @@ export default function RefundPage() {
     <div className="flex flex-col gap-16 py-12">
       {/* Hero */}
       <section className="text-center flex flex-col items-center gap-4">
-        <Chip color="success" variant="flat" size="sm" className="font-semibold">
+        <Chip
+          color="success"
+          variant="flat"
+          size="sm"
+          className="font-semibold"
+        >
           Légal
         </Chip>
         <h1 className="text-4xl lg:text-6xl font-bold tracking-tight">
-          Politique de{" "}
-          <span className="text-success">Remboursement</span>
+          Politique de <span className="text-success">Remboursement</span>
         </h1>
         <p className="text-default-500 text-lg max-w-2xl">
-          Satisfait ou remboursé dans les 14 jours. Sans questions.
-          Dernière mise à jour : 21 février 2025.
+          Satisfait ou remboursé dans les 14 jours. Sans questions. Dernière
+          mise à jour : 21 février 2026.
         </p>
       </section>
 
@@ -94,7 +108,8 @@ export default function RefundPage() {
             <BadgeCheck className="w-8 h-8 text-success" />
             <p className="font-bold text-lg">Garantie satisfaction 14 jours</p>
             <p className="text-default-500 text-sm">
-              Remboursement complet si vous n&apos;êtes pas satisfait dans les 14 jours suivant votre premier paiement.
+              Remboursement complet si vous n&apos;êtes pas satisfait dans les
+              14 jours suivant votre premier paiement.
             </p>
           </CardBody>
         </Card>
@@ -115,11 +130,16 @@ export default function RefundPage() {
               <h2 className="font-bold text-base">{section.title}</h2>
             </CardHeader>
             <CardBody className="flex flex-col gap-3">
-              <p className="text-default-500 text-sm leading-relaxed">{section.content}</p>
+              <p className="text-default-500 text-sm leading-relaxed">
+                {section.content}
+              </p>
               {section.list && (
                 <ul className="flex flex-col gap-1.5 mt-1">
                   {section.list.map((item, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-default-500">
+                    <li
+                      key={i}
+                      className="flex items-start gap-2 text-sm text-default-500"
+                    >
                       <span className="w-1.5 h-1.5 rounded-full bg-success flex-shrink-0 mt-1.5" />
                       {item}
                     </li>
@@ -140,7 +160,8 @@ export default function RefundPage() {
               Besoin d&apos;un remboursement ?
             </h2>
             <p className="text-white/90 text-lg max-w-xl">
-              Contactez notre équipe — nous traitons toutes les demandes dans les 5 à 7 jours ouvrables.
+              Contactez notre équipe — nous traitons toutes les demandes dans
+              les 5 à 7 jours ouvrables.
             </p>
             <div className="flex gap-3 flex-wrap justify-center">
               <Button
