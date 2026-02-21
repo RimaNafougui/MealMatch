@@ -13,7 +13,7 @@ const API_KEYS = [
   process.env.SPOONACULAR_API_KEY_3,
 ].filter((key): key is string => !!key && key.length > 0);
 
-const TARGET_COUNT_PER_KEY = 40;
+const TARGET_COUNT_PER_KEY = 120;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
