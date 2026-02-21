@@ -148,8 +148,8 @@ export default function SignUpForm() {
         return;
       }
 
-      router.push("/login?signup=success");
-      toast.success("Inscription réussie!");
+      router.push("/login?verify=true");
+      // Don't show toast here — the login page verification banner handles messaging
     } catch (err) {
       setError("Une erreur inattendue est survenue");
       setIsLoading(false);

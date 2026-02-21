@@ -4,7 +4,7 @@ import { Form, Input, Button, Link, Divider } from "@heroui/react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, MailCheck, MailWarning, CheckCircle2, XCircle } from "lucide-react";
 
 import {
   SignInButtonGithub,
@@ -14,9 +14,16 @@ import {
 function LoginFormContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const signupSuccess = searchParams?.get("signup") === "success";
+
+  // ?verify=true      → just signed up, email confirmation pending
+  // ?verified=true    → clicked email link, email now confirmed
+  // ?verified=error   → something went wrong during callback
+  const needsVerification = searchParams?.get("verify") === "true";
+  const justVerified = searchParams?.get("verified") === "true";
+  const verifyError = searchParams?.get("verified") === "error";
 
   const [error, setError] = useState<string>("");
+  const [unverified, setUnverified] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -25,6 +32,7 @@ function LoginFormContent() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
+    setUnverified(false);
     setIsLoading(true);
 
     const formData = new FormData(e.currentTarget);
@@ -32,6 +40,29 @@ function LoginFormContent() {
     const password = formData.get("password") as string;
 
     try {
+      // Step 1: pre-flight check to detect unverified email before NextAuth.
+      // NextAuth beta.30 wraps thrown errors in CallbackRouteError, losing the
+      // custom error code — so we check Supabase directly first.
+      const check = await fetch("/api/auth/check-credentials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const { status } = await check.json();
+
+      if (status === "email_not_confirmed") {
+        setUnverified(true);
+        setIsLoading(false);
+        return;
+      }
+
+      if (status === "invalid_credentials") {
+        setError("Adresse e-mail ou mot de passe invalide.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Step 2: credentials are valid → let NextAuth create the session
       const result = await signIn("credentials", {
         email,
         password,
@@ -39,20 +70,14 @@ function LoginFormContent() {
       });
 
       if (result?.error) {
+        setError("Adresse e-mail ou mot de passe invalide.");
         setIsLoading(false);
-        if (result.error.includes("EmailNotVerified")) {
-          setError(
-            "Veuillez consulter votre messagerie électronique pour vérifier votre compte avant de vous connecter.",
-          );
-        } else {
-          setError("Adresse e-mail ou mot de passe invalide.");
-        }
       } else {
         router.push("/onboarding");
         router.refresh();
       }
     } catch (err) {
-      setError("An unexpected error occurred");
+      setError("Une erreur inattendue est survenue.");
       setIsLoading(false);
     }
   };
@@ -68,14 +93,82 @@ function LoginFormContent() {
           Content de vous revoir
         </h2>
         <p className="text-default-500 text-sm tracking-wide">
-          Saisissez vos informations pour accéder à votre compte{" "}
+          Saisissez vos informations pour accéder à votre compte
         </p>
       </div>
 
-      {signupSuccess && (
-        <div className="p-3 text-xs bg-success-50 border border-success-200 text-success-700 rounded-xl text-center">
-          MealMatch compte crée! Veuillez vous connecté.
-        </div>
+      {/* ── Post-signup: email confirmation pending ── */}
+      {needsVerification && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.97 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col gap-2 p-4 rounded-2xl bg-success-50 border border-success-200 dark:bg-success/10 dark:border-success/30"
+        >
+          <div className="flex items-center gap-2 text-success-700 dark:text-success font-semibold text-sm">
+            <MailCheck size={18} />
+            Compte créé — vérifiez votre courriel !
+          </div>
+          <p className="text-success-600 dark:text-success/80 text-xs leading-relaxed">
+            Un lien de confirmation a été envoyé à votre adresse courriel.
+            Cliquez sur ce lien pour activer votre compte, puis revenez vous
+            connecter.
+          </p>
+        </motion.div>
+      )}
+
+      {/* ── Email successfully verified via link ── */}
+      {justVerified && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.97 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col gap-2 p-4 rounded-2xl bg-success-50 border border-success-200 dark:bg-success/10 dark:border-success/30"
+        >
+          <div className="flex items-center gap-2 text-success-700 dark:text-success font-semibold text-sm">
+            <CheckCircle2 size={18} />
+            Courriel vérifié avec succès !
+          </div>
+          <p className="text-success-600 dark:text-success/80 text-xs leading-relaxed">
+            Votre adresse courriel a été confirmée. Vous pouvez maintenant vous
+            connecter.
+          </p>
+        </motion.div>
+      )}
+
+      {/* ── Verification link error ── */}
+      {verifyError && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.97 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col gap-2 p-4 rounded-2xl bg-danger-50 border border-danger-200 dark:bg-danger/10 dark:border-danger/30"
+        >
+          <div className="flex items-center gap-2 text-danger-700 dark:text-danger font-semibold text-sm">
+            <XCircle size={18} />
+            Lien de vérification invalide
+          </div>
+          <p className="text-danger-600 dark:text-danger/80 text-xs leading-relaxed">
+            Ce lien a expiré ou est invalide. Réessayez de vous inscrire pour
+            recevoir un nouveau lien.
+          </p>
+        </motion.div>
+      )}
+
+      {/* ── Login attempt while email unverified ── */}
+      {unverified && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.97 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col gap-2 p-4 rounded-2xl bg-warning-50 border border-warning-200 dark:bg-warning/10 dark:border-warning/30"
+        >
+          <div className="flex items-center gap-2 text-warning-700 dark:text-warning font-semibold text-sm">
+            <MailWarning size={18} />
+            Courriel non vérifié
+          </div>
+          <p className="text-warning-600 dark:text-warning/80 text-xs leading-relaxed">
+            Votre adresse courriel n&apos;a pas encore été confirmée. Consultez
+            votre boîte de réception (et vos indésirables) pour trouver le lien
+            d&apos;activation envoyé lors de votre inscription.
+          </p>
+        </motion.div>
       )}
 
       <Form
@@ -127,9 +220,12 @@ function LoginFormContent() {
             Mot de passe oublié?
           </Link>
         </div>
+
+        {/* Generic credential error (wrong password etc.) */}
         {error && (
           <p className="text-danger text-xs text-center font-medium">{error}</p>
         )}
+
         <Button
           className="w-full h-12 font-bold text-md mt-2 shadow-lg shadow-primary/20"
           color="primary"
@@ -141,7 +237,7 @@ function LoginFormContent() {
         <div className="flex items-center w-full gap-4 my-2">
           <Divider className="flex-1" />
           <span className="text-xs text-default-400 uppercase tracking-widest">
-            Où
+            Ou
           </span>
           <Divider className="flex-1" />
         </div>

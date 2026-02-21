@@ -44,7 +44,11 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           });
 
           if (error) {
-            if (error.message.includes("Email not confirmed")) {
+            if (
+              error.message.includes("Email not confirmed") ||
+              error.message.includes("email not confirmed") ||
+              error.code === "email_not_confirmed"
+            ) {
               throw new EmailNotVerifiedError();
             }
             return null;
@@ -75,9 +79,8 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           };
         } catch (error) {
           if (error instanceof EmailNotVerifiedError) {
-            throw error;
+            throw error; // must propagate so NextAuth surfaces the code
           }
-          console.error("Authorization error:", error);
           return null;
         }
       },

@@ -5,9 +5,10 @@ import { getSupabaseServer } from "@/utils/supabase-server";
 // GET - fetch a single meal plan by ID
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -17,7 +18,7 @@ export async function GET(
     const { data: plan, error } = await supabase
       .from("meal_plans")
       .select("*")
-      .eq("id", params.id)
+      .eq("id", id)
       .eq("user_id", session.user.id)
       .single();
 
@@ -35,9 +36,10 @@ export async function GET(
 // DELETE - delete a meal plan
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -47,7 +49,7 @@ export async function DELETE(
     const { error } = await supabase
       .from("meal_plans")
       .delete()
-      .eq("id", params.id)
+      .eq("id", id)
       .eq("user_id", session.user.id);
 
     if (error) throw error;

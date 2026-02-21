@@ -5,16 +5,16 @@ import { getSupabaseServer } from "@/utils/supabase-server";
 // PATCH - toggle a shopping list item checked state
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: listId } = await params;
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { itemIndex, checked } = await req.json();
-    const listId = params.id;
 
     const supabase = getSupabaseServer();
 
