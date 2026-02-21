@@ -41,7 +41,7 @@ const mainFeatures = [
     description:
       "Mange sainement sans te ruiner. MealMatch optimise tes repas pour respecter ton budget tout en garantissant une alimentation équilibrée.",
     details: [
-      "Recettes économiques dès 2€ par repas",
+      "Recettes économiques dès 2$ par repas",
       "Comparaison des prix automatique",
       "Optimisation des achats en vrac",
       "Suivi des dépenses alimentaires",
@@ -115,19 +115,29 @@ export default function FeaturesPage() {
     <div className="flex flex-col gap-16 py-12">
       {/* Hero */}
       <section className="text-center flex flex-col items-center gap-4">
-        <Chip color="success" variant="flat" size="sm" className="font-semibold">
+        <Chip
+          color="success"
+          variant="flat"
+          size="sm"
+          className="font-semibold"
+        >
           Fonctionnalités
         </Chip>
         <h1 className="text-4xl lg:text-6xl font-bold tracking-tight">
-          Tout ce dont tu as{" "}
-          <span className="text-success">besoin</span>
+          Tout ce dont tu as <span className="text-success">besoin</span>
         </h1>
         <p className="text-default-500 text-lg max-w-2xl">
-          MealMatch réunit tout ce qu'il te faut pour manger sainement, dépenser moins
-          et cuisiner sans stress — spécialement conçu pour les étudiants.
+          MealMatch réunit tout ce qu'il te faut pour manger sainement, dépenser
+          moins et cuisiner sans stress — spécialement conçu pour les étudiants.
         </p>
         <div className="flex gap-3 mt-2">
-          <Button as={Link} href="/signup" color="success" size="lg" className="font-semibold">
+          <Button
+            as={Link}
+            href="/signup"
+            color="success"
+            size="lg"
+            className="font-semibold"
+          >
             Essayer gratuitement
           </Button>
           <Button as={Link} href="/pricing" variant="bordered" size="lg">
@@ -192,9 +202,15 @@ export default function FeaturesPage() {
               Prêt à transformer ta façon de manger ?
             </h2>
             <p className="text-white/90 text-lg max-w-xl">
-              Rejoins des milliers d'étudiants qui mangent mieux grâce à MealMatch.
+              Rejoins des milliers d'étudiants qui mangent mieux grâce à
+              MealMatch.
             </p>
-            <Button as={Link} href="/signup" size="lg" className="bg-white text-success font-bold">
+            <Button
+              as={Link}
+              href="/signup"
+              size="lg"
+              className="bg-white text-success font-bold"
+            >
               Commencer maintenant
             </Button>
           </CardBody>

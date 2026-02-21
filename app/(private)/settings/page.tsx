@@ -34,9 +34,9 @@ const dietaryOptions = [
 ];
 
 const budgetOptions = [
-  { key: "low", label: "Petit budget (< 30€/semaine)" },
-  { key: "medium", label: "Budget moyen (30-60€/semaine)" },
-  { key: "high", label: "Budget confortable (60€+/semaine)" },
+  { key: "low", label: "Petit budget (< 30$/semaine)" },
+  { key: "medium", label: "Budget moyen (30-60$/semaine)" },
+  { key: "high", label: "Budget confortable (60$+/semaine)" },
 ];
 
 const languageOptions = [
@@ -78,9 +78,21 @@ export default function SettingsPage() {
 
   const sections: { key: Section; label: string; icon: React.ReactNode }[] = [
     { key: "profile", label: "Profil", icon: <User className="w-4 h-4" /> },
-    { key: "preferences", label: "Préférences", icon: <Globe className="w-4 h-4" /> },
-    { key: "notifications", label: "Notifications", icon: <Bell className="w-4 h-4" /> },
-    { key: "privacy", label: "Confidentialité", icon: <Shield className="w-4 h-4" /> },
+    {
+      key: "preferences",
+      label: "Préférences",
+      icon: <Globe className="w-4 h-4" />,
+    },
+    {
+      key: "notifications",
+      label: "Notifications",
+      icon: <Bell className="w-4 h-4" />,
+    },
+    {
+      key: "privacy",
+      label: "Confidentialité",
+      icon: <Shield className="w-4 h-4" />,
+    },
   ];
 
   const initials = (session?.user?.name || session?.user?.email || "U")
@@ -95,7 +107,11 @@ export default function SettingsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Paramètres</h1>
         {saved && (
-          <Chip color="success" variant="flat" className="font-semibold animate-fade-in">
+          <Chip
+            color="success"
+            variant="flat"
+            className="font-semibold animate-fade-in"
+          >
             Sauvegardé !
           </Chip>
         )}
@@ -146,8 +162,12 @@ export default function SettingsPage() {
                     className="w-16 h-16 text-xl font-bold"
                   />
                   <div>
-                    <p className="font-semibold">{session?.user?.name || "Utilisateur"}</p>
-                    <p className="text-default-400 text-xs">{session?.user?.email}</p>
+                    <p className="font-semibold">
+                      {session?.user?.name || "Utilisateur"}
+                    </p>
+                    <p className="text-default-400 text-xs">
+                      {session?.user?.email}
+                    </p>
                   </div>
                 </div>
 
@@ -158,7 +178,9 @@ export default function SettingsPage() {
                     label="Nom d'affichage"
                     placeholder="Ton prénom ou pseudo"
                     value={profileForm.name}
-                    onValueChange={(v) => setProfileForm({ ...profileForm, name: v })}
+                    onValueChange={(v) =>
+                      setProfileForm({ ...profileForm, name: v })
+                    }
                     variant="flat"
                   />
                   <Input
@@ -166,7 +188,9 @@ export default function SettingsPage() {
                     placeholder="ton@email.com"
                     type="email"
                     value={profileForm.email}
-                    onValueChange={(v) => setProfileForm({ ...profileForm, email: v })}
+                    onValueChange={(v) =>
+                      setProfileForm({ ...profileForm, email: v })
+                    }
                     variant="flat"
                     description="Modifier l'email nécessite une confirmation."
                   />
@@ -207,7 +231,10 @@ export default function SettingsPage() {
                   label="Régime alimentaire"
                   selectedKeys={[preferences.dietary]}
                   onSelectionChange={(keys) =>
-                    setPreferences({ ...preferences, dietary: Array.from(keys)[0] as string })
+                    setPreferences({
+                      ...preferences,
+                      dietary: Array.from(keys)[0] as string,
+                    })
                   }
                   variant="flat"
                 >
@@ -220,7 +247,10 @@ export default function SettingsPage() {
                   label="Budget hebdomadaire"
                   selectedKeys={[preferences.budget]}
                   onSelectionChange={(keys) =>
-                    setPreferences({ ...preferences, budget: Array.from(keys)[0] as string })
+                    setPreferences({
+                      ...preferences,
+                      budget: Array.from(keys)[0] as string,
+                    })
                   }
                   variant="flat"
                 >
@@ -233,12 +263,17 @@ export default function SettingsPage() {
                   label="Nombre de portions par repas"
                   selectedKeys={[preferences.servings]}
                   onSelectionChange={(keys) =>
-                    setPreferences({ ...preferences, servings: Array.from(keys)[0] as string })
+                    setPreferences({
+                      ...preferences,
+                      servings: Array.from(keys)[0] as string,
+                    })
                   }
                   variant="flat"
                 >
                   {["1", "2", "3", "4"].map((n) => (
-                    <SelectItem key={n}>{n} portion{n !== "1" ? "s" : ""}</SelectItem>
+                    <SelectItem key={n}>
+                      {n} portion{n !== "1" ? "s" : ""}
+                    </SelectItem>
                   ))}
                 </Select>
 
@@ -246,7 +281,10 @@ export default function SettingsPage() {
                   label="Langue de l'application"
                   selectedKeys={[preferences.language]}
                   onSelectionChange={(keys) =>
-                    setPreferences({ ...preferences, language: Array.from(keys)[0] as string })
+                    setPreferences({
+                      ...preferences,
+                      language: Array.from(keys)[0] as string,
+                    })
                   }
                   variant="flat"
                 >
@@ -271,7 +309,9 @@ export default function SettingsPage() {
           {activeSection === "notifications" && (
             <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
               <CardHeader className="pb-2 p-0 mb-6">
-                <h2 className="font-bold text-xl">Préférences de notification</h2>
+                <h2 className="font-bold text-xl">
+                  Préférences de notification
+                </h2>
               </CardHeader>
               <CardBody className="p-0 flex flex-col gap-0">
                 {[
@@ -316,7 +356,9 @@ export default function SettingsPage() {
                         size="sm"
                       />
                     </div>
-                    {i < arr.length - 1 && <Divider className="bg-divider/50" />}
+                    {i < arr.length - 1 && (
+                      <Divider className="bg-divider/50" />
+                    )}
                   </div>
                 ))}
 
@@ -337,15 +379,21 @@ export default function SettingsPage() {
             <div className="flex flex-col gap-4">
               <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
                 <CardHeader className="pb-2 p-0 mb-4">
-                  <h2 className="font-bold text-xl">Confidentialité et données</h2>
+                  <h2 className="font-bold text-xl">
+                    Confidentialité et données
+                  </h2>
                 </CardHeader>
                 <CardBody className="p-0 flex flex-col gap-4">
                   <p className="text-default-500 text-sm">
-                    Tes données personnelles sont protégées et ne sont jamais partagées
-                    avec des tiers sans ton consentement explicite.
+                    Tes données personnelles sont protégées et ne sont jamais
+                    partagées avec des tiers sans ton consentement explicite.
                   </p>
                   <div className="flex flex-col gap-3">
-                    <Button variant="flat" color="primary" className="font-semibold justify-start">
+                    <Button
+                      variant="flat"
+                      color="primary"
+                      className="font-semibold justify-start"
+                    >
                       Télécharger mes données
                     </Button>
                     <Button
@@ -372,12 +420,15 @@ export default function SettingsPage() {
 
               <Card className="p-6 border border-danger/30 bg-danger/5">
                 <CardHeader className="pb-2 p-0 mb-4">
-                  <h2 className="font-bold text-xl text-danger">Zone dangereuse</h2>
+                  <h2 className="font-bold text-xl text-danger">
+                    Zone dangereuse
+                  </h2>
                 </CardHeader>
                 <CardBody className="p-0 flex flex-col gap-3">
                   <p className="text-default-500 text-sm">
-                    La suppression de ton compte est irréversible. Toutes tes données,
-                    recettes et plans de repas seront définitivement supprimés.
+                    La suppression de ton compte est irréversible. Toutes tes
+                    données, recettes et plans de repas seront définitivement
+                    supprimés.
                   </p>
                   <Button
                     color="danger"

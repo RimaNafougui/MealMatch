@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Card, CardBody, Button, Chip } from "@heroui/react";
+import { Card, CardBody, Button, Chip, Skeleton } from "@heroui/react";
 import { Calendar, UtensilsCrossed, Sparkles } from "lucide-react";
 import { MealPlanConfig } from "@/types/meal-plan";
 
@@ -34,6 +34,47 @@ export function GenerateConfig({
     2: ["Lunch + Dinner"],
     3: ["Breakfast + Lunch + Dinner"],
   };
+
+  if (isGenerating) {
+    return (
+      <div className="flex flex-col gap-6">
+        {/* Skeleton for days selector */}
+        <Card className="border border-divider bg-content1">
+          <CardBody className="gap-4 p-5">
+            <Skeleton className="h-4 w-36 rounded-lg" />
+            <div className="flex gap-3">
+              <Skeleton className="flex-1 h-16 rounded-xl" />
+              <Skeleton className="flex-1 h-16 rounded-xl" />
+            </div>
+          </CardBody>
+        </Card>
+
+        {/* Skeleton for meals per day */}
+        <Card className="border border-divider bg-content1">
+          <CardBody className="gap-4 p-5">
+            <Skeleton className="h-4 w-32 rounded-lg" />
+            <div className="flex gap-3">
+              <Skeleton className="flex-1 h-16 rounded-xl" />
+              <Skeleton className="flex-1 h-16 rounded-xl" />
+              <Skeleton className="flex-1 h-16 rounded-xl" />
+            </div>
+          </CardBody>
+        </Card>
+
+        {/* Skeleton for summary chips */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Skeleton className="h-6 w-16 rounded-full" />
+          <Skeleton className="h-4 w-4 rounded" />
+          <Skeleton className="h-6 w-24 rounded-full" />
+          <Skeleton className="h-4 w-4 rounded" />
+          <Skeleton className="h-6 w-20 rounded-full" />
+        </div>
+
+        {/* Skeleton for button */}
+        <Skeleton className="h-14 w-full rounded-xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
