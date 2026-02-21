@@ -9,9 +9,7 @@ export default function PublicLayout({
   return (
     <div className="relative flex flex-col h-screen">
       <Header />
-      <main className="container mx-auto max-w-7xl pt-16 px-6 flex-grow">
-        {children}
-      </main>
+      <main className="flex-grow w-full">{children}</main>
       <Footer />
     </div>
   );

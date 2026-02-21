@@ -151,6 +151,7 @@ const calorieProfiles = [
 
 export default function NutritionPage() {
   return (
+    <div className="max-w-7xl mx-auto px-6 pt-16 pb-12">
     <div className="flex flex-col gap-16 py-12">
       {/* Hero */}
       <section className="text-center flex flex-col items-center gap-4">
@@ -339,6 +340,7 @@ export default function NutritionPage() {
           </CardBody>
         </Card>
       </section>
+    </div>
     </div>
   );
 }

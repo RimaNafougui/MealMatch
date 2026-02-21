@@ -1,4 +1,5 @@
 "use client";
+
 import React from "react";
 import {
   Navbar as HeroUINavbar,
@@ -9,30 +10,53 @@ import {
   NavbarItem,
   NavbarMenuItem,
   Button,
-  Badge,
 } from "@heroui/react";
 import { link as linkStyles } from "@heroui/theme";
 import NextLink from "next/link";
 import clsx from "clsx";
-import { Sparkles } from "lucide-react";
+import {
+  Sparkles,
+  LayoutDashboard,
+  Compass,
+  Home,
+  Tag,
+  Info,
+  LogIn,
+  User,
+  Settings,
+  Utensils,
+  LogOut,
+} from "lucide-react";
 
 import { siteConfig } from "@/config/site";
 import { ThemeSwitch } from "@/components/theme-switch";
 import { ProfileDropdown } from "@/components/login/dropdown";
 import { Logo } from "@/components/logo";
+import { logout } from "@/lib/actions/auth";
 
-const privateNavItems = [
-  { label: "Dashboard", href: "/dashboard" },
-  { label: "Explorer", href: "/explore" },
+// ─── Nav item definitions ─────────────────────────────────────────────────────
+
+const publicNavItems = [
+  { label: "Accueil", href: "/", icon: <Home size={18} /> },
+  { label: "Tarification", href: "/pricing", icon: <Tag size={18} /> },
+  { label: "Nutrition", href: "/nutrition", icon: <Info size={18} /> },
 ];
 
-export const AppNavbar = ({ user }: { user: any }) => {
-  const [isMenuOpen, setIsMenuOpen] = React.useReducer(
-    (current) => !current,
-    false,
-  );
+const privateNavItems = [
+  {
+    label: "Dashboard",
+    href: "/dashboard",
+    icon: <LayoutDashboard size={18} />,
+  },
+  { label: "Explorer", href: "/explore", icon: <Compass size={18} /> },
+];
 
-  const navItems = user ? privateNavItems : siteConfig.navItems;
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export const AppNavbar = ({ user }: { user: any }) => {
+  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+
+  const navItems = user ? privateNavItems : publicNavItems;
 
   return (
     <HeroUINavbar
@@ -45,42 +69,46 @@ export const AppNavbar = ({ user }: { user: any }) => {
         wrapper: "px-4 sm:px-6",
       }}
     >
-      <NavbarContent className="sm:hidden" justify="start">
+      {/* ── Left: hamburger (mobile) + brand ───────────────────────────────── */}
+      <NavbarContent justify="start" className="gap-3">
+        {/* Hamburger — visible below md */}
         <NavbarMenuToggle
-          aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+          aria-label={isMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+          className="md:hidden text-default-600"
         />
-      </NavbarContent>
 
-      <NavbarContent justify="start">
-        <NavbarBrand as="li" className="gap-3 max-w-fit">
+        {/* Brand / Logo */}
+        <NavbarBrand>
           <NextLink
-            className="flex justify-start items-center gap-1"
+            className="flex items-center gap-2"
             href={user ? "/dashboard" : "/"}
           >
             <Logo />
           </NextLink>
         </NavbarBrand>
-
-        <ul className="hidden lg:flex gap-6 ml-6">
-          {navItems.map((item) => (
-            <NavbarItem key={item.href}>
-              <NextLink
-                className={clsx(
-                  linkStyles({ color: "foreground" }),
-                  "text-sm font-medium hover:text-success transition-colors relative group",
-                )}
-                href={item.href}
-              >
-                {item.label}
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-success group-hover:w-full transition-all duration-300" />
-              </NextLink>
-            </NavbarItem>
-          ))}
-        </ul>
       </NavbarContent>
 
-      <NavbarContent justify="end" className="gap-3">
-        <NavbarItem className="hidden sm:flex">
+      {/* ── Centre: desktop nav links — hidden below md ─────────────────────── */}
+      <NavbarContent className="hidden md:flex gap-1" justify="center">
+        {navItems.map((item) => (
+          <NavbarItem key={item.href}>
+            <NextLink
+              className={clsx(
+                linkStyles({ color: "foreground" }),
+                "text-sm font-medium px-3 py-1.5 rounded-lg hover:text-success hover:bg-success/5 transition-colors relative group",
+              )}
+              href={item.href}
+            >
+              {item.label}
+              <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-success scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left rounded-full" />
+            </NextLink>
+          </NavbarItem>
+        ))}
+      </NavbarContent>
+
+      {/* ── Right: theme + auth actions ─────────────────────────────────────── */}
+      <NavbarContent justify="end" className="gap-2">
+        <NavbarItem>
           <ThemeSwitch />
         </NavbarItem>
 
@@ -89,90 +117,141 @@ export const AppNavbar = ({ user }: { user: any }) => {
             <ProfileDropdown user={user} />
           </NavbarItem>
         ) : (
-          <div className="flex gap-2">
-            <Button
-              as={NextLink}
-              href="/login"
-              variant="light"
-              size="sm"
-              className="font-medium"
-            >
-              Connexion
-            </Button>
-            <Badge
-              content={<Sparkles size={10} />}
-              color="success"
-              size="sm"
-              placement="top-right"
-              className="hidden sm:flex"
-            >
+          <>
+            {/* Login — hidden on very small screens */}
+            <NavbarItem className="hidden sm:flex">
+              <Button
+                as={NextLink}
+                href="/login"
+                variant="light"
+                size="sm"
+                className="font-medium"
+              >
+                Connexion
+              </Button>
+            </NavbarItem>
+
+            {/* Sign up — always visible */}
+            <NavbarItem>
               <Button
                 as={NextLink}
                 href="/signup"
                 color="success"
-                variant="flat"
                 size="sm"
-                className="font-semibold"
+                className="font-semibold text-white"
+                startContent={<Sparkles size={13} />}
               >
-                Commencer
+                <span className="hidden sm:inline">Commencer</span>
+                <span className="sm:hidden">S&apos;inscrire</span>
               </Button>
-            </Badge>
-            <Button
-              as={NextLink}
-              href="/signup"
-              color="success"
-              variant="flat"
-              size="sm"
-              className="font-semibold sm:hidden"
-            >
-              Inscription
-            </Button>
-          </div>
+            </NavbarItem>
+          </>
         )}
       </NavbarContent>
 
-      <NavbarMenu className="pt-8 pb-6 bg-background/95 backdrop-blur-lg">
-        <div className="flex flex-col gap-4">
+      {/* ── Mobile menu ─────────────────────────────────────────────────────── */}
+      <NavbarMenu className="pt-6 pb-8 bg-background/98 backdrop-blur-xl gap-0">
+        {/* Nav links */}
+        <div className="flex flex-col gap-1 mb-6">
+          <p className="text-[10px] font-bold text-default-400 uppercase tracking-widest px-3 mb-2">
+            Navigation
+          </p>
+          {navItems.map((item) => (
+            <NavbarMenuItem key={item.href}>
+              <NextLink
+                href={item.href}
+                onClick={() => setIsMenuOpen(false)}
+                className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-default-700 hover:bg-success/8 hover:text-success transition-colors"
+              >
+                <span className="w-8 h-8 rounded-lg bg-default-100 dark:bg-default-50/10 flex items-center justify-center text-default-500">
+                  {item.icon}
+                </span>
+                {item.label}
+              </NextLink>
+            </NavbarMenuItem>
+          ))}
+        </div>
+
+        {/* Auth section */}
+        <div className="border-t border-divider/50 pt-6 flex flex-col gap-1">
           {user ? (
-            navItems.map((item, index) => (
-              <NavbarMenuItem key={`${item.label}-${index}`}>
-                <NextLink
-                  className="w-full text-2xl font-medium tracking-tight py-2 hover:text-success transition-colors"
-                  href={item.href}
-                  onClick={() => setIsMenuOpen()}
+            <>
+              <p className="text-[10px] font-bold text-default-400 uppercase tracking-widest px-3 mb-2">
+                Mon compte
+              </p>
+              {[
+                {
+                  label: "Mon Profil",
+                  href: "/profile",
+                  icon: <User size={18} />,
+                },
+                {
+                  label: "Mes Recettes",
+                  href: "/dashboard/recettes",
+                  icon: <Utensils size={18} />,
+                },
+                {
+                  label: "Paramètres",
+                  href: "/settings",
+                  icon: <Settings size={18} />,
+                },
+              ].map((item) => (
+                <NavbarMenuItem key={item.href}>
+                  <NextLink
+                    href={item.href}
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-default-700 hover:bg-success/8 hover:text-success transition-colors"
+                  >
+                    <span className="w-8 h-8 rounded-lg bg-default-100 dark:bg-default-50/10 flex items-center justify-center text-default-500">
+                      {item.icon}
+                    </span>
+                    {item.label}
+                  </NextLink>
+                </NavbarMenuItem>
+              ))}
+              <NavbarMenuItem>
+                <button
+                  onClick={() => {
+                    logout();
+                    setIsMenuOpen(false);
+                  }}
+                  className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-danger hover:bg-danger/8 transition-colors w-full text-left"
                 >
-                  {item.label}
-                </NextLink>
+                  <span className="w-8 h-8 rounded-lg bg-danger/10 flex items-center justify-center">
+                    <LogOut size={18} className="text-danger" />
+                  </span>
+                  Déconnexion
+                </button>
               </NavbarMenuItem>
-            ))
+            </>
           ) : (
             <>
               <NavbarMenuItem>
                 <NextLink
-                  className="text-2xl font-medium tracking-tight py-2 hover:text-success transition-colors"
                   href="/login"
-                  onClick={() => setIsMenuOpen()}
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-default-700 hover:bg-success/8 hover:text-success transition-colors"
                 >
+                  <span className="w-8 h-8 rounded-lg bg-default-100 dark:bg-default-50/10 flex items-center justify-center text-default-500">
+                    <LogIn size={18} />
+                  </span>
                   Connexion
                 </NextLink>
               </NavbarMenuItem>
               <NavbarMenuItem>
                 <NextLink
-                  className="text-2xl font-medium tracking-tight py-2 text-success flex items-center gap-2"
                   href="/signup"
-                  onClick={() => setIsMenuOpen()}
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-success hover:bg-success/8 transition-colors"
                 >
-                  <Sparkles size={20} />
-                  Commencer
+                  <span className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
+                    <Sparkles size={18} className="text-success" />
+                  </span>
+                  Commencer gratuitement
                 </NextLink>
               </NavbarMenuItem>
             </>
           )}
-
-          <div className="pt-6 mt-4 border-t border-divider/50 flex items-center justify-between">
-            <span className="text-sm font-medium text-default-600">Thème</span>
-            <ThemeSwitch />
-          </div>
         </div>
       </NavbarMenu>
     </HeroUINavbar>
