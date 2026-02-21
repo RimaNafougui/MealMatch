@@ -13,8 +13,20 @@ import {
   Sparkles,
   Clock,
   CheckCircle2,
+  Target,
+  Rocket,
+  Salad,
+  Fish,
+  Carrot,
+  Leaf,
+  Wheat,
+  Grape,
+  Apple,
+  BookOpen,
+  Zap,
+  Timer,
+  UtensilsCrossed,
 } from "lucide-react";
-import { GradientBlobs } from "@/components/Landing-page/GradientBlobs";
 import { auth } from "@/auth";
 
 export default async function Home() {
@@ -28,9 +40,6 @@ export default async function Home() {
     <div className="flex flex-col relative overflow-hidden">
       {/* ── 1. HERO SECTION ──────────────────────────────────────────────────── */}
       <section className="relative min-h-[92vh] flex items-center overflow-hidden">
-        <div className="mealmatch-animated-bg" />
-        <GradientBlobs />
-
         {/* Subtle grid overlay */}
         <div
           className="absolute inset-0 -z-10 opacity-[0.03] dark:opacity-[0.06]"
@@ -172,17 +181,17 @@ export default async function Home() {
       {/* ── 3. ABOUT SECTION ─────────────────────────────────────────────────── */}
       <section className="max-w-7xl mx-auto px-6 w-full py-24 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-          {/* Visual side */}
+          {/* Visual side — icon orbit */}
           <div className="flex justify-center">
             <div className="relative w-72 h-72 sm:w-80 sm:h-80">
               {/* Decorative rings */}
-              <div className="absolute inset-0 rounded-full border-2 border-success/20 animate-spin-slow" />
+              <div className="absolute inset-0 rounded-full border-2 border-success/20" />
               <div className="absolute inset-6 rounded-full border-2 border-dashed border-success/30" />
 
               {/* Center badge */}
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="w-48 h-48 rounded-full bg-success/10 dark:bg-success/15 border border-success/20 flex flex-col items-center justify-center gap-2 shadow-xl shadow-success/10">
-                  <span className="text-5xl">🥗</span>
+                  <Salad size={48} className="text-success" />
                   <span className="text-sm font-bold text-success tracking-wide">
                     MealMatch
                   </span>
@@ -191,22 +200,18 @@ export default async function Home() {
 
               {/* Orbiting icons */}
               {[
-                { emoji: "🥦", top: "2%", left: "50%", delay: "0s" },
-                { emoji: "🐟", top: "50%", left: "96%", delay: "0.5s" },
-                { emoji: "🍋", top: "90%", left: "60%", delay: "1s" },
-                { emoji: "🥕", top: "75%", left: "4%", delay: "1.5s" },
-                { emoji: "🫐", top: "20%", left: "4%", delay: "2s" },
+                { icon: <Leaf size={18} className="text-success" />, top: "2%", left: "50%" },
+                { icon: <Fish size={18} className="text-primary" />, top: "50%", left: "96%" },
+                { icon: <Apple size={18} className="text-danger" />, top: "90%", left: "60%" },
+                { icon: <Carrot size={18} className="text-warning" />, top: "75%", left: "4%" },
+                { icon: <Grape size={18} className="text-secondary" />, top: "20%", left: "4%" },
               ].map((item, i) => (
                 <div
                   key={i}
-                  className="absolute w-10 h-10 rounded-full bg-white dark:bg-black/60 border border-divider/50 shadow-md flex items-center justify-center text-xl -translate-x-1/2 -translate-y-1/2"
-                  style={{
-                    top: item.top,
-                    left: item.left,
-                    animationDelay: item.delay,
-                  }}
+                  className="absolute w-10 h-10 rounded-full bg-white dark:bg-black/60 border border-divider/50 shadow-md flex items-center justify-center -translate-x-1/2 -translate-y-1/2"
+                  style={{ top: item.top, left: item.left }}
                 >
-                  {item.emoji}
+                  {item.icon}
                 </div>
               ))}
             </div>
@@ -214,7 +219,12 @@ export default async function Home() {
 
           {/* Text side */}
           <div className="flex flex-col gap-6">
-            <Chip color="success" variant="flat" size="sm" className="font-semibold text-xs tracking-wide w-fit">
+            <Chip
+              color="success"
+              variant="flat"
+              size="sm"
+              className="font-semibold text-xs tracking-wide w-fit"
+            >
               À propos de MealMatch
             </Chip>
             <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
@@ -262,7 +272,12 @@ export default async function Home() {
       >
         <div className="max-w-7xl mx-auto px-6 w-full flex flex-col gap-12">
           <div className="text-center space-y-3">
-            <Chip color="success" variant="flat" size="sm" className="font-semibold text-xs tracking-wide">
+            <Chip
+              color="success"
+              variant="flat"
+              size="sm"
+              className="font-semibold text-xs tracking-wide"
+            >
               Fonctionnalités
             </Chip>
             <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
@@ -308,7 +323,7 @@ export default async function Home() {
               <Card
                 key={i}
                 isHoverable
-                className="backdrop-blur-xl bg-white/70 dark:bg-black/40 border border-divider/50 p-6 flex flex-col gap-4"
+                className="backdrop-blur-xl bg-white/70 dark:bg-black/40 border border-divider/50 p-6"
               >
                 <CardBody className="gap-4 p-0">
                   <div
@@ -329,13 +344,18 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ── 5. HOW IT WORKS (Lead Magnet / CTA section) ──────────────────────── */}
+      {/* ── 5. HOW IT WORKS + LEAD MAGNET CTA ───────────────────────────────── */}
       <section className="max-w-7xl mx-auto px-6 w-full py-24 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           {/* Steps */}
           <div className="flex flex-col gap-8">
             <div className="space-y-3">
-              <Chip color="success" variant="flat" size="sm" className="font-semibold text-xs tracking-wide">
+              <Chip
+                color="success"
+                variant="flat"
+                size="sm"
+                className="font-semibold text-xs tracking-wide"
+              >
                 Comment ça marche ?
               </Chip>
               <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
@@ -350,32 +370,35 @@ export default async function Home() {
                   step: "01",
                   title: "Définissez vos préférences",
                   desc: "Régime alimentaire, intolérances, budget hebdomadaire — tout est pris en compte.",
-                  icon: "🎯",
+                  icon: <Target size={22} className="text-success" />,
+                  bg: "bg-success/10 border-success/20",
                 },
                 {
                   step: "02",
                   title: "Recevez votre plan de repas",
                   desc: "Notre IA génère un plan complet pour la semaine avec les recettes détaillées.",
-                  icon: "🤖",
+                  icon: <Bot size={22} className="text-primary" />,
+                  bg: "bg-primary/10 border-primary/20",
                 },
                 {
                   step: "03",
                   title: "Achetez et cuisinez",
                   desc: "Votre liste d'épicerie organisée est prête. Plus qu'à cuisiner et savourer !",
-                  icon: "🛒",
+                  icon: <ShoppingCart size={22} className="text-warning" />,
+                  bg: "bg-warning/10 border-warning/20",
                 },
               ].map((item, i) => (
                 <div key={i} className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-success/10 border border-success/20 flex items-center justify-center text-xl shrink-0">
+                  <div
+                    className={`w-12 h-12 rounded-2xl border flex items-center justify-center shrink-0 ${item.bg}`}
+                  >
                     {item.icon}
                   </div>
                   <div className="pt-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-bold text-success tracking-wider">
-                        ÉTAPE {item.step}
-                      </span>
-                    </div>
-                    <h3 className="font-bold text-base">{item.title}</h3>
+                    <span className="text-xs font-bold text-success tracking-wider">
+                      ÉTAPE {item.step}
+                    </span>
+                    <h3 className="font-bold text-base mt-0.5">{item.title}</h3>
                     <p className="text-sm text-default-500 mt-1 leading-relaxed">
                       {item.desc}
                     </p>
@@ -388,7 +411,9 @@ export default async function Home() {
           {/* CTA Card */}
           <div className="backdrop-blur-xl bg-white/70 dark:bg-black/40 border border-divider/50 rounded-3xl p-8 sm:p-10 flex flex-col gap-6">
             <div className="text-center space-y-2">
-              <div className="text-4xl mb-4">🚀</div>
+              <div className="w-16 h-16 rounded-2xl bg-success/10 border border-success/20 flex items-center justify-center mx-auto mb-4">
+                <Rocket size={32} className="text-success" />
+              </div>
               <h3 className="text-2xl font-extrabold tracking-tight">
                 Créez votre premier plan
                 <br />
@@ -437,7 +462,12 @@ export default async function Home() {
         <div className="max-w-7xl mx-auto px-6 w-full flex flex-col gap-10">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div className="space-y-2">
-              <Chip color="success" variant="flat" size="sm" className="font-semibold text-xs tracking-wide">
+              <Chip
+                color="success"
+                variant="flat"
+                size="sm"
+                className="font-semibold text-xs tracking-wide"
+              >
                 Conseils &amp; Astuces
               </Chip>
               <h2 className="text-3xl font-extrabold tracking-tight">
@@ -459,21 +489,24 @@ export default async function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               {
-                emoji: "🥗",
+                icon: <Wheat size={32} className="text-success" />,
+                iconBg: "bg-success/10",
                 tag: "Nutrition",
                 title: "5 façons de manger équilibré avec un petit budget",
                 desc: "Découvrez comment optimiser votre alimentation sans vider votre portefeuille.",
                 time: "5 min",
               },
               {
-                emoji: "🤖",
+                icon: <Zap size={32} className="text-primary" />,
+                iconBg: "bg-primary/10",
                 tag: "IA & Tech",
                 title: "Comment l'IA révolutionne la planification des repas",
                 desc: "L'intelligence artificielle transforme notre façon de cuisiner et de faire l'épicerie.",
                 time: "7 min",
               },
               {
-                emoji: "⏱️",
+                icon: <Timer size={32} className="text-warning" />,
+                iconBg: "bg-warning/10",
                 tag: "Productivité",
                 title: "Meal prep : gagnez 5h par semaine en cuisine",
                 desc: "Préparez vos repas en avance et libérez du temps pour l'essentiel.",
@@ -489,13 +522,20 @@ export default async function Home() {
                 className="backdrop-blur-xl bg-white/70 dark:bg-black/40 border border-divider/50 overflow-hidden"
               >
                 <CardBody className="p-0">
-                  {/* Color band header */}
-                  <div className="h-32 bg-gradient-to-br from-success/10 to-success/5 dark:from-success/20 dark:to-transparent flex items-center justify-center text-5xl">
-                    {post.emoji}
+                  {/* Icon header */}
+                  <div
+                    className={`h-32 ${post.iconBg} flex items-center justify-center`}
+                  >
+                    {post.icon}
                   </div>
                   <div className="p-5 space-y-3">
                     <div className="flex items-center justify-between">
-                      <Chip size="sm" variant="flat" color="success" className="text-xs font-semibold">
+                      <Chip
+                        size="sm"
+                        variant="flat"
+                        color="success"
+                        className="text-xs font-semibold"
+                      >
                         {post.tag}
                       </Chip>
                       <span className="flex items-center gap-1 text-xs text-default-400">
@@ -503,7 +543,9 @@ export default async function Home() {
                         {post.time}
                       </span>
                     </div>
-                    <h3 className="font-bold text-sm leading-snug">{post.title}</h3>
+                    <h3 className="font-bold text-sm leading-snug">
+                      {post.title}
+                    </h3>
                     <p className="text-xs text-default-500 leading-relaxed">
                       {post.desc}
                     </p>
@@ -525,14 +567,19 @@ export default async function Home() {
               <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full bg-white -translate-x-1/3 translate-y-1/3" />
             </div>
 
-            <div className="relative space-y-3">
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-                Prêt à mieux manger ?
-              </h2>
-              <p className="text-white/80 text-lg max-w-xl mx-auto">
-                Rejoignez MealMatch aujourd&apos;hui et laissez l&apos;IA gérer
-                vos repas — gratuitement.
-              </p>
+            <div className="relative flex flex-col items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center">
+                <UtensilsCrossed size={32} className="text-white" />
+              </div>
+              <div className="space-y-3">
+                <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+                  Prêt à mieux manger ?
+                </h2>
+                <p className="text-white/80 text-lg max-w-xl mx-auto">
+                  Rejoignez MealMatch aujourd&apos;hui et laissez l&apos;IA gérer
+                  vos repas — gratuitement.
+                </p>
+              </div>
             </div>
 
             <Button

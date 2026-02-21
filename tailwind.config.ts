@@ -95,7 +95,7 @@ const config: Config = {
         dark: {
           colors: {
             background: {
-              DEFAULT: "#1E293B",
+              DEFAULT: "#212121",
               foreground: "#F8FAFC",
             },
             primary: {
