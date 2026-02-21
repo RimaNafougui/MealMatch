@@ -13,7 +13,7 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans: ["Poppins", "system-ui", "sans-serif"],
       },
 
       fontSize: {
@@ -75,7 +75,17 @@ const config: Config = {
               foreground: "#FFFFFF",
             },
             success: {
-              DEFAULT: "#10B981",
+              50: "#e6f4ee",
+              100: "#c2e3d3",
+              200: "#9bd1b6",
+              300: "#70be97",
+              400: "#4daf7e",
+              500: "#2a9f65",
+              600: "#1d7d4e",
+              700: "#125c38",
+              800: "#093d25",
+              900: "#2E6F40",
+              DEFAULT: "#2E6F40",
               foreground: "#FFFFFF",
             },
             focus: "#2563EB",
@@ -105,8 +115,18 @@ const config: Config = {
               foreground: "#FFFFFF",
             },
             success: {
-              DEFAULT: "#10B981",
-              foreground: "#0F172A",
+              50: "#e6f4ee",
+              100: "#c2e3d3",
+              200: "#9bd1b6",
+              300: "#70be97",
+              400: "#4daf7e",
+              500: "#2a9f65",
+              600: "#1d7d4e",
+              700: "#125c38",
+              800: "#093d25",
+              900: "#2E6F40",
+              DEFAULT: "#2E6F40",
+              foreground: "#FFFFFF",
             },
             focus: "#60A5FA",
           },

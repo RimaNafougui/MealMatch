@@ -11,6 +11,26 @@
   --font-mono: "monospace", monospace;
 }
 
+/* Override HeroUI success color to #2E6F40 (forest green) */
+:root,
+[data-theme="light"],
+.light,
+.dark,
+[data-theme="dark"] {
+  --heroui-success-50: 132 31.25% 93.73%;
+  --heroui-success-100: 130 30.77% 84.71%;
+  --heroui-success-200: 129.23 30.71% 75.1%;
+  --heroui-success-300: 130.53 31.49% 64.51%;
+  --heroui-success-400: 131.2 32.19% 54.31%;
+  --heroui-success-500: 136.62 41.4% 30.78%;
+  --heroui-success-600: 137.14 41.79% 26.27%;
+  --heroui-success-700: 137.5 43.64% 21.57%;
+  --heroui-success-800: 136.92 45.88% 16.67%;
+  --heroui-success-900: 136 50% 11.76%;
+  --heroui-success: 136.62 41.4% 30.78%;
+  --heroui-success-foreground: 0 0% 100%;
+}
+
 .mealmatch-animated-bg {
   position: absolute;
   inset: 0;
