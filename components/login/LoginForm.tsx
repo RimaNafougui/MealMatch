@@ -4,7 +4,7 @@ import { Form, Input, Button, Link, Divider } from "@heroui/react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, Lock, Mail, MailCheck, MailWarning, CheckCircle2, XCircle } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, UserRound, MailCheck, MailWarning, CheckCircle2, XCircle } from "lucide-react";
 
 import {
   SignInButtonGithub,
@@ -19,13 +19,17 @@ function LoginFormContent() {
   // ?verified=true    → clicked email link, email now confirmed
   // ?verified=error   → something went wrong during callback
   const needsVerification = searchParams?.get("verify") === "true";
-  const justVerified = searchParams?.get("verified") === "true";
-  const verifyError = searchParams?.get("verified") === "error";
+  const justVerified      = searchParams?.get("verified") === "true";
+  const verifyError       = searchParams?.get("verified") === "error";
 
-  const [error, setError] = useState<string>("");
+  const [error, setError]           = useState<string>("");
   const [unverified, setUnverified] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
+  const [isLoading, setIsLoading]   = useState(false);
+  const [isVisible, setIsVisible]   = useState(false);
+
+  // Track what the user is typing to swap the icon dynamically
+  const [identifier, setIdentifier] = useState("");
+  const looksLikeEmail = identifier.includes("@");
 
   const toggleVisibility = () => setIsVisible(!isVisible);
 
@@ -36,19 +40,40 @@ function LoginFormContent() {
     setIsLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const email = formData.get("email") as string;
+    const identifierValue = (formData.get("identifier") as string).trim();
     const password = formData.get("password") as string;
 
     try {
-      // Step 1: pre-flight check to detect unverified email before NextAuth.
-      // NextAuth beta.30 wraps thrown errors in CallbackRouteError, losing the
-      // custom error code — so we check Supabase directly first.
+      // ── Step 1: pre-flight check ─────────────────────────────────────────
+      // Resolves username → email and distinguishes "no account" from "wrong password"
       const check = await fetch("/api/auth/check-credentials", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ identifier: identifierValue, password }),
       });
-      const { status } = await check.json();
+      const { status, resolvedEmail } = await check.json();
+
+      if (status === "rate_limited") {
+        setError("Trop de tentatives. Veuillez patienter quelques instants.");
+        setIsLoading(false);
+        return;
+      }
+
+      if (status === "user_not_found") {
+        setError(
+          looksLikeEmail
+            ? "Aucun compte n'est associé à cette adresse e-mail."
+            : "Aucun compte n'est associé à ce nom d'utilisateur.",
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      if (status === "wrong_password") {
+        setError("Mot de passe incorrect. Vérifiez votre saisie ou réinitialisez-le.");
+        setIsLoading(false);
+        return;
+      }
 
       if (status === "email_not_confirmed") {
         setUnverified(true);
@@ -56,27 +81,22 @@ function LoginFormContent() {
         return;
       }
 
-      if (status === "invalid_credentials") {
-        setError("Adresse e-mail ou mot de passe invalide.");
-        setIsLoading(false);
-        return;
-      }
-
-      // Step 2: credentials are valid → let NextAuth create the session
+      // ── Step 2: credentials valid → create session via NextAuth ──────────
+      // Pass the resolved email (important when user typed a username)
       const result = await signIn("credentials", {
-        email,
+        email: resolvedEmail ?? identifierValue,
         password,
         redirect: false,
       });
 
       if (result?.error) {
-        setError("Adresse e-mail ou mot de passe invalide.");
+        setError("Une erreur est survenue lors de la connexion. Réessayez.");
         setIsLoading(false);
       } else {
         router.push("/onboarding");
         router.refresh();
       }
-    } catch (err) {
+    } catch {
       setError("Une erreur inattendue est survenue.");
       setIsLoading(false);
     }
@@ -176,17 +196,25 @@ function LoginFormContent() {
         onSubmit={handleSubmit}
         validationBehavior="native"
       >
+        {/* ── Email or username ── */}
         <Input
           isRequired
-          label="Courriel"
-          name="email"
-          placeholder="mealmatch@email.com"
-          type="email"
+          label="Courriel ou nom d'utilisateur"
+          name="identifier"
+          placeholder="mealmatch@email.com ou monpseudo"
+          type="text"
           variant="bordered"
           labelPlacement="outside"
-          startContent={<Mail size={18} className="text-default-400" />}
+          value={identifier}
+          onValueChange={setIdentifier}
+          startContent={
+            looksLikeEmail
+              ? <Mail size={18} className="text-default-400" />
+              : <UserRound size={18} className="text-default-400" />
+          }
           classNames={{ inputWrapper: "h-12" }}
         />
+
         <Input
           isRequired
           label="Mot de passe"
@@ -211,6 +239,7 @@ function LoginFormContent() {
           }
           type={isVisible ? "text" : "password"}
         />
+
         <div className="flex justify-end w-full px-1">
           <Link
             href="/forgot-password"
@@ -221,9 +250,15 @@ function LoginFormContent() {
           </Link>
         </div>
 
-        {/* Generic credential error (wrong password etc.) */}
+        {/* Specific credential error */}
         {error && (
-          <p className="text-danger text-xs text-center font-medium">{error}</p>
+          <motion.p
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-danger text-xs text-center font-medium"
+          >
+            {error}
+          </motion.p>
         )}
 
         <Button
@@ -234,6 +269,7 @@ function LoginFormContent() {
         >
           Connexion
         </Button>
+
         <div className="flex items-center w-full gap-4 my-2">
           <Divider className="flex-1" />
           <span className="text-xs text-default-400 uppercase tracking-widest">
@@ -241,10 +277,12 @@ function LoginFormContent() {
           </span>
           <Divider className="flex-1" />
         </div>
+
         <div className="grid grid-cols-2 w-full gap-3">
           <SignInButtonGoogle />
           <SignInButtonGithub />
         </div>
+
         <p className="text-center w-full text-sm text-default-500 pt-4">
           Pas de compte?{" "}
           <Link

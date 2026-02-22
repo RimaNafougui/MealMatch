@@ -32,7 +32,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
     }),
     Credentials({
       credentials: {
-        email: { label: "Email", type: "email" },
+        email: { label: "Email or Username", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
@@ -41,8 +41,24 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         }
 
         try {
+          // `credentials.email` may be a resolved email (sent by LoginForm after
+          // the pre-flight check) or a raw username if called directly. Handle both.
+          let emailToUse = (credentials.email as string).trim().toLowerCase();
+
+          const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailToUse);
+          if (!isEmail) {
+            // Resolve username → email via profiles table
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("email")
+              .ilike("username", emailToUse)
+              .single();
+            if (!profile?.email) return null;
+            emailToUse = profile.email;
+          }
+
           const { data, error } = await supabase.auth.signInWithPassword({
-            email: credentials.email as string,
+            email: emailToUse,
             password: credentials.password as string,
           });
 
