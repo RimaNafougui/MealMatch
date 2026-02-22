@@ -167,7 +167,9 @@ export default function ExplorePage() {
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
-  const [selectedIntolerances, setSelectedIntolerances] = useState<string[]>([]);
+  const [selectedIntolerances, setSelectedIntolerances] = useState<string[]>(
+    [],
+  );
   const [maxPrepTime, setMaxPrepTime] = useState<string>("");
   const [calorieRange, setCalorieRange] = useState<[number, number]>([0, 1500]);
   const [maxBudget, setMaxBudget] = useState<string>("");
@@ -199,8 +201,10 @@ export default function ExplorePage() {
       if (selectedIntolerances.length > 0)
         params.append("intolerances", selectedIntolerances.join(","));
       if (maxPrepTime) params.append("max_prep_time", maxPrepTime);
-      if (calorieRange[0] > 0) params.append("min_calories", calorieRange[0].toString());
-      if (calorieRange[1] < 1500) params.append("max_calories", calorieRange[1].toString());
+      if (calorieRange[0] > 0)
+        params.append("min_calories", calorieRange[0].toString());
+      if (calorieRange[1] < 1500)
+        params.append("max_calories", calorieRange[1].toString());
       if (maxBudget) params.append("max_price", maxBudget);
       if (maxServings) params.append("max_servings", maxServings);
       params.append("page", pagination.page.toString());
@@ -289,7 +293,6 @@ export default function ExplorePage() {
 
   return (
     <div className="max-w-7xl mx-auto flex flex-col gap-6">
-
       {/* ── Header ── */}
       <div className="flex flex-col gap-1">
         <h1 className="text-3xl font-bold flex items-center gap-2">
@@ -297,7 +300,9 @@ export default function ExplorePage() {
           Explorer les Recettes
         </h1>
         <p className="text-default-500 text-sm">
-          {loading ? "Chargement…" : `${pagination.total} recette${pagination.total > 1 ? "s" : ""} disponibles`}
+          {loading
+            ? "Chargement…"
+            : `${pagination.total} recette${pagination.total > 1 ? "s" : ""} disponibles`}
         </p>
       </div>
 
@@ -340,7 +345,9 @@ export default function ExplorePage() {
               setSearchQuery(e.target.value);
               resetPage();
             }}
-            startContent={<Search size={16} className="text-default-400 shrink-0" />}
+            startContent={
+              <Search size={16} className="text-default-400 shrink-0" />
+            }
             classNames={{
               inputWrapper:
                 "bg-default-100 border border-divider hover:border-success/50 transition-colors",
@@ -392,7 +399,6 @@ export default function ExplorePage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-
               {/* ── Régimes alimentaires ── */}
               <div className="space-y-2 md:col-span-2 xl:col-span-2">
                 <label className="text-sm font-semibold text-default-700 flex items-center gap-1.5">
@@ -403,12 +409,24 @@ export default function ExplorePage() {
                   {DIETARY_OPTIONS.map((opt) => (
                     <Chip
                       key={opt.value}
-                      variant={selectedDietary.includes(opt.value) ? "solid" : "bordered"}
-                      color={selectedDietary.includes(opt.value) ? "success" : "default"}
+                      variant={
+                        selectedDietary.includes(opt.value)
+                          ? "solid"
+                          : "bordered"
+                      }
+                      color={
+                        selectedDietary.includes(opt.value)
+                          ? "success"
+                          : "default"
+                      }
                       className="cursor-pointer select-none text-xs"
                       size="sm"
                       onClick={() =>
-                        toggleTag(opt.value, selectedDietary, setSelectedDietary)
+                        toggleTag(
+                          opt.value,
+                          selectedDietary,
+                          setSelectedDietary,
+                        )
                       }
                     >
                       {opt.label}
@@ -452,12 +470,24 @@ export default function ExplorePage() {
                   {INTOLERANCE_OPTIONS.map((opt) => (
                     <Chip
                       key={opt.value}
-                      variant={selectedIntolerances.includes(opt.value) ? "solid" : "bordered"}
-                      color={selectedIntolerances.includes(opt.value) ? "danger" : "default"}
+                      variant={
+                        selectedIntolerances.includes(opt.value)
+                          ? "solid"
+                          : "bordered"
+                      }
+                      color={
+                        selectedIntolerances.includes(opt.value)
+                          ? "danger"
+                          : "default"
+                      }
                       className="cursor-pointer select-none text-xs"
                       size="sm"
                       onClick={() =>
-                        toggleTag(opt.value, selectedIntolerances, setSelectedIntolerances)
+                        toggleTag(
+                          opt.value,
+                          selectedIntolerances,
+                          setSelectedIntolerances,
+                        )
                       }
                     >
                       {opt.label}
@@ -503,7 +533,8 @@ export default function ExplorePage() {
                   <Flame size={14} className="text-danger" />
                   Calories par portion
                   <span className="ml-auto font-normal text-default-500 text-xs">
-                    {calorieRange[0]} – {calorieRange[1] >= 1500 ? "1500+" : calorieRange[1]} kcal
+                    {calorieRange[0]} –{" "}
+                    {calorieRange[1] >= 1500 ? "1500+" : calorieRange[1]} kcal
                   </span>
                 </label>
                 <Slider
@@ -578,28 +609,40 @@ export default function ExplorePage() {
           {maxPrepTime && (
             <FilterBadge
               label={`≤ ${maxPrepTime} min`}
-              onRemove={() => { setMaxPrepTime(""); resetPage(); }}
+              onRemove={() => {
+                setMaxPrepTime("");
+                resetPage();
+              }}
             />
           )}
 
           {(calorieRange[0] > 0 || calorieRange[1] < 1500) && (
             <FilterBadge
               label={`${calorieRange[0]}–${calorieRange[1] >= 1500 ? "1500+" : calorieRange[1]} kcal`}
-              onRemove={() => { setCalorieRange([0, 1500]); resetPage(); }}
+              onRemove={() => {
+                setCalorieRange([0, 1500]);
+                resetPage();
+              }}
             />
           )}
 
           {maxBudget && (
             <FilterBadge
               label={`≤ ${maxBudget} $ / portion`}
-              onRemove={() => { setMaxBudget(""); resetPage(); }}
+              onRemove={() => {
+                setMaxBudget("");
+                resetPage();
+              }}
             />
           )}
 
           {maxServings && (
             <FilterBadge
               label={`≤ ${maxServings} portion${parseInt(maxServings) > 1 ? "s" : ""}`}
-              onRemove={() => { setMaxServings(""); resetPage(); }}
+              onRemove={() => {
+                setMaxServings("");
+                resetPage();
+              }}
             />
           )}
         </div>
@@ -619,7 +662,9 @@ export default function ExplorePage() {
               <Search size={28} className="text-default-400" />
             </div>
             <div>
-              <p className="font-semibold text-default-700">Aucune recette trouvée</p>
+              <p className="font-semibold text-default-700">
+                Aucune recette trouvée
+              </p>
               <p className="text-sm text-default-500 mt-1">
                 Essayez de modifier vos filtres ou votre recherche.
               </p>
@@ -652,7 +697,7 @@ export default function ExplorePage() {
 
       {/* ── Pagination ── */}
       {!loading && recipes.length > 0 && pagination.totalPages > 1 && (
-        <div className="flex flex-wrap justify-center items-center gap-2 pt-4">
+        <div className="flex flex-wrap justify-center items-center gap-2 pt-4 pb-4">
           <Button
             size="sm"
             variant="flat"
@@ -663,32 +708,39 @@ export default function ExplorePage() {
           </Button>
 
           <div className="flex items-center gap-1">
-            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((num) => {
-              if (
-                num === 1 ||
-                num === pagination.totalPages ||
-                (num >= pagination.page - 2 && num <= pagination.page + 2)
-              ) {
-                return (
-                  <Button
-                    key={num}
-                    size="sm"
-                    variant={num === pagination.page ? "solid" : "flat"}
-                    color={num === pagination.page ? "success" : "default"}
-                    onPress={() => setPagination((p) => ({ ...p, page: num }))}
-                  >
-                    {num}
-                  </Button>
-                );
-              } else if (num === pagination.page - 3 || num === pagination.page + 3) {
-                return (
-                  <span key={num} className="px-1 text-sm text-default-500">
-                    …
-                  </span>
-                );
-              }
-              return null;
-            })}
+            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(
+              (num) => {
+                if (
+                  num === 1 ||
+                  num === pagination.totalPages ||
+                  (num >= pagination.page - 2 && num <= pagination.page + 2)
+                ) {
+                  return (
+                    <Button
+                      key={num}
+                      size="sm"
+                      variant={num === pagination.page ? "solid" : "flat"}
+                      color={num === pagination.page ? "success" : "default"}
+                      onPress={() =>
+                        setPagination((p) => ({ ...p, page: num }))
+                      }
+                    >
+                      {num}
+                    </Button>
+                  );
+                } else if (
+                  num === pagination.page - 3 ||
+                  num === pagination.page + 3
+                ) {
+                  return (
+                    <span key={num} className="px-1 text-sm text-default-500">
+                      …
+                    </span>
+                  );
+                }
+                return null;
+              },
+            )}
           </div>
 
           <Button

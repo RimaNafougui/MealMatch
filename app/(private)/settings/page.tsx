@@ -55,20 +55,33 @@ const dietaryOptions = [
   { key: "kosher", label: "Casher" },
 ];
 
-
-const ACTIVITY_OPTIONS: { value: ActivityLevel; label: string; desc: string }[] = [
-  { value: "sedentary",         label: "Sédentaire",          desc: "≤ 5 000 pas/jour" },
-  { value: "moderately_active", label: "Modérément actif",    desc: "5 000 – 15 000 pas/jour" },
-  { value: "very_active",       label: "Très actif",          desc: "≥ 15 000 pas/jour" },
+const ACTIVITY_OPTIONS: {
+  value: ActivityLevel;
+  label: string;
+  desc: string;
+}[] = [
+  { value: "sedentary", label: "Sédentaire", desc: "≤ 5 000 pas/jour" },
+  {
+    value: "moderately_active",
+    label: "Modérément actif",
+    desc: "5 000 – 15 000 pas/jour",
+  },
+  { value: "very_active", label: "Très actif", desc: "≥ 15 000 pas/jour" },
 ];
 
 const GOAL_OPTIONS: { value: WeightGoal; label: string }[] = [
-  { value: "lose",     label: "Perdre du poids" },
+  { value: "lose", label: "Perdre du poids" },
   { value: "maintain", label: "Maintenir mon poids" },
-  { value: "gain",     label: "Prendre du poids" },
+  { value: "gain", label: "Prendre du poids" },
 ];
 
-type Section = "profile" | "preferences" | "nutrition" | "progression" | "notifications" | "privacy";
+type Section =
+  | "profile"
+  | "preferences"
+  | "nutrition"
+  | "progression"
+  | "notifications"
+  | "privacy";
 
 interface WeightLog {
   id: string;
@@ -78,7 +91,11 @@ interface WeightLog {
 }
 
 function formatLogDate(iso: string) {
-  return new Date(iso + "T00:00:00").toLocaleDateString("fr-FR", { weekday: "short", month: "short", day: "numeric" });
+  return new Date(iso + "T00:00:00").toLocaleDateString("fr-FR", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function SectionSkeleton() {
@@ -106,7 +123,10 @@ export default function SettingsPage() {
   const [savingNutrition, setSavingNutrition] = useState(false);
 
   const [profileForm, setProfileForm] = useState({ name: "", email: "" });
-  const [passwordForm, setPasswordForm] = useState({ password: "", confirmPassword: "" });
+  const [passwordForm, setPasswordForm] = useState({
+    password: "",
+    confirmPassword: "",
+  });
   const [preferences, setPreferences] = useState({
     dietary: "none",
     allergies: [] as string[],
@@ -142,7 +162,7 @@ export default function SettingsPage() {
   const [fatPct, setFatPct] = useState(30);
 
   // ── Weight log state ─────────────────────────────────────────────────────────
-  const [weightLogs, setWeightLogs]   = useState<WeightLog[]>([]);
+  const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [showAllLogs, setShowAllLogs] = useState(false);
 
@@ -169,8 +189,8 @@ export default function SettingsPage() {
     if (!calories) return null;
     return {
       protein: Math.round((calories * proteinPct) / 100 / 4),
-      carbs:   Math.round((calories * carbsPct)   / 100 / 4),
-      fat:     Math.round((calories * fatPct)      / 100 / 9),
+      carbs: Math.round((calories * carbsPct) / 100 / 4),
+      fat: Math.round((calories * fatPct) / 100 / 9),
     };
   };
 
@@ -182,20 +202,42 @@ export default function SettingsPage() {
   // Recalculate when inputs change
   useEffect(() => {
     if (!birthYear || !sex || !weightRaw || !activityLevel) return;
-    const hCm = heightUnit === "cm"
-      ? Number(heightCm)
-      : inToCm(Number(heightFt) * 12 + Number(heightIn || 0));
+    const hCm =
+      heightUnit === "cm"
+        ? Number(heightCm)
+        : inToCm(Number(heightFt) * 12 + Number(heightIn || 0));
     if (!hCm) return;
-    const wKg = weightUnit === "kg" ? Number(weightRaw) : lbsToKg(Number(weightRaw));
+    const wKg =
+      weightUnit === "kg" ? Number(weightRaw) : lbsToKg(Number(weightRaw));
     const age = new Date().getFullYear() - Number(birthYear);
     if (!age || !wKg) return;
-    const t = calcTDEE(wKg, hCm, age, sex as Sex, activityLevel as ActivityLevel, exerciseDays);
+    const t = calcTDEE(
+      wKg,
+      hCm,
+      age,
+      sex as Sex,
+      activityLevel as ActivityLevel,
+      exerciseDays,
+    );
     setTdee(t);
     if (goalRate) setDailyCalories(calcDailyCalorieTarget(t, goalRate));
-  }, [birthYear, sex, heightCm, heightFt, heightIn, heightUnit, weightRaw, weightUnit, activityLevel, exerciseDays, goalRate]);
+  }, [
+    birthYear,
+    sex,
+    heightCm,
+    heightFt,
+    heightIn,
+    heightUnit,
+    weightRaw,
+    weightUnit,
+    activityLevel,
+    exerciseDays,
+    goalRate,
+  ]);
 
   useEffect(() => {
-    if (tdee && goalRate) setDailyCalories(calcDailyCalorieTarget(tdee, goalRate));
+    if (tdee && goalRate)
+      setDailyCalories(calcDailyCalorieTarget(tdee, goalRate));
   }, [goalRate, tdee]);
 
   // Load all data on mount
@@ -203,12 +245,13 @@ export default function SettingsPage() {
     async function loadAll() {
       setLoading(true);
       try {
-        const [profileRes, prefsRes, notifsRes, nutritionRes] = await Promise.all([
-          fetch("/api/user/profile"),
-          fetch("/api/user/preferences"),
-          fetch("/api/user/notifications"),
-          fetch("/api/user/nutrition"),
-        ]);
+        const [profileRes, prefsRes, notifsRes, nutritionRes] =
+          await Promise.all([
+            fetch("/api/user/profile"),
+            fetch("/api/user/preferences"),
+            fetch("/api/user/notifications"),
+            fetch("/api/user/nutrition"),
+          ]);
 
         if (profileRes.ok) {
           const { profile } = await profileRes.json();
@@ -237,7 +280,8 @@ export default function SettingsPage() {
         if (nutritionRes.ok) {
           const { nutrition } = await nutritionRes.json();
           if (nutrition) {
-            if (nutrition.birth_year) setBirthYear(String(nutrition.birth_year));
+            if (nutrition.birth_year)
+              setBirthYear(String(nutrition.birth_year));
             if (nutrition.sex) setSex(nutrition.sex);
             if (nutrition.height_unit) setHeightUnit(nutrition.height_unit);
             if (nutrition.height_cm) {
@@ -254,25 +298,30 @@ export default function SettingsPage() {
               setWeightRaw(
                 nutrition.weight_unit === "lbs"
                   ? String(kgToLbs(nutrition.weight_kg).toFixed(1))
-                  : String(nutrition.weight_kg)
+                  : String(nutrition.weight_kg),
               );
             }
-            if (nutrition.exercise_days_per_week != null) setExerciseDays(nutrition.exercise_days_per_week);
-            if (nutrition.activity_level) setActivityLevel(nutrition.activity_level);
+            if (nutrition.exercise_days_per_week != null)
+              setExerciseDays(nutrition.exercise_days_per_week);
+            if (nutrition.activity_level)
+              setActivityLevel(nutrition.activity_level);
             if (nutrition.tdee_kcal) setTdee(nutrition.tdee_kcal);
             if (nutrition.weight_goal) setWeightGoal(nutrition.weight_goal);
             if (nutrition.goal_weight_kg) {
               setGoalWeightRaw(
                 nutrition.weight_unit === "lbs"
                   ? String(kgToLbs(nutrition.goal_weight_kg).toFixed(1))
-                  : String(nutrition.goal_weight_kg)
+                  : String(nutrition.goal_weight_kg),
               );
             }
             if (nutrition.goal_rate) setGoalRate(nutrition.goal_rate);
-            if (nutrition.daily_calorie_target) setDailyCalories(nutrition.daily_calorie_target);
-            if (nutrition.macro_protein_pct) setProteinPct(nutrition.macro_protein_pct);
-            if (nutrition.macro_carbs_pct)   setCarbsPct(nutrition.macro_carbs_pct);
-            if (nutrition.macro_fat_pct)     setFatPct(nutrition.macro_fat_pct);
+            if (nutrition.daily_calorie_target)
+              setDailyCalories(nutrition.daily_calorie_target);
+            if (nutrition.macro_protein_pct)
+              setProteinPct(nutrition.macro_protein_pct);
+            if (nutrition.macro_carbs_pct)
+              setCarbsPct(nutrition.macro_carbs_pct);
+            if (nutrition.macro_fat_pct) setFatPct(nutrition.macro_fat_pct);
           }
         }
       } catch {
@@ -304,14 +353,23 @@ export default function SettingsPage() {
 
   async function savePassword() {
     if (!passwordForm.password) return;
-    if (passwordForm.password.length < 8) { toast.error("Le mot de passe doit contenir au moins 8 caractères"); return; }
-    if (passwordForm.password !== passwordForm.confirmPassword) { toast.error("Les mots de passe ne correspondent pas"); return; }
+    if (passwordForm.password.length < 8) {
+      toast.error("Le mot de passe doit contenir au moins 8 caractères");
+      return;
+    }
+    if (passwordForm.password !== passwordForm.confirmPassword) {
+      toast.error("Les mots de passe ne correspondent pas");
+      return;
+    }
     setSavingPassword(true);
     try {
       const res = await fetch("/api/user/password", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: passwordForm.password, confirmPassword: passwordForm.confirmPassword }),
+        body: JSON.stringify({
+          password: passwordForm.password,
+          confirmPassword: passwordForm.confirmPassword,
+        }),
       });
       if (!res.ok) throw new Error();
       setPasswordForm({ password: "", confirmPassword: "" });
@@ -327,12 +385,22 @@ export default function SettingsPage() {
     setSavingPrefs(true);
     try {
       // Always store weekly values in the DB
-      const weeklyMin = budgetPeriod === "month" ? Math.round(budgetRange[0] / 4.33) : budgetRange[0];
-      const weeklyMax = budgetPeriod === "month" ? Math.round(budgetRange[1] / 4.33) : budgetRange[1];
+      const weeklyMin =
+        budgetPeriod === "month"
+          ? Math.round(budgetRange[0] / 4.33)
+          : budgetRange[0];
+      const weeklyMax =
+        budgetPeriod === "month"
+          ? Math.round(budgetRange[1] / 4.33)
+          : budgetRange[1];
       const res = await fetch("/api/user/preferences", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...preferences, budget_min: weeklyMin, budget_max: weeklyMax }),
+        body: JSON.stringify({
+          ...preferences,
+          budget_min: weeklyMin,
+          budget_max: weeklyMax,
+        }),
       });
       if (!res.ok) throw new Error();
       toast.success("Préférences sauvegardées !");
@@ -363,20 +431,33 @@ export default function SettingsPage() {
   async function saveNutrition() {
     setSavingNutrition(true);
     try {
-      const finalHeightCm = heightUnit === "cm"
-        ? Number(heightCm)
-        : inToCm(Number(heightFt) * 12 + Number(heightIn || 0));
-      const finalWeightKg = weightUnit === "kg" ? Number(weightRaw) : lbsToKg(Number(weightRaw));
+      const finalHeightCm =
+        heightUnit === "cm"
+          ? Number(heightCm)
+          : inToCm(Number(heightFt) * 12 + Number(heightIn || 0));
+      const finalWeightKg =
+        weightUnit === "kg" ? Number(weightRaw) : lbsToKg(Number(weightRaw));
       const goalWeightKg = goalWeightRaw
-        ? (weightUnit === "kg" ? Number(goalWeightRaw) : lbsToKg(Number(goalWeightRaw)))
+        ? weightUnit === "kg"
+          ? Number(goalWeightRaw)
+          : lbsToKg(Number(goalWeightRaw))
         : null;
       const age = new Date().getFullYear() - Number(birthYear);
-      const finalTdee = (sex && activityLevel && finalHeightCm && finalWeightKg && age)
-        ? calcTDEE(finalWeightKg, finalHeightCm, age, sex as Sex, activityLevel as ActivityLevel, exerciseDays)
-        : tdee;
-      const finalCalories = finalTdee && goalRate
-        ? calcDailyCalorieTarget(finalTdee, goalRate)
-        : finalTdee;
+      const finalTdee =
+        sex && activityLevel && finalHeightCm && finalWeightKg && age
+          ? calcTDEE(
+              finalWeightKg,
+              finalHeightCm,
+              age,
+              sex as Sex,
+              activityLevel as ActivityLevel,
+              exerciseDays,
+            )
+          : tdee;
+      const finalCalories =
+        finalTdee && goalRate
+          ? calcDailyCalorieTarget(finalTdee, goalRate)
+          : finalTdee;
 
       const res = await fetch("/api/user/nutrition", {
         method: "PATCH",
@@ -412,12 +493,32 @@ export default function SettingsPage() {
   }
 
   const sections: { key: Section; label: string; icon: React.ReactNode }[] = [
-    { key: "profile",       label: "Profil",          icon: <User className="w-4 h-4" /> },
-    { key: "preferences",   label: "Préférences",     icon: <Globe className="w-4 h-4" /> },
-    { key: "nutrition",     label: "Nutrition",        icon: <Flame className="w-4 h-4" /> },
-    { key: "progression",   label: "Progression",     icon: <Scale className="w-4 h-4" /> },
-    { key: "notifications", label: "Notifications",   icon: <Bell className="w-4 h-4" /> },
-    { key: "privacy",       label: "Confidentialité", icon: <Shield className="w-4 h-4" /> },
+    { key: "profile", label: "Profil", icon: <User className="w-4 h-4" /> },
+    {
+      key: "preferences",
+      label: "Préférences",
+      icon: <Globe className="w-4 h-4" />,
+    },
+    {
+      key: "nutrition",
+      label: "Nutrition",
+      icon: <Flame className="w-4 h-4" />,
+    },
+    {
+      key: "progression",
+      label: "Progression",
+      icon: <Scale className="w-4 h-4" />,
+    },
+    {
+      key: "notifications",
+      label: "Notifications",
+      icon: <Bell className="w-4 h-4" />,
+    },
+    {
+      key: "privacy",
+      label: "Confidentialité",
+      icon: <Shield className="w-4 h-4" />,
+    },
   ];
 
   const initials = (session?.user?.name || session?.user?.email || "U")
@@ -428,7 +529,7 @@ export default function SettingsPage() {
     .slice(0, 2);
 
   const filteredRates = GOAL_RATES.filter(
-    (r) => !weightGoal || r.goalTypes.includes(weightGoal as WeightGoal)
+    (r) => !weightGoal || r.goalTypes.includes(weightGoal as WeightGoal),
   );
 
   return (
@@ -455,7 +556,7 @@ export default function SettingsPage() {
           <Divider className="my-2 hidden lg:block" />
           <button
             onClick={() => logout()}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-danger hover:bg-danger/10 transition-colors text-left w-full lg:flex hidden"
+            className=" items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-danger hover:bg-danger/10 transition-colors text-left w-full lg:flex hidden"
           >
             <LogOut className="w-4 h-4" />
             Déconnexion
@@ -464,14 +565,17 @@ export default function SettingsPage() {
 
         {/* Content */}
         <div className="flex-1">
-
           {/* ── Profile ── */}
           {activeSection === "profile" &&
-            (loading ? <SectionSkeleton /> : (
+            (loading ? (
+              <SectionSkeleton />
+            ) : (
               <div className="flex flex-col gap-4">
                 <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
                   <CardHeader className="pb-2 p-0 mb-6">
-                    <h2 className="font-bold text-xl">Informations du profil</h2>
+                    <h2 className="font-bold text-xl">
+                      Informations du profil
+                    </h2>
                   </CardHeader>
                   <CardBody className="p-0 flex flex-col gap-6">
                     <div className="flex items-center gap-4">
@@ -483,8 +587,12 @@ export default function SettingsPage() {
                         className="w-16 m-1 h-16 text-xl font-bold"
                       />
                       <div>
-                        <p className="font-semibold">{session?.user?.name || "Utilisateur"}</p>
-                        <p className="text-default-400 text-xs">{session?.user?.email}</p>
+                        <p className="font-semibold">
+                          {session?.user?.name || "Utilisateur"}
+                        </p>
+                        <p className="text-default-400 text-xs">
+                          {session?.user?.email}
+                        </p>
                       </div>
                     </div>
                     <Divider className="bg-divider/50" />
@@ -493,7 +601,9 @@ export default function SettingsPage() {
                         label="Nom d'affichage"
                         placeholder="Ton prénom ou pseudo"
                         value={profileForm.name}
-                        onValueChange={(v) => setProfileForm({ ...profileForm, name: v })}
+                        onValueChange={(v) =>
+                          setProfileForm({ ...profileForm, name: v })
+                        }
                         variant="flat"
                       />
                       <Input
@@ -531,7 +641,9 @@ export default function SettingsPage() {
                       placeholder="Minimum 8 caractères"
                       type="password"
                       value={passwordForm.password}
-                      onValueChange={(v) => setPasswordForm({ ...passwordForm, password: v })}
+                      onValueChange={(v) =>
+                        setPasswordForm({ ...passwordForm, password: v })
+                      }
                       variant="flat"
                     />
                     <Input
@@ -539,9 +651,14 @@ export default function SettingsPage() {
                       placeholder="Répète le nouveau mot de passe"
                       type="password"
                       value={passwordForm.confirmPassword}
-                      onValueChange={(v) => setPasswordForm({ ...passwordForm, confirmPassword: v })}
+                      onValueChange={(v) =>
+                        setPasswordForm({ ...passwordForm, confirmPassword: v })
+                      }
                       variant="flat"
-                      isInvalid={passwordForm.confirmPassword.length > 0 && passwordForm.password !== passwordForm.confirmPassword}
+                      isInvalid={
+                        passwordForm.confirmPassword.length > 0 &&
+                        passwordForm.password !== passwordForm.confirmPassword
+                      }
                       errorMessage="Les mots de passe ne correspondent pas"
                     />
                     <Button
@@ -562,24 +679,37 @@ export default function SettingsPage() {
 
           {/* ── Preferences ── */}
           {activeSection === "preferences" &&
-            (loading ? <SectionSkeleton /> : (
+            (loading ? (
+              <SectionSkeleton />
+            ) : (
               <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
                 <CardHeader className="pb-2 p-0 mb-6">
-                  <h2 className="font-bold text-xl">Préférences alimentaires</h2>
+                  <h2 className="font-bold text-xl">
+                    Préférences alimentaires
+                  </h2>
                 </CardHeader>
                 <CardBody className="p-0 flex flex-col gap-5">
                   <Select
                     label="Régime alimentaire"
                     selectedKeys={[preferences.dietary]}
-                    onSelectionChange={(keys) => setPreferences({ ...preferences, dietary: Array.from(keys)[0] as string })}
+                    onSelectionChange={(keys) =>
+                      setPreferences({
+                        ...preferences,
+                        dietary: Array.from(keys)[0] as string,
+                      })
+                    }
                     variant="flat"
                   >
-                    {dietaryOptions.map((opt) => <SelectItem key={opt.key}>{opt.label}</SelectItem>)}
+                    {dietaryOptions.map((opt) => (
+                      <SelectItem key={opt.key}>{opt.label}</SelectItem>
+                    ))}
                   </Select>
                   {/* Budget period toggle + slider */}
                   <div className="flex flex-col gap-4">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-default-700">Budget alimentaire</p>
+                      <p className="text-sm font-medium text-default-700">
+                        Budget alimentaire
+                      </p>
                       <div className="flex gap-1 p-0.5 rounded-lg bg-default-100">
                         {(["week", "month"] as const).map((p) => (
                           <button
@@ -588,9 +718,15 @@ export default function SettingsPage() {
                             onClick={() => {
                               if (p === budgetPeriod) return;
                               if (p === "month") {
-                                setBudgetRange([Math.round(budgetRange[0] * 4.33 / 5) * 5, Math.round(budgetRange[1] * 4.33 / 5) * 5]);
+                                setBudgetRange([
+                                  Math.round((budgetRange[0] * 4.33) / 5) * 5,
+                                  Math.round((budgetRange[1] * 4.33) / 5) * 5,
+                                ]);
                               } else {
-                                setBudgetRange([Math.round(budgetRange[0] / 4.33 / 5) * 5, Math.round(budgetRange[1] / 4.33 / 5) * 5]);
+                                setBudgetRange([
+                                  Math.round(budgetRange[0] / 4.33 / 5) * 5,
+                                  Math.round(budgetRange[1] / 4.33 / 5) * 5,
+                                ]);
                               }
                               setBudgetPeriod(p);
                             }}
@@ -605,13 +741,21 @@ export default function SettingsPage() {
 
                     <div className="flex justify-between items-center">
                       <div className="text-center">
-                        <p className="text-xs text-default-400 mb-0.5">Minimum</p>
-                        <p className="text-xl font-bold text-success">{budgetRange[0]} $</p>
+                        <p className="text-xs text-default-400 mb-0.5">
+                          Minimum
+                        </p>
+                        <p className="text-xl font-bold text-success">
+                          {budgetRange[0]} $
+                        </p>
                       </div>
                       <span className="text-default-300">—</span>
                       <div className="text-center">
-                        <p className="text-xs text-default-400 mb-0.5">Maximum</p>
-                        <p className="text-xl font-bold text-success">{budgetRange[1]} $</p>
+                        <p className="text-xs text-default-400 mb-0.5">
+                          Maximum
+                        </p>
+                        <p className="text-xl font-bold text-success">
+                          {budgetRange[1]} $
+                        </p>
                       </div>
                     </div>
 
@@ -620,11 +764,17 @@ export default function SettingsPage() {
                       minValue={0}
                       maxValue={budgetPeriod === "month" ? 1600 : 400}
                       value={budgetRange}
-                      onChange={(value) => setBudgetRange(value as [number, number])}
+                      onChange={(value) =>
+                        setBudgetRange(value as [number, number])
+                      }
                       color="success"
                       size="md"
                       showTooltip
-                      tooltipValueFormatOptions={{ style: "currency", currency: "CAD", maximumFractionDigits: 0 }}
+                      tooltipValueFormatOptions={{
+                        style: "currency",
+                        currency: "CAD",
+                        maximumFractionDigits: 0,
+                      }}
                     />
 
                     <p className="text-xs text-default-400 text-center">
@@ -648,9 +798,10 @@ export default function SettingsPage() {
 
           {/* ── Nutrition & Goals ── */}
           {activeSection === "nutrition" &&
-            (loading ? <SectionSkeleton /> : (
+            (loading ? (
+              <SectionSkeleton />
+            ) : (
               <div className="flex flex-col gap-4">
-
                 {/* Body metrics card */}
                 <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
                   <CardHeader className="pb-2 p-0 mb-6">
@@ -660,7 +811,6 @@ export default function SettingsPage() {
                     </h2>
                   </CardHeader>
                   <CardBody className="p-0 flex flex-col gap-5">
-
                     {/* Birth year */}
                     <Input
                       label="Année de naissance"
@@ -673,24 +823,28 @@ export default function SettingsPage() {
 
                     {/* Sex */}
                     <div className="flex flex-col gap-2">
-                      <p className="text-sm font-medium text-default-700">Sexe biologique</p>
+                      <p className="text-sm font-medium text-default-700">
+                        Sexe biologique
+                      </p>
                       <div className="flex gap-2 flex-wrap">
                         {[
-                          { value: "male",   label: "Homme", emoji: "♂️" },
-                          { value: "female", label: "Femme",  emoji: "♀️" },
-                          { value: "other",  label: "Autre",  emoji: "⚧️" },
+                          { value: "male", label: "Homme", emoji: "♂️" },
+                          { value: "female", label: "Femme", emoji: "♀️" },
+                          { value: "other", label: "Autre", emoji: "⚧️" },
                         ].map((opt) => (
                           <button
                             key={opt.value}
                             type="button"
                             onClick={() => setSex(opt.value as Sex)}
                             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm font-medium transition-all cursor-pointer
-                              ${sex === opt.value
-                                ? "border-success bg-success/10 text-success"
-                                : "border-divider bg-white/50 dark:bg-white/5 text-default-600 hover:border-success/50"
+                              ${
+                                sex === opt.value
+                                  ? "border-success bg-success/10 text-success"
+                                  : "border-divider bg-white/50 dark:bg-white/5 text-default-600 hover:border-success/50"
                               }`}
                           >
-                            <span>{opt.emoji}</span>{opt.label}
+                            <span>{opt.emoji}</span>
+                            {opt.label}
                           </button>
                         ))}
                       </div>
@@ -699,7 +853,9 @@ export default function SettingsPage() {
                     {/* Height */}
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-default-700">Taille</p>
+                        <p className="text-sm font-medium text-default-700">
+                          Taille
+                        </p>
                         <div className="flex gap-1 p-0.5 rounded-lg bg-default-100">
                           {(["cm", "in"] as const).map((u) => (
                             <button
@@ -721,12 +877,36 @@ export default function SettingsPage() {
                           value={heightCm}
                           onValueChange={setHeightCm}
                           variant="flat"
-                          endContent={<span className="text-default-400 text-sm">cm</span>}
+                          endContent={
+                            <span className="text-default-400 text-sm">cm</span>
+                          }
                         />
                       ) : (
                         <div className="flex gap-2">
-                          <Input placeholder="5" type="number" value={heightFt} onValueChange={setHeightFt} variant="flat" endContent={<span className="text-default-400 text-sm">ft</span>} />
-                          <Input placeholder="8" type="number" value={heightIn} onValueChange={setHeightIn} variant="flat" endContent={<span className="text-default-400 text-sm">in</span>} />
+                          <Input
+                            placeholder="5"
+                            type="number"
+                            value={heightFt}
+                            onValueChange={setHeightFt}
+                            variant="flat"
+                            endContent={
+                              <span className="text-default-400 text-sm">
+                                ft
+                              </span>
+                            }
+                          />
+                          <Input
+                            placeholder="8"
+                            type="number"
+                            value={heightIn}
+                            onValueChange={setHeightIn}
+                            variant="flat"
+                            endContent={
+                              <span className="text-default-400 text-sm">
+                                in
+                              </span>
+                            }
+                          />
                         </div>
                       )}
                     </div>
@@ -734,7 +914,9 @@ export default function SettingsPage() {
                     {/* Weight */}
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-default-700">Poids</p>
+                        <p className="text-sm font-medium text-default-700">
+                          Poids
+                        </p>
                         <div className="flex gap-1 p-0.5 rounded-lg bg-default-100">
                           {(["kg", "lbs"] as const).map((u) => (
                             <button
@@ -755,7 +937,11 @@ export default function SettingsPage() {
                         value={weightRaw}
                         onValueChange={setWeightRaw}
                         variant="flat"
-                        endContent={<span className="text-default-400 text-sm">{weightUnit}</span>}
+                        endContent={
+                          <span className="text-default-400 text-sm">
+                            {weightUnit}
+                          </span>
+                        }
                       />
                     </div>
                   </CardBody>
@@ -770,12 +956,15 @@ export default function SettingsPage() {
                     </h2>
                   </CardHeader>
                   <CardBody className="p-0 flex flex-col gap-5">
-
                     {/* Exercise days slider */}
                     <div className="flex flex-col gap-3">
                       <div className="flex justify-between items-center">
-                        <p className="text-sm font-medium text-default-700">Séances d&apos;exercice / semaine</p>
-                        <span className="text-xl font-bold text-warning">{exerciseDays}</span>
+                        <p className="text-sm font-medium text-default-700">
+                          Séances d&apos;exercice / semaine
+                        </p>
+                        <span className="text-xl font-bold text-warning">
+                          {exerciseDays}
+                        </span>
                       </div>
                       <Slider
                         step={1}
@@ -786,13 +975,18 @@ export default function SettingsPage() {
                         color="warning"
                         size="lg"
                         showTooltip
-                        marks={[0, 1, 2, 3, 4, 5, 6, 7].map((v) => ({ value: v, label: String(v) }))}
+                        marks={[0, 1, 2, 3, 4, 5, 6, 7].map((v) => ({
+                          value: v,
+                          label: String(v),
+                        }))}
                       />
                     </div>
 
                     {/* Activity level */}
                     <div className="flex flex-col gap-2">
-                      <p className="text-sm font-medium text-default-700">Niveau de pas quotidiens</p>
+                      <p className="text-sm font-medium text-default-700">
+                        Niveau de pas quotidiens
+                      </p>
                       <div className="flex flex-col gap-2">
                         {ACTIVITY_OPTIONS.map((opt) => (
                           <button
@@ -800,16 +994,23 @@ export default function SettingsPage() {
                             type="button"
                             onClick={() => setActivityLevel(opt.value)}
                             className={`flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all cursor-pointer
-                              ${activityLevel === opt.value
-                                ? "border-warning bg-warning/10 text-warning"
-                                : "border-divider bg-white/50 dark:bg-white/5 hover:border-warning/40"
+                              ${
+                                activityLevel === opt.value
+                                  ? "border-warning bg-warning/10 text-warning"
+                                  : "border-divider bg-white/50 dark:bg-white/5 hover:border-warning/40"
                               }`}
                           >
                             <div className="flex-1">
-                              <p className="font-semibold text-sm">{opt.label}</p>
-                              <p className="text-xs text-default-400">{opt.desc}</p>
+                              <p className="font-semibold text-sm">
+                                {opt.label}
+                              </p>
+                              <p className="text-xs text-default-400">
+                                {opt.desc}
+                              </p>
                             </div>
-                            {activityLevel === opt.value && <span className="w-3 h-3 rounded-full bg-warning shrink-0" />}
+                            {activityLevel === opt.value && (
+                              <span className="w-3 h-3 rounded-full bg-warning shrink-0" />
+                            )}
                           </button>
                         ))}
                       </div>
@@ -820,8 +1021,12 @@ export default function SettingsPage() {
                       <div className="flex items-center gap-3 p-4 rounded-2xl bg-warning/5 border border-warning/20">
                         <Flame size={20} className="text-warning shrink-0" />
                         <div>
-                          <p className="text-xs text-default-500">Dépense énergétique estimée (TDEE)</p>
-                          <p className="font-bold text-lg text-warning">{tdee.toLocaleString()} kcal/jour</p>
+                          <p className="text-xs text-default-500">
+                            Dépense énergétique estimée (TDEE)
+                          </p>
+                          <p className="font-bold text-lg text-warning">
+                            {tdee.toLocaleString()} kcal/jour
+                          </p>
                         </div>
                       </div>
                     )}
@@ -837,7 +1042,6 @@ export default function SettingsPage() {
                     </h2>
                   </CardHeader>
                   <CardBody className="p-0 flex flex-col gap-5">
-
                     {/* Goal type */}
                     <Select
                       label="Objectif de poids"
@@ -848,7 +1052,9 @@ export default function SettingsPage() {
                       }}
                       variant="flat"
                     >
-                      {GOAL_OPTIONS.map((opt) => <SelectItem key={opt.value}>{opt.label}</SelectItem>)}
+                      {GOAL_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value}>{opt.label}</SelectItem>
+                      ))}
                     </Select>
 
                     {/* Target weight */}
@@ -860,14 +1066,20 @@ export default function SettingsPage() {
                         value={goalWeightRaw}
                         onValueChange={setGoalWeightRaw}
                         variant="flat"
-                        endContent={<span className="text-default-400 text-sm">{weightUnit}</span>}
+                        endContent={
+                          <span className="text-default-400 text-sm">
+                            {weightUnit}
+                          </span>
+                        }
                       />
                     )}
 
                     {/* Rate */}
                     {weightGoal && (
                       <div className="flex flex-col gap-2">
-                        <p className="text-sm font-medium text-default-700">Rythme de progression</p>
+                        <p className="text-sm font-medium text-default-700">
+                          Rythme de progression
+                        </p>
                         <div className="flex flex-col gap-2">
                           {filteredRates.map((r) => (
                             <button
@@ -875,12 +1087,15 @@ export default function SettingsPage() {
                               type="button"
                               onClick={() => setGoalRate(r.key)}
                               className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-sm text-left transition-all cursor-pointer
-                                ${goalRate === r.key
-                                  ? "border-primary bg-primary/10 text-primary"
-                                  : "border-divider bg-white/50 dark:bg-white/5 text-default-600 hover:border-primary/40"
+                                ${
+                                  goalRate === r.key
+                                    ? "border-primary bg-primary/10 text-primary"
+                                    : "border-divider bg-white/50 dark:bg-white/5 text-default-600 hover:border-primary/40"
                                 }`}
                             >
-                              <span className={`w-3 h-3 rounded-full shrink-0 ${goalRate === r.key ? "bg-primary" : "border-2 border-divider"}`} />
+                              <span
+                                className={`w-3 h-3 rounded-full shrink-0 ${goalRate === r.key ? "bg-primary" : "border-2 border-divider"}`}
+                              />
                               <span className="font-medium">{r.label}</span>
                             </button>
                           ))}
@@ -893,17 +1108,22 @@ export default function SettingsPage() {
                       <div className="flex items-center gap-3 p-4 rounded-2xl bg-primary/5 border border-primary/20">
                         <Flame size={20} className="text-primary shrink-0" />
                         <div>
-                          <p className="text-xs text-default-500">Objectif calorique journalier</p>
-                          <p className="font-bold text-lg text-primary">{dailyCalories.toLocaleString()} kcal/jour</p>
+                          <p className="text-xs text-default-500">
+                            Objectif calorique journalier
+                          </p>
+                          <p className="font-bold text-lg text-primary">
+                            {dailyCalories.toLocaleString()} kcal/jour
+                          </p>
                           {tdee && (
                             <p className="text-xs text-default-400">
-                              TDEE {tdee.toLocaleString()} → {dailyCalories > tdee ? "+" : ""}{dailyCalories - tdee} kcal
+                              TDEE {tdee.toLocaleString()} →{" "}
+                              {dailyCalories > tdee ? "+" : ""}
+                              {dailyCalories - tdee} kcal
                             </p>
                           )}
                         </div>
                       </div>
                     )}
-
                   </CardBody>
                 </Card>
 
@@ -920,85 +1140,154 @@ export default function SettingsPage() {
                     {proteinPct + carbsPct + fatPct !== 100 && (
                       <div className="px-3 py-2 rounded-xl bg-warning/10 border border-warning/30">
                         <span className="text-warning text-xs font-semibold">
-                          Total : {proteinPct + carbsPct + fatPct}% — doit être égal à 100%
+                          Total : {proteinPct + carbsPct + fatPct}% — doit être
+                          égal à 100%
                         </span>
                       </div>
                     )}
 
                     {/* Bar */}
                     <div className="flex h-4 rounded-full overflow-hidden gap-0.5">
-                      <div className="bg-danger transition-all duration-300" style={{ width: `${proteinPct}%` }} />
-                      <div className="bg-warning transition-all duration-300" style={{ width: `${carbsPct}%` }} />
-                      <div className="bg-primary transition-all duration-300" style={{ width: `${fatPct}%` }} />
+                      <div
+                        className="bg-danger transition-all duration-300"
+                        style={{ width: `${proteinPct}%` }}
+                      />
+                      <div
+                        className="bg-warning transition-all duration-300"
+                        style={{ width: `${carbsPct}%` }}
+                      />
+                      <div
+                        className="bg-primary transition-all duration-300"
+                        style={{ width: `${fatPct}%` }}
+                      />
                     </div>
                     <div className="flex justify-between text-xs -mt-1">
-                      <span className="text-danger font-medium">Protéines {proteinPct}%</span>
-                      <span className="text-warning font-medium">Glucides {carbsPct}%</span>
-                      <span className="text-primary font-medium">Lipides {fatPct}%</span>
+                      <span className="text-danger font-medium">
+                        Protéines {proteinPct}%
+                      </span>
+                      <span className="text-warning font-medium">
+                        Glucides {carbsPct}%
+                      </span>
+                      <span className="text-primary font-medium">
+                        Lipides {fatPct}%
+                      </span>
                     </div>
 
                     {/* Protein */}
                     <div className="flex flex-col gap-2">
                       <div className="flex justify-between items-center">
-                        <p className="text-sm font-medium text-danger">🥩 Protéines</p>
-                        <span className="text-lg font-bold text-danger">{proteinPct}%</span>
+                        <p className="text-sm font-medium text-danger">
+                          🥩 Protéines
+                        </p>
+                        <span className="text-lg font-bold text-danger">
+                          {proteinPct}%
+                        </span>
                       </div>
                       <Slider
-                        step={5} minValue={5} maxValue={60}
+                        step={5}
+                        minValue={5}
+                        maxValue={60}
                         value={proteinPct}
-                        onChange={(v) => { const val = v as number; setProteinPct(val); setFatPct(Math.max(5, Math.min(60, 100 - val - carbsPct))); }}
-                        color="danger" size="md" showTooltip
+                        onChange={(v) => {
+                          const val = v as number;
+                          setProteinPct(val);
+                          setFatPct(
+                            Math.max(5, Math.min(60, 100 - val - carbsPct)),
+                          );
+                        }}
+                        color="danger"
+                        size="md"
+                        showTooltip
                       />
                     </div>
 
                     {/* Carbs */}
                     <div className="flex flex-col gap-2">
                       <div className="flex justify-between items-center">
-                        <p className="text-sm font-medium text-warning">🌾 Glucides</p>
-                        <span className="text-lg font-bold text-warning">{carbsPct}%</span>
+                        <p className="text-sm font-medium text-warning">
+                          🌾 Glucides
+                        </p>
+                        <span className="text-lg font-bold text-warning">
+                          {carbsPct}%
+                        </span>
                       </div>
                       <Slider
-                        step={5} minValue={5} maxValue={70}
+                        step={5}
+                        minValue={5}
+                        maxValue={70}
                         value={carbsPct}
-                        onChange={(v) => { const val = v as number; setCarbsPct(val); setFatPct(Math.max(5, Math.min(60, 100 - proteinPct - val))); }}
-                        color="warning" size="md" showTooltip
+                        onChange={(v) => {
+                          const val = v as number;
+                          setCarbsPct(val);
+                          setFatPct(
+                            Math.max(5, Math.min(60, 100 - proteinPct - val)),
+                          );
+                        }}
+                        color="warning"
+                        size="md"
+                        showTooltip
                       />
                     </div>
 
                     {/* Fat */}
                     <div className="flex flex-col gap-2">
                       <div className="flex justify-between items-center">
-                        <p className="text-sm font-medium text-primary">🫒 Lipides</p>
-                        <span className="text-lg font-bold text-primary">{fatPct}%</span>
+                        <p className="text-sm font-medium text-primary">
+                          🫒 Lipides
+                        </p>
+                        <span className="text-lg font-bold text-primary">
+                          {fatPct}%
+                        </span>
                       </div>
                       <Slider
-                        step={5} minValue={5} maxValue={60}
+                        step={5}
+                        minValue={5}
+                        maxValue={60}
                         value={fatPct}
-                        onChange={(v) => { const val = v as number; setFatPct(val); setCarbsPct(Math.max(5, Math.min(70, 100 - proteinPct - val))); }}
-                        color="primary" size="md" showTooltip
+                        onChange={(v) => {
+                          const val = v as number;
+                          setFatPct(val);
+                          setCarbsPct(
+                            Math.max(5, Math.min(70, 100 - proteinPct - val)),
+                          );
+                        }}
+                        color="primary"
+                        size="md"
+                        showTooltip
                       />
                     </div>
 
                     {/* Gram preview */}
-                    {dailyCalories && (() => {
-                      const g = macroGrams(dailyCalories);
-                      return g ? (
-                        <div className="flex gap-3">
-                          <div className="flex-1 p-3 rounded-xl bg-danger/5 border border-danger/15 text-center">
-                            <p className="text-xs text-default-400">Protéines</p>
-                            <p className="font-bold text-danger">{g.protein}g</p>
+                    {dailyCalories &&
+                      (() => {
+                        const g = macroGrams(dailyCalories);
+                        return g ? (
+                          <div className="flex gap-3">
+                            <div className="flex-1 p-3 rounded-xl bg-danger/5 border border-danger/15 text-center">
+                              <p className="text-xs text-default-400">
+                                Protéines
+                              </p>
+                              <p className="font-bold text-danger">
+                                {g.protein}g
+                              </p>
+                            </div>
+                            <div className="flex-1 p-3 rounded-xl bg-warning/5 border border-warning/15 text-center">
+                              <p className="text-xs text-default-400">
+                                Glucides
+                              </p>
+                              <p className="font-bold text-warning">
+                                {g.carbs}g
+                              </p>
+                            </div>
+                            <div className="flex-1 p-3 rounded-xl bg-primary/5 border border-primary/15 text-center">
+                              <p className="text-xs text-default-400">
+                                Lipides
+                              </p>
+                              <p className="font-bold text-primary">{g.fat}g</p>
+                            </div>
                           </div>
-                          <div className="flex-1 p-3 rounded-xl bg-warning/5 border border-warning/15 text-center">
-                            <p className="text-xs text-default-400">Glucides</p>
-                            <p className="font-bold text-warning">{g.carbs}g</p>
-                          </div>
-                          <div className="flex-1 p-3 rounded-xl bg-primary/5 border border-primary/15 text-center">
-                            <p className="text-xs text-default-400">Lipides</p>
-                            <p className="font-bold text-primary">{g.fat}g</p>
-                          </div>
-                        </div>
-                      ) : null;
-                    })()}
+                        ) : null;
+                      })()}
 
                     <Button
                       color="success"
@@ -1034,66 +1323,110 @@ export default function SettingsPage() {
                 <CardBody className="p-0 flex flex-col gap-4">
                   {loadingLogs ? (
                     <div className="flex flex-col gap-2">
-                      {[1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full rounded-xl" />)}
+                      {[1, 2, 3].map((i) => (
+                        <Skeleton key={i} className="h-10 w-full rounded-xl" />
+                      ))}
                     </div>
                   ) : weightLogs.length === 0 ? (
                     <p className="text-sm text-default-400 text-center py-6">
-                      Aucune donnée de poids. Commencez à enregistrer depuis le tableau de bord.
+                      Aucune donnée de poids. Commencez à enregistrer depuis le
+                      tableau de bord.
                     </p>
                   ) : (
                     <>
                       {/* Summary stats */}
-                      {weightLogs.length >= 2 && (() => {
-                        const latest = weightLogs[weightLogs.length - 1];
-                        const first  = weightLogs[0];
-                        const delta  = latest.weight_kg - first.weight_kg;
-                        const dispUnit = weightUnit as "kg" | "lbs";
-                        const dispVal  = (kg: number) => dispUnit === "lbs" ? `${kgToLbs(kg).toFixed(1)} lbs` : `${kg.toFixed(1)} kg`;
-                        return (
-                          <div className="grid grid-cols-3 gap-3">
-                            <div className="p-3 rounded-xl bg-default-100 text-center">
-                              <p className="text-[10px] text-default-400 mb-0.5">Départ</p>
-                              <p className="font-bold text-sm">{dispVal(first.weight_kg)}</p>
-                            </div>
-                            <div className="p-3 rounded-xl bg-default-100 text-center">
-                              <p className="text-[10px] text-default-400 mb-0.5">Actuel</p>
-                              <p className="font-bold text-sm text-success">{dispVal(latest.weight_kg)}</p>
-                            </div>
-                            <div className={`p-3 rounded-xl text-center ${delta < 0 ? "bg-success/10" : delta > 0 ? "bg-danger/10" : "bg-default-100"}`}>
-                              <p className="text-[10px] text-default-400 mb-0.5">Variation</p>
-                              <div className="flex items-center justify-center gap-1">
-                                {delta < 0 ? <TrendingDown size={12} className="text-success" /> : delta > 0 ? <TrendingUp size={12} className="text-danger" /> : null}
-                                <p className={`font-bold text-sm ${delta < 0 ? "text-success" : delta > 0 ? "text-danger" : "text-default-400"}`}>
-                                  {delta > 0 ? "+" : ""}{dispVal(delta)}
+                      {weightLogs.length >= 2 &&
+                        (() => {
+                          const latest = weightLogs[weightLogs.length - 1];
+                          const first = weightLogs[0];
+                          const delta = latest.weight_kg - first.weight_kg;
+                          const dispUnit = weightUnit as "kg" | "lbs";
+                          const dispVal = (kg: number) =>
+                            dispUnit === "lbs"
+                              ? `${kgToLbs(kg).toFixed(1)} lbs`
+                              : `${kg.toFixed(1)} kg`;
+                          return (
+                            <div className="grid grid-cols-3 gap-3">
+                              <div className="p-3 rounded-xl bg-default-100 text-center">
+                                <p className="text-[10px] text-default-400 mb-0.5">
+                                  Départ
+                                </p>
+                                <p className="font-bold text-sm">
+                                  {dispVal(first.weight_kg)}
                                 </p>
                               </div>
+                              <div className="p-3 rounded-xl bg-default-100 text-center">
+                                <p className="text-[10px] text-default-400 mb-0.5">
+                                  Actuel
+                                </p>
+                                <p className="font-bold text-sm text-success">
+                                  {dispVal(latest.weight_kg)}
+                                </p>
+                              </div>
+                              <div
+                                className={`p-3 rounded-xl text-center ${delta < 0 ? "bg-success/10" : delta > 0 ? "bg-danger/10" : "bg-default-100"}`}
+                              >
+                                <p className="text-[10px] text-default-400 mb-0.5">
+                                  Variation
+                                </p>
+                                <div className="flex items-center justify-center gap-1">
+                                  {delta < 0 ? (
+                                    <TrendingDown
+                                      size={12}
+                                      className="text-success"
+                                    />
+                                  ) : delta > 0 ? (
+                                    <TrendingUp
+                                      size={12}
+                                      className="text-danger"
+                                    />
+                                  ) : null}
+                                  <p
+                                    className={`font-bold text-sm ${delta < 0 ? "text-success" : delta > 0 ? "text-danger" : "text-default-400"}`}
+                                  >
+                                    {delta > 0 ? "+" : ""}
+                                    {dispVal(delta)}
+                                  </p>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })()}
+                          );
+                        })()}
 
                       {/* Log list */}
                       <div className="flex flex-col divide-y divide-divider/40">
-                        {(showAllLogs ? [...weightLogs] : [...weightLogs].slice(-10)).reverse().map((log) => (
-                          <div key={log.id} className="flex items-center justify-between py-2.5 gap-3">
-                            <span className="text-xs text-default-400 w-28 shrink-0">{formatLogDate(log.logged_at)}</span>
-                            <span className="text-sm font-semibold flex-1">
-                              {weightUnit === "lbs"
-                                ? `${kgToLbs(log.weight_kg).toFixed(1)} lbs`
-                                : `${log.weight_kg.toFixed(1)} kg`}
-                            </span>
-                            {log.note && (
-                              <span className="text-xs text-default-400 italic truncate max-w-32">{log.note}</span>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => deleteWeightLog(log.id)}
-                              className="p-1.5 rounded-lg hover:bg-danger/10 text-default-300 hover:text-danger transition-colors shrink-0"
+                        {(showAllLogs
+                          ? [...weightLogs]
+                          : [...weightLogs].slice(-10)
+                        )
+                          .reverse()
+                          .map((log) => (
+                            <div
+                              key={log.id}
+                              className="flex items-center justify-between py-2.5 gap-3"
                             >
-                              <Trash2 size={13} />
-                            </button>
-                          </div>
-                        ))}
+                              <span className="text-xs text-default-400 w-28 shrink-0">
+                                {formatLogDate(log.logged_at)}
+                              </span>
+                              <span className="text-sm font-semibold flex-1">
+                                {weightUnit === "lbs"
+                                  ? `${kgToLbs(log.weight_kg).toFixed(1)} lbs`
+                                  : `${log.weight_kg.toFixed(1)} kg`}
+                              </span>
+                              {log.note && (
+                                <span className="text-xs text-default-400 italic truncate max-w-32">
+                                  {log.note}
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => deleteWeightLog(log.id)}
+                                className="p-1.5 rounded-lg hover:bg-danger/10 text-default-300 hover:text-danger transition-colors shrink-0"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          ))}
                       </div>
 
                       {weightLogs.length > 10 && (
@@ -1102,8 +1435,14 @@ export default function SettingsPage() {
                           onClick={() => setShowAllLogs((s) => !s)}
                           className="flex items-center gap-1 text-xs text-default-400 hover:text-foreground transition-colors self-start"
                         >
-                          {showAllLogs ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                          {showAllLogs ? "Voir moins" : `Voir les ${weightLogs.length - 10} entrées plus anciennes`}
+                          {showAllLogs ? (
+                            <ChevronUp size={13} />
+                          ) : (
+                            <ChevronDown size={13} />
+                          )}
+                          {showAllLogs
+                            ? "Voir moins"
+                            : `Voir les ${weightLogs.length - 10} entrées plus anciennes`}
                         </button>
                       )}
                     </>
@@ -1122,18 +1461,28 @@ export default function SettingsPage() {
                   </CardHeader>
                   <CardBody className="p-0 flex flex-col gap-4">
                     {(() => {
-                      const latest   = weightLogs[weightLogs.length - 1];
-                      const first    = weightLogs[0];
-                      const goalKg   = weightUnit === "lbs"
-                        ? Number(goalWeightRaw) / 2.20462
-                        : Number(goalWeightRaw);
+                      const latest = weightLogs[weightLogs.length - 1];
+                      const first = weightLogs[0];
+                      const goalKg =
+                        weightUnit === "lbs"
+                          ? Number(goalWeightRaw) / 2.20462
+                          : Number(goalWeightRaw);
                       const totalDist = Math.abs(first.weight_kg - goalKg);
-                      const covered   = Math.abs(first.weight_kg - latest.weight_kg);
-                      const pct       = totalDist > 0 ? Math.min(100, Math.round((covered / totalDist) * 100)) : 0;
+                      const covered = Math.abs(
+                        first.weight_kg - latest.weight_kg,
+                      );
+                      const pct =
+                        totalDist > 0
+                          ? Math.min(
+                              100,
+                              Math.round((covered / totalDist) * 100),
+                            )
+                          : 0;
                       const remaining = Math.abs(latest.weight_kg - goalKg);
-                      const dispVal   = (kg: number) => weightUnit === "lbs"
-                        ? `${kgToLbs(kg).toFixed(1)} lbs`
-                        : `${kg.toFixed(1)} kg`;
+                      const dispVal = (kg: number) =>
+                        weightUnit === "lbs"
+                          ? `${kgToLbs(kg).toFixed(1)} lbs`
+                          : `${kg.toFixed(1)} kg`;
 
                       return (
                         <>
@@ -1148,9 +1497,17 @@ export default function SettingsPage() {
                             />
                           </div>
                           <div className="flex justify-between items-center">
-                            <span className="text-xs text-default-400">{pct}% accompli</span>
-                            <Chip size="sm" variant="flat" color={remaining < 1 ? "success" : "primary"}>
-                              {remaining < 0.1 ? "Objectif atteint ! 🎉" : `${dispVal(remaining)} restant`}
+                            <span className="text-xs text-default-400">
+                              {pct}% accompli
+                            </span>
+                            <Chip
+                              size="sm"
+                              variant="flat"
+                              color={remaining < 1 ? "success" : "primary"}
+                            >
+                              {remaining < 0.1
+                                ? "Objectif atteint ! 🎉"
+                                : `${dispVal(remaining)} restant`}
                             </Chip>
                           </div>
                         </>
@@ -1164,35 +1521,72 @@ export default function SettingsPage() {
 
           {/* ── Notifications ── */}
           {activeSection === "notifications" &&
-            (loading ? <SectionSkeleton /> : (
+            (loading ? (
+              <SectionSkeleton />
+            ) : (
               <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
                 <CardHeader className="pb-2 p-0 mb-6">
-                  <h2 className="font-bold text-xl">Préférences de notification</h2>
+                  <h2 className="font-bold text-xl">
+                    Préférences de notification
+                  </h2>
                 </CardHeader>
                 <CardBody className="p-0 flex flex-col gap-0">
                   {(
                     [
-                      { key: "mealReminders" as const, label: "Rappels de repas", desc: "Notifications pour les repas planifiés" },
-                      { key: "weeklyPlan" as const, label: "Résumé hebdomadaire", desc: "Récapitulatif de ton plan de la semaine" },
-                      { key: "newRecipes" as const, label: "Nouvelles recettes", desc: "Alertes lors de l'ajout de nouvelles recettes" },
-                      { key: "tips" as const, label: "Conseils nutritionnels", desc: "Astuces et conseils pour mieux manger" },
-                      { key: "newsletter" as const, label: "Newsletter", desc: "Actualités et offres de MealMatch" },
-                    ] as { key: keyof typeof notifications; label: string; desc: string }[]
+                      {
+                        key: "mealReminders" as const,
+                        label: "Rappels de repas",
+                        desc: "Notifications pour les repas planifiés",
+                      },
+                      {
+                        key: "weeklyPlan" as const,
+                        label: "Résumé hebdomadaire",
+                        desc: "Récapitulatif de ton plan de la semaine",
+                      },
+                      {
+                        key: "newRecipes" as const,
+                        label: "Nouvelles recettes",
+                        desc: "Alertes lors de l'ajout de nouvelles recettes",
+                      },
+                      {
+                        key: "tips" as const,
+                        label: "Conseils nutritionnels",
+                        desc: "Astuces et conseils pour mieux manger",
+                      },
+                      {
+                        key: "newsletter" as const,
+                        label: "Newsletter",
+                        desc: "Actualités et offres de MealMatch",
+                      },
+                    ] as {
+                      key: keyof typeof notifications;
+                      label: string;
+                      desc: string;
+                    }[]
                   ).map((item, i, arr) => (
                     <div key={item.key}>
                       <div className="flex items-center justify-between py-4">
                         <div>
                           <p className="font-medium text-sm">{item.label}</p>
-                          <p className="text-default-400 text-xs">{item.desc}</p>
+                          <p className="text-default-400 text-xs">
+                            {item.desc}
+                          </p>
                         </div>
                         <Switch
                           isSelected={notifications[item.key]}
-                          onValueChange={(v) => setNotifications({ ...notifications, [item.key]: v })}
+                          onValueChange={(v) =>
+                            setNotifications({
+                              ...notifications,
+                              [item.key]: v,
+                            })
+                          }
                           color="success"
                           size="sm"
                         />
                       </div>
-                      {i < arr.length - 1 && <Divider className="bg-divider/50" />}
+                      {i < arr.length - 1 && (
+                        <Divider className="bg-divider/50" />
+                      )}
                     </div>
                   ))}
                   <Button
@@ -1213,17 +1607,32 @@ export default function SettingsPage() {
             <div className="flex flex-col gap-4">
               <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
                 <CardHeader className="pb-2 p-0 mb-4">
-                  <h2 className="font-bold text-xl">Confidentialité et données</h2>
+                  <h2 className="font-bold text-xl">
+                    Confidentialité et données
+                  </h2>
                 </CardHeader>
                 <CardBody className="p-0 flex flex-col gap-4">
                   <p className="text-default-500 text-sm">
-                    Tes données personnelles sont protégées et ne sont jamais partagées avec des tiers sans ton consentement explicite.
+                    Tes données personnelles sont protégées et ne sont jamais
+                    partagées avec des tiers sans ton consentement explicite.
                   </p>
                   <div className="flex flex-col gap-3">
-                    <Button variant="flat" color="default" className="font-semibold justify-start" as="a" href="/privacy">
+                    <Button
+                      variant="flat"
+                      color="default"
+                      className="font-semibold justify-start"
+                      as="a"
+                      href="/privacy"
+                    >
                       Lire la politique de confidentialité
                     </Button>
-                    <Button variant="flat" color="default" className="font-semibold justify-start" as="a" href="/terms">
+                    <Button
+                      variant="flat"
+                      color="default"
+                      className="font-semibold justify-start"
+                      as="a"
+                      href="/terms"
+                    >
                       Conditions d&apos;utilisation
                     </Button>
                   </div>
@@ -1232,20 +1641,35 @@ export default function SettingsPage() {
 
               <Card className="p-6 border border-danger/30 bg-danger/5">
                 <CardHeader className="pb-2 p-0 mb-4">
-                  <h2 className="font-bold text-xl text-danger">Zone dangereuse</h2>
+                  <h2 className="font-bold text-xl text-danger">
+                    Zone dangereuse
+                  </h2>
                 </CardHeader>
                 <CardBody className="p-0 flex flex-col gap-3">
                   <p className="text-default-500 text-sm">
-                    La suppression de ton compte est irréversible. Toutes tes données, recettes et plans de repas seront définitivement supprimés.
+                    La suppression de ton compte est irréversible. Toutes tes
+                    données, recettes et plans de repas seront définitivement
+                    supprimés.
                   </p>
-                  <Button color="danger" variant="bordered" startContent={<Trash2 className="w-4 h-4" />} className="font-semibold w-fit">
+                  <Button
+                    color="danger"
+                    variant="bordered"
+                    startContent={<Trash2 className="w-4 h-4" />}
+                    className="font-semibold w-fit"
+                  >
                     Supprimer mon compte
                   </Button>
                 </CardBody>
               </Card>
 
               <div className="lg:hidden">
-                <Button color="danger" variant="flat" startContent={<LogOut className="w-4 h-4" />} className="font-semibold w-full" onPress={() => logout()}>
+                <Button
+                  color="danger"
+                  variant="flat"
+                  startContent={<LogOut className="w-4 h-4" />}
+                  className="font-semibold w-full"
+                  onPress={() => logout()}
+                >
                   Déconnexion
                 </Button>
               </div>
