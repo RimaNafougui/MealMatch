@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useStats, useNutrition, useWeightLogs, type WeightLog } from "@/hooks/useUserData";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Avatar } from "@heroui/avatar";
 import { Chip } from "@heroui/chip";
@@ -28,44 +28,6 @@ import {
   Droplets,
 } from "lucide-react";
 import { kgToLbs } from "@/utils/nutrition";
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-interface StatsData {
-  savedRecipes: number;
-  mealPlans: number;
-  favorites: number;
-  profile: {
-    name: string;
-    email: string;
-    image?: string;
-    plan?: "free" | "premium" | "pro" | null;
-    created_at: string;
-  } | null;
-}
-
-interface Nutrition {
-  weight_kg?: number | null;
-  weight_unit?: "kg" | "lbs";
-  height_unit?: "cm" | "in";
-  height_cm?: number | null;
-  birth_year?: number | null;
-  sex?: string | null;
-  activity_level?: string | null;
-  tdee_kcal?: number | null;
-  weight_goal?: "lose" | "maintain" | "gain" | null;
-  goal_weight_kg?: number | null;
-  daily_calorie_target?: number | null;
-  macro_protein_pct?: number | null;
-  macro_carbs_pct?: number | null;
-  macro_fat_pct?: number | null;
-}
-
-interface WeightLog {
-  id: string;
-  logged_at: string;
-  weight_kg: number;
-}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -167,27 +129,12 @@ const GOAL_LABELS: Record<string, string> = {
 
 export default function ProfilePage() {
   const { data: session } = useSession();
-  const [stats, setStats]         = useState<StatsData | null>(null);
-  const [nutrition, setNutrition] = useState<Nutrition | null>(null);
-  const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
-  const [loading, setLoading]     = useState(true);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const [statsRes, nutritionRes, logsRes] = await Promise.all([
-          fetch("/api/user/stats"),
-          fetch("/api/user/nutrition"),
-          fetch("/api/user/weight-logs?days=90"),
-        ]);
-        if (statsRes.ok)     setStats((await statsRes.json()) ?? null);
-        if (nutritionRes.ok) setNutrition((await nutritionRes.json()).nutrition ?? null);
-        if (logsRes.ok)      setWeightLogs((await logsRes.json()).logs ?? []);
-      } catch {}
-      setLoading(false);
-    }
-    load();
-  }, []);
+  // React Query — data is deduped/cached across components on the same page
+  const { data: stats, isLoading: loadingStats } = useStats();
+  const { data: nutrition, isLoading: loadingNutrition } = useNutrition();
+  const { data: weightLogs = [], isLoading: loadingLogs } = useWeightLogs(90);
+  const loading = loadingStats || loadingNutrition || loadingLogs;
 
   const user        = session?.user;
   const profile     = stats?.profile;

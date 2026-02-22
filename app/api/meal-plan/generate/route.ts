@@ -3,7 +3,8 @@ import { auth } from "@/auth";
 import { getSupabaseServer } from "@/utils/supabase-server";
 import OpenAI from "openai";
 import { GeneratedMealPlan, MealPlanConfig } from "@/types/meal-plan";
-import { startOfWeek, endOfWeek, format, addDays } from "date-fns";
+import { startOfWeek, format, addDays } from "date-fns";
+import { mealPlanRateLimit } from "@/utils/rate-limit";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -36,6 +37,19 @@ export async function POST(req: Request) {
     }
 
     const userId = session.user.id;
+
+    // ── Rate limiting: max 3 generation attempts per user per minute ─────────
+    // (The DB weekly-usage check is the primary guard; this prevents API abuse)
+    const rl = mealPlanRateLimit(userId);
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: "Too many requests. Please wait before generating again." },
+        {
+          status: 429,
+          headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) },
+        },
+      );
+    }
     const supabase = getSupabaseServer();
     const body = await req.json();
     const config: MealPlanConfig = {

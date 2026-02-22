@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { Card, CardBody } from "@heroui/card";
 import { Button } from "@heroui/button";
 import { Chip } from "@heroui/chip";
@@ -19,16 +18,7 @@ import {
   ChefHat,
 } from "lucide-react";
 import ProgressDashboard from "@/components/dashboard/ProgressDashboard";
-
-interface DashboardStats {
-  savedRecipes: number;
-  mealPlans: number;
-  favorites: number;
-  profile: {
-    name: string;
-    plan?: "free" | "premium" | "pro" | null;
-  } | null;
-}
+import { useStats } from "@/hooks/useUserData";
 
 function StatCard({
   label,
@@ -67,22 +57,7 @@ function StatCard({
 
 export default function DashboardPage() {
   const { data: session } = useSession();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch("/api/user/stats");
-        if (res.ok) setStats(await res.json());
-      } catch {
-        // ignore
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, []);
+  const { data: stats, isLoading: loading } = useStats();
 
   const displayName =
     stats?.profile?.name || session?.user?.name || "Utilisateur";

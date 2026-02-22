@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServer } from "@/utils/supabase-server";
+import { loginRateLimit } from "@/utils/rate-limit";
 
 /**
  * Pre-flight credentials check — called by the login form BEFORE NextAuth signIn.
@@ -10,9 +11,31 @@ import { getSupabaseServer } from "@/utils/supabase-server";
  *
  * We never expose Supabase session tokens here; this is purely a check.
  */
+
+function getClientIp(req: NextRequest): string {
+  const forwarded = req.headers.get("x-forwarded-for");
+  if (forwarded) return forwarded.split(",")[0].trim();
+  return req.headers.get("x-real-ip") ?? "unknown";
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { email, password } = await req.json();
+    // ── Rate limiting: 5 attempts per IP per minute ──────────────────────────
+    const ip = getClientIp(req);
+    const rl = loginRateLimit(ip);
+    if (!rl.success) {
+      return NextResponse.json(
+        { status: "rate_limited" },
+        {
+          status: 429,
+          headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) },
+        },
+      );
+    }
+
+    const body = await req.json();
+    const email: string = (body.email ?? "").toString().trim().toLowerCase();
+    const password: string = (body.password ?? "").toString();
 
     if (!email || !password) {
       return NextResponse.json({ status: "invalid_credentials" }, { status: 200 });

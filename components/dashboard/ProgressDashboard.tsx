@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useNutrition, useWeightLogs, useLogWeight, useDeleteWeightLog } from "@/hooks/useUserData";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
@@ -363,16 +364,18 @@ function MacroRing({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ProgressDashboard() {
-  const [nutrition, setNutrition] = useState<NutritionProfile | null>(null);
-  const [logs, setLogs] = useState<WeightLog[]>([]);
-  const [loadingLogs, setLoadingLogs] = useState(true);
+  // ── React Query hooks ────────────────────────────────────────────────────────
+  const { data: nutrition } = useNutrition();
+  const { data: logs = [], isLoading: loadingLogs } = useWeightLogs(90);
+  const logWeightMutation = useLogWeight();
+  const deleteWeightLogMutation = useDeleteWeightLog();
+
   const [weekMacros, setWeekMacros] = useState<MealPlanMacros[]>([]);
 
   // Weight entry form
   const [entryValue, setEntryValue] = useState("");
   const [entryNote, setEntryNote] = useState("");
   const [entryUnit, setEntryUnit] = useState<"kg" | "lbs">("kg");
-  const [saving, setSaving] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
   const unit = (nutrition?.weight_unit as "kg" | "lbs") ?? "kg";
@@ -381,27 +384,6 @@ export default function ProgressDashboard() {
   useEffect(() => {
     if (nutrition?.weight_unit) setEntryUnit(nutrition.weight_unit as "kg" | "lbs");
   }, [nutrition?.weight_unit]);
-
-  // Load nutrition profile
-  useEffect(() => {
-    fetch("/api/user/nutrition")
-      .then((r) => r.json())
-      .then((d) => setNutrition(d.nutrition ?? null))
-      .catch(() => {});
-  }, []);
-
-  // Load weight logs
-  const fetchLogs = useCallback(async () => {
-    setLoadingLogs(true);
-    try {
-      const r = await fetch("/api/user/weight-logs?days=90");
-      const d = await r.json();
-      setLogs(d.logs ?? []);
-    } catch {}
-    setLoadingLogs(false);
-  }, []);
-
-  useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
   // Load current week meal plan macros
   useEffect(() => {
@@ -435,33 +417,20 @@ export default function ProgressDashboard() {
   // Log today's weight
   async function handleLogWeight() {
     if (!entryValue) return;
-    setSaving(true);
-    try {
-      const body: Record<string, unknown> = { note: entryNote || null };
-      if (entryUnit === "lbs") body.weight_lbs = Number(entryValue);
-      else                      body.weight_kg  = Number(entryValue);
+    const body: Record<string, unknown> = { note: entryNote || null };
+    if (entryUnit === "lbs") body.weight_lbs = Number(entryValue);
+    else                      body.weight_kg  = Number(entryValue);
 
-      const r = await fetch("/api/user/weight-logs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (r.ok) {
+    logWeightMutation.mutate(body as any, {
+      onSuccess: () => {
         setEntryValue("");
         setEntryNote("");
-        await fetchLogs();
-      }
-    } catch {}
-    setSaving(false);
+      },
+    });
   }
 
-  async function handleDeleteLog(id: string) {
-    await fetch("/api/user/weight-logs", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    setLogs((prev) => prev.filter((l) => l.id !== id));
+  function handleDeleteLog(id: string) {
+    deleteWeightLogMutation.mutate(id);
   }
 
   // Derived stats
@@ -640,9 +609,9 @@ export default function ProgressDashboard() {
                     size="sm"
                     color="success"
                     onPress={handleLogWeight}
-                    isLoading={saving}
+                    isLoading={logWeightMutation.isPending}
                     isDisabled={!entryValue}
-                    startContent={!saving && <Scale size={14} />}
+                    startContent={!logWeightMutation.isPending && <Scale size={14} />}
                     className="font-semibold"
                   >
                     Enregistrer

@@ -5,6 +5,9 @@ import Credentials from "next-auth/providers/credentials";
 import { createClient } from "@supabase/supabase-js";
 import { generateUniqueUsername } from "@/utils/username-generator";
 
+// Dedicated Supabase admin client for auth.ts (module-level singleton).
+// This file runs in the NextAuth server context; it intentionally uses its
+// own client rather than getSupabaseServer() to keep auth concerns isolated.
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -56,6 +59,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
 
           if (!data.user) return null;
 
+          // Fetch the profile record to get our app-level user id/name/image.
           const { data: existingUser } = await supabase
             .from("profiles")
             .select("id, email, name, image")
@@ -87,14 +91,10 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account }) {
       if (account?.provider === "github" || account?.provider === "google") {
         try {
-          console.log("=== OAuth Sign In Debug ===");
-          console.log("Provider:", account.provider);
-          console.log("User email:", user.email);
-
-          // Check if profile exists
+          // ── 1. Check if a profile already exists for this email ──────────
           const { data: existingProfile, error: profileCheckError } =
             await supabase
               .from("profiles")
@@ -103,17 +103,16 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
               .single();
 
           if (profileCheckError && profileCheckError.code !== "PGRST116") {
-            console.error("Error checking profile:", profileCheckError);
+            console.error("[auth] Error checking profile:", profileCheckError.message);
             return false;
           }
 
           let userId: string;
 
           if (existingProfile) {
-            console.log("✅ Existing profile found:", existingProfile.id);
             userId = existingProfile.id;
 
-            // Update profile if name/image changed
+            // Update profile if name/image changed in the OAuth provider.
             if (
               (user.name && user.name !== existingProfile.name) ||
               (user.image && user.image !== existingProfile.image)
@@ -130,32 +129,24 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
 
             user.id = userId;
           } else {
-            console.log("❌ No profile found, checking auth.users...");
+            // ── 2. No profile — check auth.users by email (filtered listUsers) ─
+            const { data: authUsersData, error: authUserError } =
+              await supabase.auth.admin.listUsers({ filter: `email=${user.email!}` } as any);
 
-            // Check if user exists in auth.users by email
-            const { data: authUsers, error: authListError } =
-              await supabase.auth.admin.listUsers();
-
-            if (authListError) {
-              console.error("Error listing auth users:", authListError);
+            if (authUserError) {
+              console.error("[auth] Error fetching auth user:", authUserError.message);
               return false;
             }
 
-            const existingAuthUser = authUsers.users.find(
+            const existingAuthUser = authUsersData?.users?.find(
               (u) => u.email?.toLowerCase() === user.email?.toLowerCase(),
             );
 
             if (existingAuthUser) {
-              console.log("✅ Found in auth.users:", existingAuthUser.id);
+              // Auth user exists but profile is missing — create it.
               userId = existingAuthUser.id;
+              const autoUsername = await generateUniqueUsername(user.name, user.email!);
 
-              // Generate unique username
-              const autoUsername = await generateUniqueUsername(
-                user.name,
-                user.email!,
-              );
-
-              // Create missing profile with auto-generated username
               const { error: profileInsertError } = await supabase
                 .from("profiles")
                 .insert({
@@ -169,15 +160,11 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
                 });
 
               if (profileInsertError) {
-                console.error("Error creating profile:", profileInsertError);
+                console.error("[auth] Error creating profile:", profileInsertError.message);
                 return false;
               }
-
-              console.log("✅ Profile created with username:", autoUsername);
             } else {
-              console.log("Creating new auth user...");
-
-              // Create new auth user
+              // ── 3. New user entirely — create auth user + profile ────────
               const { data: authData, error: authError } =
                 await supabase.auth.admin.createUser({
                   email: user.email!,
@@ -189,20 +176,13 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
                 });
 
               if (authError) {
-                console.error("❌ Error creating auth user:", authError);
+                console.error("[auth] Error creating auth user:", authError.message);
                 return false;
               }
 
               userId = authData.user.id;
-              console.log("✅ Created new auth user:", userId);
+              const autoUsername = await generateUniqueUsername(user.name, user.email!);
 
-              // Generate unique username
-              const autoUsername = await generateUniqueUsername(
-                user.name,
-                user.email!,
-              );
-
-              // Create profile with auto-generated username
               const { error: profileError } = await supabase
                 .from("profiles")
                 .insert({
@@ -216,23 +196,20 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
                 });
 
               if (profileError) {
-                console.error("❌ Error creating profile:", profileError);
+                console.error("[auth] Error creating profile:", profileError.message);
                 return false;
               }
-
-              console.log("✅ Profile created with username:", autoUsername);
             }
 
             user.id = userId;
           }
 
-          // Link OAuth account
-          console.log("Linking OAuth account...");
+          // ── 4. Upsert the OAuth account link ────────────────────────────
           const { error: accountError } = await supabase
             .from("accounts")
             .upsert(
               {
-                user_id: userId,
+                user_id: userId!,
                 type: account.type,
                 provider: account.provider,
                 provider_account_id: account.providerAccountId,
@@ -246,21 +223,16 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
               },
-              {
-                onConflict: "provider,provider_account_id",
-              },
+              { onConflict: "provider,provider_account_id" },
             );
 
           if (accountError) {
-            console.error("❌ Error linking account:", accountError);
-          } else {
-            console.log("✅ OAuth account linked");
+            console.error("[auth] Error linking OAuth account:", accountError.message);
           }
 
-          console.log("=== End Debug ===");
           return true;
         } catch (error) {
-          console.error("❌ Error in signIn callback:", error);
+          console.error("[auth] Unexpected error in signIn callback:", error);
           return false;
         }
       }
