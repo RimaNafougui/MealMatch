@@ -47,6 +47,7 @@ interface StatsData {
 interface Nutrition {
   weight_kg?: number | null;
   weight_unit?: "kg" | "lbs";
+  height_unit?: "cm" | "in";
   height_cm?: number | null;
   birth_year?: number | null;
   sex?: string | null;
@@ -272,7 +273,7 @@ export default function ProfilePage() {
                     {age && <Chip size="sm" variant="flat" color="default">{age} ans</Chip>}
                     {nutrition?.height_cm && (
                       <Chip size="sm" variant="flat" color="default">
-                        {unit === "in"
+                        {nutrition.height_unit === "in"
                           ? `${Math.floor(nutrition.height_cm / 2.54 / 12)}'${Math.round((nutrition.height_cm / 2.54) % 12)}"`
                           : `${Math.round(nutrition.height_cm)} cm`}
                       </Chip>
