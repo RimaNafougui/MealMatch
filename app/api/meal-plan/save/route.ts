@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getSupabaseServer } from "@/utils/supabase-server";
 import { GeneratedMealPlan } from "@/types/meal-plan";
+import { cacheDel, cacheDelPattern, CacheKey } from "@/utils/redis";
+import { format, startOfWeek } from "date-fns";
 
 export async function POST(req: Request) {
   try {
@@ -68,6 +70,15 @@ export async function POST(req: Request) {
         { status: 500 },
       );
     }
+
+    // Bust current meal plan cache for this week
+    const weekStartStr = format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd");
+    await Promise.all([
+      cacheDel(CacheKey.mealPlanCurrent(userId, weekStartStr)),
+      cacheDel(CacheKey.userStats(userId)),
+      // Also bust any other week keys for this user (edge case: plan spans weeks)
+      cacheDelPattern(`user:${userId}:meal-plan:*`),
+    ]);
 
     return NextResponse.json({ success: true, plan: savedPlan });
   } catch (error) {

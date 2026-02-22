@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   try {
     // ── Rate limiting: 5 attempts per IP per minute ──────────────────────────
     const ip = getClientIp(req);
-    const rl = loginRateLimit(ip);
+    const rl = await loginRateLimit(ip);
     if (!rl.success) {
       return NextResponse.json(
         { status: "rate_limited" },

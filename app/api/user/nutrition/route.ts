@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getSupabaseServer } from "@/utils/supabase-server";
+import { withCache, cacheDel, CacheKey, TTL } from "@/utils/redis";
 
 const NUTRITION_FIELDS = [
   "birth_year",
@@ -28,19 +29,24 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const supabase = getSupabaseServer();
-    const { data, error } = await supabase
-      .from("profiles")
-      .select(NUTRITION_FIELDS.join(", "))
-      .eq("id", session.user.id)
-      .single();
+    const userId = session.user.id;
 
-    if (error) {
-      console.error("Nutrition GET error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+    const nutrition = await withCache(
+      CacheKey.userNutrition(userId),
+      TTL.USER_NUTRITION,
+      async () => {
+        const supabase = getSupabaseServer();
+        const { data, error } = await supabase
+          .from("profiles")
+          .select(NUTRITION_FIELDS.join(", "))
+          .eq("id", userId)
+          .single();
+        if (error) throw error;
+        return data;
+      },
+    );
 
-    return NextResponse.json({ nutrition: data });
+    return NextResponse.json({ nutrition });
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -54,6 +60,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const userId = session.user.id;
     const body = await req.json();
 
     // Only allow whitelisted fields
@@ -66,12 +73,19 @@ export async function PATCH(req: NextRequest) {
     const { error } = await supabase
       .from("profiles")
       .update({ ...update, updated_at: new Date().toISOString() })
-      .eq("id", session.user.id);
+      .eq("id", userId);
 
     if (error) {
       console.error("Nutrition PATCH error:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    // Bust caches that depend on profile data
+    await cacheDel(
+      CacheKey.userNutrition(userId),
+      CacheKey.userStats(userId),
+      CacheKey.userProfile(userId),
+    );
 
     return NextResponse.json({ success: true });
   } catch (err) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getSupabaseServer } from "@/utils/supabase-server";
+import { withCache, cacheDel, CacheKey, TTL } from "@/utils/redis";
 
 // GET - fetch user preferences
 export async function GET() {
@@ -10,28 +11,36 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const supabase = getSupabaseServer();
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("dietary_restrictions, allergies, budget_min, budget_max, meal_plan_days, meal_plan_meals_per_day")
-      .eq("id", session.user.id)
-      .single();
+    const userId = session.user.id;
 
-    if (error) throw error;
+    const prefs = await withCache(
+      CacheKey.userPrefs(userId),
+      TTL.USER_PREFS,
+      async () => {
+        const supabase = getSupabaseServer();
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("dietary_restrictions, allergies, budget_min, budget_max, meal_plan_days, meal_plan_meals_per_day")
+          .eq("id", userId)
+          .single();
+        if (error) throw error;
 
-    // Map DB fields to UI-friendly format
-    const dietary = data?.dietary_restrictions?.[0] || "none";
-    const budgetMax = data?.budget_max ?? 60;
-    const budget =
-      budgetMax <= 30 ? "low" : budgetMax <= 60 ? "medium" : "high";
+        const dietary = data?.dietary_restrictions?.[0] || "none";
+        const budgetMax = data?.budget_max ?? 60;
+        const budget =
+          budgetMax <= 30 ? "low" : budgetMax <= 60 ? "medium" : "high";
 
-    return NextResponse.json({
-      dietary,
-      budget,
-      allergies: data?.allergies || [],
-      budget_min: data?.budget_min ?? 0,
-      budget_max: budgetMax,
-    });
+        return {
+          dietary,
+          budget,
+          allergies: data?.allergies || [],
+          budget_min: data?.budget_min ?? 0,
+          budget_max: budgetMax,
+        };
+      },
+    );
+
+    return NextResponse.json(prefs);
   } catch (err) {
     console.error("GET /api/user/preferences error:", err);
     return NextResponse.json({ error: "Failed to fetch preferences" }, { status: 500 });
@@ -46,6 +55,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const userId = session.user.id;
     const { dietary, budget, allergies } = await req.json();
 
     // Map UI budget key to min/max
@@ -66,9 +76,12 @@ export async function PATCH(req: NextRequest) {
         budget_max: budgetRange.max,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", session.user.id);
+      .eq("id", userId);
 
     if (error) throw error;
+
+    // Bust preferences cache
+    await cacheDel(CacheKey.userPrefs(userId));
 
     return NextResponse.json({ success: true });
   } catch (err) {

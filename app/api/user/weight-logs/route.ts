@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getSupabaseServer } from "@/utils/supabase-server";
+import { withCache, cacheDel, CacheKey, TTL } from "@/utils/redis";
 
-// GET — fetch last 90 days of weight logs
+// GET — fetch last N days of weight logs
 export async function GET(req: NextRequest) {
   try {
     const session = await auth();
@@ -10,27 +11,32 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const supabase = getSupabaseServer();
+    const userId = session.user.id;
     const { searchParams } = new URL(req.url);
     const days = Math.min(Number(searchParams.get("days") ?? 90), 365);
 
-    const since = new Date();
-    since.setDate(since.getDate() - days);
-    const sinceStr = since.toISOString().split("T")[0];
+    const logs = await withCache(
+      CacheKey.weightLogs(userId, days),
+      TTL.WEIGHT_LOGS,
+      async () => {
+        const supabase = getSupabaseServer();
+        const since = new Date();
+        since.setDate(since.getDate() - days);
+        const sinceStr = since.toISOString().split("T")[0];
 
-    const { data, error } = await supabase
-      .from("weight_logs")
-      .select("id, logged_at, weight_kg, note")
-      .eq("user_id", session.user.id)
-      .gte("logged_at", sinceStr)
-      .order("logged_at", { ascending: true });
+        const { data, error } = await supabase
+          .from("weight_logs")
+          .select("id, logged_at, weight_kg, note")
+          .eq("user_id", userId)
+          .gte("logged_at", sinceStr)
+          .order("logged_at", { ascending: true });
 
-    if (error) {
-      console.error("Weight logs GET error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+        if (error) throw error;
+        return data ?? [];
+      },
+    );
 
-    return NextResponse.json({ logs: data ?? [] });
+    return NextResponse.json({ logs });
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -45,6 +51,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const userId = session.user.id;
     const { weight_kg, weight_lbs, note, logged_at } = await req.json();
 
     // Accept either kg or lbs
@@ -70,7 +77,7 @@ export async function POST(req: NextRequest) {
       .from("weight_logs")
       .upsert(
         {
-          user_id: session.user.id,
+          user_id: userId,
           logged_at: dateStr,
           weight_kg: Math.round(weightKg * 10) / 10,
           note: note ?? null,
@@ -84,6 +91,13 @@ export async function POST(req: NextRequest) {
       console.error("Weight log POST error:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    // Bust all weight-log cache variants for this user
+    await cacheDel(
+      CacheKey.weightLogs(userId, 90),
+      CacheKey.weightLogs(userId, 30),
+      CacheKey.weightLogs(userId, 365),
+    );
 
     return NextResponse.json({ success: true, log: data });
   } catch (err) {
@@ -100,6 +114,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const userId = session.user.id;
     const { id } = await req.json();
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
@@ -108,12 +123,19 @@ export async function DELETE(req: NextRequest) {
       .from("weight_logs")
       .delete()
       .eq("id", id)
-      .eq("user_id", session.user.id); // ownership guard
+      .eq("user_id", userId); // ownership guard
 
     if (error) {
       console.error("Weight log DELETE error:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    // Bust cache
+    await cacheDel(
+      CacheKey.weightLogs(userId, 90),
+      CacheKey.weightLogs(userId, 30),
+      CacheKey.weightLogs(userId, 365),
+    );
 
     return NextResponse.json({ success: true });
   } catch (err) {

@@ -5,6 +5,7 @@ import OpenAI from "openai";
 import { GeneratedMealPlan, MealPlanConfig } from "@/types/meal-plan";
 import { startOfWeek, format, addDays } from "date-fns";
 import { mealPlanRateLimit } from "@/utils/rate-limit";
+import { cacheDel, cacheDelPattern, CacheKey } from "@/utils/redis";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -40,7 +41,7 @@ export async function POST(req: Request) {
 
     // ── Rate limiting: max 3 generation attempts per user per minute ─────────
     // (The DB weekly-usage check is the primary guard; this prevents API abuse)
-    const rl = mealPlanRateLimit(userId);
+    const rl = await mealPlanRateLimit(userId);
     if (!rl.success) {
       return NextResponse.json(
         { error: "Too many requests. Please wait before generating again." },
@@ -387,6 +388,13 @@ Notes sur les champs :
         { status: 500 },
       );
     }
+
+    // Bust meal plan + stats caches so the UI reflects the new plan immediately
+    await Promise.all([
+      cacheDel(CacheKey.mealPlanCurrent(userId, weekStartStr)),
+      cacheDel(CacheKey.userStats(userId)),
+      cacheDelPattern(`user:${userId}:meal-plan:*`),
+    ]);
 
     return NextResponse.json({
       success: true,
