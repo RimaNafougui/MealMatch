@@ -37,29 +37,88 @@ export async function POST(req: Request) {
       .map((m: GeneratedMeal) => m.title)
       .filter((t: string) => t !== current_meal?.title);
 
-    const systemPrompt = `You are a meal planning assistant. Respond with valid JSON only. No markdown, no explanation.`;
+    // --- Fetch a sample of recipes from catalog ---
+    const { data: catalogRecipes } = await supabase
+      .from("recipes_catalog")
+      .select("id, title, calories, prep_time, dietary_tags, price_per_serving, protein, carbs, fat, spoonacular_id")
+      .limit(30);
 
-    const userPrompt = `Suggest ONE alternative meal for ${day} ${slot}.
+    // --- Fetch user's own recipes ---
+    const { data: userRecipes } = await supabase
+      .from("user_recipes")
+      .select("id, title, calories, prep_time, dietary_tags, price_per_serving, protein, carbs, fat")
+      .eq("user_id", userId)
+      .limit(15);
 
-Current meal being replaced: "${current_meal?.title || "none"}"
-Already used in this plan (avoid these): ${usedTitles.slice(0, 10).join(", ") || "none"}
-Dietary restrictions: ${restrictions}
-Allergies: ${allergies}
-Budget target: around $${((profile?.budget_min || 0 + (profile?.budget_max || 80)) / 2 / 21).toFixed(2)} per meal
+    const catalogPool = (catalogRecipes || []).map((r: any) => ({
+      source: "catalog",
+      id: r.id,
+      spoonacular_id: r.spoonacular_id,
+      title: r.title,
+      calories: r.calories,
+      prep_time: r.prep_time,
+      cost: r.price_per_serving,
+      tags: r.dietary_tags,
+      protein: r.protein,
+      carbs: r.carbs,
+      fat: r.fat,
+    }));
 
-Return exactly this JSON (one meal object, not an array):
+    const userPool = (userRecipes || []).map((r: any) => ({
+      source: "user_recipe",
+      id: r.id,
+      title: r.title,
+      calories: r.calories,
+      prep_time: r.prep_time,
+      cost: r.price_per_serving,
+      tags: r.dietary_tags,
+      protein: r.protein,
+      carbs: r.carbs,
+      fat: r.fat,
+    }));
+
+    const allAvailableRecipes = [...catalogPool, ...userPool];
+
+    const systemPrompt = `Tu es un assistant de planification de repas. Réponds uniquement en JSON valide. Pas de markdown, pas d'explication.
+Tout le contenu (titres, descriptions, instructions) doit être en FRANÇAIS.`;
+
+    const userPrompt = `Suggère UN repas alternatif pour ${day} ${slot}.
+
+Repas actuel remplacé : "${current_meal?.title || "aucun"}"
+Déjà utilisés dans ce plan (à éviter) : ${usedTitles.slice(0, 10).join(", ") || "aucun"}
+Restrictions alimentaires : ${restrictions}
+Allergies : ${allergies}
+Budget cible : environ ${((profile?.budget_min || 0 + (profile?.budget_max || 80)) / 2 / 21).toFixed(2)} $ par repas
+
+Recettes disponibles (catalogue + recettes de l'utilisateur) :
+${JSON.stringify(allAvailableRecipes.slice(0, 30), null, 0)}
+
+RÈGLES :
+- Utilise en priorité une recette du catalogue ou de l'utilisateur (source "catalog" ou "user_recipe")
+- Si aucune ne convient, génère une recette originale (source "ai") avec instructions complètes en français et valeurs nutritionnelles précises
+- Pour source "ai" : fournis une image_url unsplash pertinente (ex: https://source.unsplash.com/800x600/?salade,legumes)
+
+Retourne exactement cet objet JSON (un seul repas, pas un tableau) :
 {
   "slot": "${slot}",
-  "title": "Recipe Name",
-  "description": "One sentence description",
+  "source": "catalog",
+  "recipe_catalog_id": "uuid-si-catalog-sinon-null",
+  "user_recipe_id": null,
+  "title": "Nom de la recette en français",
+  "description": "Une phrase de description en français",
   "prep_time_minutes": 20,
   "calories": 450,
+  "protein": 25,
+  "carbs": 50,
+  "fat": 12,
   "estimated_cost_usd": 3.50,
   "dietary_tags": ["vegetarian"],
-  "ingredients_summary": "ingredient 1, ingredient 2, ingredient 3",
+  "ingredients_summary": "ingrédient 1, ingrédient 2, ingrédient 3",
+  "instructions": [],
   "is_favorite": false,
   "can_repeat": true,
-  "spoonacular_search_query": "search query"
+  "spoonacular_search_query": "search query",
+  "image_url": null
 }`;
 
     const completion = await openai.chat.completions.create({
@@ -69,7 +128,7 @@ Return exactly this JSON (one meal object, not an array):
         { role: "user", content: userPrompt },
       ],
       temperature: 0.8,
-      max_tokens: 500,
+      max_tokens: 1000,
     });
 
     const rawContent = completion.choices[0]?.message?.content || "";
@@ -83,6 +142,16 @@ Return exactly this JSON (one meal object, not an array):
         meal = JSON.parse(jsonMatch[0]);
       } else {
         throw new Error("Failed to parse response");
+      }
+    }
+
+    // Enrich with spoonacular_id if it's a catalog recipe
+    if (meal.source === "catalog" && (meal as any).recipe_catalog_id) {
+      const catalogEntry = (catalogRecipes || []).find(
+        (r: any) => r.id === (meal as any).recipe_catalog_id
+      );
+      if (catalogEntry) {
+        (meal as any).spoonacular_id = catalogEntry.spoonacular_id;
       }
     }
 

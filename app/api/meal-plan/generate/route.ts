@@ -85,7 +85,7 @@ export async function POST(req: Request) {
         `
         recipe_id,
         recipes_catalog (
-          title, calories, prep_time, dietary_tags, price_per_serving, ingredients
+          id, title, calories, prep_time, dietary_tags, price_per_serving, ingredients, spoonacular_id
         )
       `,
       )
@@ -96,19 +96,22 @@ export async function POST(req: Request) {
       .map((f: any) => f.recipes_catalog)
       .filter(Boolean)
       .map((r: any) => ({
+        id: r.id,
         title: r.title,
         calories: r.calories,
         prep_time: r.prep_time,
         tags: r.dietary_tags,
         cost: r.price_per_serving,
+        spoonacular_id: r.spoonacular_id,
       }));
 
-    const days = config.days_count === 7 ? WEEKDAYS_7 : WEEKDAYS_5;
-    const mealLabels = getMealLabels(config.meals_per_day);
-    const budgetRange =
-      profile?.budget_min && profile?.budget_max
-        ? `$${profile.budget_min}–$${profile.budget_max} CAD per week`
-        : "budget-friendly (under $80 CAD/week)";
+    // --- Fetch a sample of recipes from catalog (up to 40) matching user restrictions ---
+    const catalogQuery = supabase
+      .from("recipes_catalog")
+      .select("id, title, calories, prep_time, dietary_tags, price_per_serving, ingredients, spoonacular_id, protein, carbs, fat")
+      .limit(40);
+
+    // Apply dietary restriction filters if present
     const restrictions = profile?.dietary_restrictions?.length
       ? profile.dietary_restrictions.join(", ")
       : "none";
@@ -116,33 +119,91 @@ export async function POST(req: Request) {
       ? profile.allergies.join(", ")
       : "none";
 
+    const { data: catalogRecipes } = await catalogQuery;
+
+    // --- Fetch user's own recipes ---
+    const { data: userRecipes } = await supabase
+      .from("user_recipes")
+      .select("id, title, calories, prep_time, dietary_tags, price_per_serving, ingredients, protein, carbs, fat")
+      .eq("user_id", userId)
+      .limit(20);
+
+    // Build recipe pool summaries for the AI
+    const catalogPool = (catalogRecipes || []).map((r: any) => ({
+      source: "catalog",
+      id: r.id,
+      spoonacular_id: r.spoonacular_id,
+      title: r.title,
+      calories: r.calories,
+      prep_time: r.prep_time,
+      cost: r.price_per_serving,
+      tags: r.dietary_tags,
+      protein: r.protein,
+      carbs: r.carbs,
+      fat: r.fat,
+    }));
+
+    const userPool = (userRecipes || []).map((r: any) => ({
+      source: "user_recipe",
+      id: r.id,
+      title: r.title,
+      calories: r.calories,
+      prep_time: r.prep_time,
+      cost: r.price_per_serving,
+      tags: r.dietary_tags,
+      protein: r.protein,
+      carbs: r.carbs,
+      fat: r.fat,
+    }));
+
+    const allAvailableRecipes = [...catalogPool, ...userPool];
+    const totalNeeded = config.days_count * config.meals_per_day;
+
+    const days = config.days_count === 7 ? WEEKDAYS_7 : WEEKDAYS_5;
+    const mealLabels = getMealLabels(config.meals_per_day);
+    const budgetRange =
+      profile?.budget_min && profile?.budget_max
+        ? `${profile.budget_min}–${profile.budget_max} $ CAD par semaine`
+        : "économique (moins de 80 $ CAD/semaine)";
+
     // --- Build OpenAI prompt ---
-    const systemPrompt = `You are a meal planning assistant for university students in Canada. 
-You create practical, affordable, and nutritious meal plans.
-ALWAYS respond with valid JSON only. No markdown, no explanation, no code blocks.
-The JSON must be parseable by JSON.parse() directly.`;
+    const systemPrompt = `Tu es un assistant de planification de repas pour des étudiants universitaires au Canada.
+Tu crées des plans de repas pratiques, abordables et nutritifs.
+TOUJOURS répondre en JSON valide uniquement. Pas de markdown, pas d'explication, pas de blocs de code.
+Le JSON doit être parseable directement par JSON.parse().
+Tout le contenu (titres, descriptions, instructions) doit être en FRANÇAIS.`;
 
-    const userPrompt = `Generate a ${config.days_count}-day meal plan (${days.join(", ")}) with ${config.meals_per_day} meal(s) per day (${mealLabels.join(", ")}).
+    const userPrompt = `Génère un plan de repas de ${config.days_count} jours (${days.join(", ")}) avec ${config.meals_per_day} repas par jour (${mealLabels.join(", ")}).
 
-User profile:
-- Dietary restrictions: ${restrictions}
-- Allergies: ${allergies}  
-- Weekly budget: ${budgetRange}
-- Favorite recipes to incorporate (include at least 2-3 if possible): ${
+Profil de l'utilisateur :
+- Restrictions alimentaires : ${restrictions}
+- Allergies : ${allergies}
+- Budget hebdomadaire : ${budgetRange}
+- Recettes favorites à intégrer (inclure au moins 2-3 si possible) : ${
       favoriteSummaries.length > 0
-        ? JSON.stringify(favoriteSummaries)
-        : "none saved yet"
+        ? JSON.stringify(favoriteSummaries.map((f: any) => ({ id: f.id, title: f.title, source: "catalog", spoonacular_id: f.spoonacular_id })))
+        : "aucune sauvegardée"
     }
 
-Rules:
-1. Respect ALL dietary restrictions and allergies strictly
-2. Stay within the weekly budget
-3. Vary cuisines and ingredients across the week — avoid repeating the same meal
-4. Prefer student-friendly recipes: simple ingredients, under 45 min prep time
-5. Incorporate favorite recipes where they fit naturally
-6. Meals can be repeated across different days if the user might want that (mark repeatable ones)
+Recettes disponibles dans la bibliothèque (catalogue + recettes de l'utilisateur) :
+${JSON.stringify(allAvailableRecipes.slice(0, 50), null, 0)}
 
-Return EXACTLY this JSON shape:
+RÈGLES IMPORTANTES :
+1. Respecter STRICTEMENT toutes les restrictions alimentaires et allergies
+2. Rester dans le budget hebdomadaire
+3. Varier les cuisines et ingrédients au cours de la semaine — éviter de répéter le même repas
+4. Préférer des recettes accessibles : ingrédients simples, moins de 45 min de préparation
+5. Intégrer les recettes favorites là où elles s'adaptent naturellement
+6. PRIORITÉ : utiliser les recettes du catalogue ou de l'utilisateur (champs "source": "catalog" ou "user_recipe") autant que possible
+7. Si aucune recette disponible ne convient pour un créneau donné, génère une recette originale — dans ce cas :
+   - Fournis des instructions complètes étape par étape (minimum 4 étapes) en français
+   - Précise les mesures exactes pour chaque ingrédient
+   - Fournis les valeurs nutritionnelles complètes (calories, protéines, glucides, lipides)
+   - Indique source: "ai"
+   - Génère une URL d'image descriptive pour la recette (utilise unsplash.com avec une requête pertinente, ex: https://source.unsplash.com/800x600/?pasta,tomato)
+8. Pour les recettes du catalogue ou de l'utilisateur, inclure leur "id" et "source" exacts
+
+Retourne EXACTEMENT cette structure JSON :
 {
   "days": [
     {
@@ -150,23 +211,37 @@ Return EXACTLY this JSON shape:
       "meals": [
         {
           "slot": "${mealLabels[0]}",
-          "title": "Recipe Name",
-          "description": "One sentence description",
+          "source": "catalog",
+          "recipe_catalog_id": "uuid-from-catalog-or-null",
+          "user_recipe_id": null,
+          "title": "Nom de la recette en français",
+          "description": "Une phrase de description en français",
           "prep_time_minutes": 20,
           "calories": 450,
+          "protein": 25,
+          "carbs": 50,
+          "fat": 12,
           "estimated_cost_usd": 3.50,
           "dietary_tags": ["vegetarian"],
-          "ingredients_summary": "pasta, tomato sauce, parmesan",
+          "ingredients_summary": "pâtes, sauce tomate, parmesan",
+          "instructions": [],
           "is_favorite": false,
           "can_repeat": true,
-          "spoonacular_search_query": "pasta tomato"
+          "spoonacular_search_query": "pasta tomato",
+          "image_url": null
         }
       ]
     }
   ],
   "total_estimated_cost": 45.00,
   "total_calories_per_day_avg": 1800
-}`;
+}
+
+Notes sur les champs :
+- Pour source "catalog" : renseigne recipe_catalog_id avec l'id exact, user_recipe_id = null, instructions = []
+- Pour source "user_recipe" : renseigne user_recipe_id avec l'id exact, recipe_catalog_id = null, instructions = []
+- Pour source "ai" : recipe_catalog_id = null, user_recipe_id = null, instructions = ["Étape 1 : ...", "Étape 2 : ...", ...], image_url = URL unsplash
+- spoonacular_id doit être renseigné si la recette vient du catalogue et a un spoonacular_id`;
 
     // --- Call OpenAI ---
     const completion = await openai.chat.completions.create({
@@ -176,7 +251,7 @@ Return EXACTLY this JSON shape:
         { role: "user", content: userPrompt },
       ],
       temperature: 0.7,
-      max_tokens: 4000,
+      max_tokens: 6000,
     });
 
     const rawContent = completion.choices[0]?.message?.content || "";
@@ -194,29 +269,46 @@ Return EXACTLY this JSON shape:
       }
     }
 
-    // --- Enrich plan: match favorite meals back to catalog IDs ---
-    if (favoriteSummaries.length > 0) {
-      // Build a lookup: title (lowercase) → { catalog_id, spoonacular_id }
-      const { data: catalogMatches } = await supabase
-        .from("recipes_catalog")
-        .select("id, spoonacular_id, title")
-        .in(
-          "title",
-          favoriteSummaries.map((f: any) => f.title),
-        );
+    // --- Enrich plan: match catalog IDs and user recipe IDs ---
+    // Build lookups for catalog
+    const catalogIdMap = new Map(
+      (catalogRecipes || []).map((r: any) => [r.id, { spoonacular_id: r.spoonacular_id }])
+    );
+    const userRecipeIdMap = new Map(
+      (userRecipes || []).map((r: any) => [r.id, true])
+    );
 
+    mealPlan.days = mealPlan.days.map((day: any) => ({
+      ...day,
+      meals: day.meals.map((meal: any) => {
+        // If AI returned a catalog recipe, ensure spoonacular_id is set
+        if (meal.source === "catalog" && meal.recipe_catalog_id) {
+          const catalogEntry = catalogIdMap.get(meal.recipe_catalog_id);
+          if (catalogEntry) {
+            return { ...meal, spoonacular_id: catalogEntry.spoonacular_id };
+          }
+        }
+        return meal;
+      }),
+    }));
+
+    // Also match favorites by title for backward compatibility
+    if (favoriteSummaries.length > 0) {
       const titleToIds = new Map(
-        (catalogMatches || []).map((r: any) => [
-          r.title.toLowerCase(),
-          { recipe_catalog_id: r.id, spoonacular_id: r.spoonacular_id },
+        favoriteSummaries.map((f: any) => [
+          f.title.toLowerCase(),
+          { recipe_catalog_id: f.id, spoonacular_id: f.spoonacular_id },
         ]),
       );
 
       mealPlan.days = mealPlan.days.map((day: any) => ({
         ...day,
         meals: day.meals.map((meal: any) => {
-          const match = titleToIds.get(meal.title?.toLowerCase());
-          return match ? { ...meal, ...match } : meal;
+          if (!meal.recipe_catalog_id) {
+            const match = titleToIds.get(meal.title?.toLowerCase());
+            if (match) return { ...meal, ...match, source: "catalog" };
+          }
+          return meal;
         }),
       }));
     }

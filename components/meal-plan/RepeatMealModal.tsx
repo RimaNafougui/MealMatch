@@ -49,78 +49,97 @@ export function RepeatMealModal({
   });
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="lg" scrollBehavior="inside">
+    <Modal isOpen={isOpen} onClose={onClose} size="2xl" scrollBehavior="inside">
       <ModalContent>
-        <ModalHeader className="flex items-center gap-2">
+        <ModalHeader className="flex items-center gap-2 border-b border-divider pb-4">
           <Repeat2 size={18} className="text-primary" />
-          <span>Repeat a Meal</span>
+          <span>Répéter un repas</span>
         </ModalHeader>
-        <ModalBody className="gap-3 pb-4">
+
+        <ModalBody className="gap-4 py-5">
           <p className="text-sm text-foreground/60">
-            Select a meal from your plan to use for{" "}
+            Choisissez un repas de votre plan à utiliser pour{" "}
             <span className="font-semibold text-foreground capitalize">
-              {targetDay} {targetSlot}
+              {targetDay} — {targetSlot}
             </span>
-            :
           </p>
+
           {uniqueMeals.length === 0 ? (
-            <p className="text-sm text-foreground/40 italic text-center py-8">
-              No other meals available yet.
-            </p>
+            <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
+              <Repeat2 size={36} className="text-default-300" />
+              <p className="text-sm text-foreground/40 italic">
+                Aucun autre repas disponible pour le moment.
+              </p>
+            </div>
           ) : (
-            uniqueMeals.map(({ meal, day, slot }) => (
-              <Card
-                key={`${day}-${slot}`}
-                isPressable
-                onPress={() => onSelect(meal)}
-                className="border border-divider hover:border-primary/50 transition-colors"
-              >
-                <CardBody className="p-3 gap-2">
-                  <div className="flex items-center justify-between">
-                    <Chip
-                      size="sm"
-                      variant="flat"
-                      className="text-[10px] capitalize"
-                    >
-                      {day} · {slot}
-                    </Chip>
-                    {meal.is_favorite && (
+            <div className="flex flex-col gap-3">
+              {uniqueMeals.map(({ meal, day, slot }) => (
+                <Card
+                  key={`${day}-${slot}`}
+                  isPressable
+                  onPress={() => onSelect(meal)}
+                  className="border border-divider hover:border-primary/60 hover:shadow-md transition-all"
+                >
+                  <CardBody className="p-4 gap-3">
+                    {/* Top row: day/slot chip + favorite badge */}
+                    <div className="flex items-center justify-between gap-2">
                       <Chip
                         size="sm"
-                        color="warning"
                         variant="flat"
-                        className="text-[10px]"
+                        color="default"
+                        className="capitalize text-xs font-medium"
                       >
-                        ★ Fav
+                        {day} · {slot}
                       </Chip>
+                      {meal.is_favorite && (
+                        <Chip
+                          size="sm"
+                          color="warning"
+                          variant="flat"
+                          className="text-xs"
+                        >
+                          ★ Favori
+                        </Chip>
+                      )}
+                    </div>
+
+                    {/* Title */}
+                    <p className="font-semibold text-base leading-snug">
+                      {meal.title}
+                    </p>
+
+                    {/* Description */}
+                    {meal.description && (
+                      <p className="text-sm text-foreground/55 line-clamp-2 leading-relaxed">
+                        {meal.description}
+                      </p>
                     )}
-                  </div>
-                  <p className="font-semibold text-sm">{meal.title}</p>
-                  <p className="text-xs text-foreground/50 line-clamp-1">
-                    {meal.description}
-                  </p>
-                  <div className="flex gap-3">
-                    <span className="flex items-center gap-1 text-xs text-foreground/40">
-                      <Clock size={11} />
-                      {meal.prep_time_minutes}m
-                    </span>
-                    <span className="flex items-center gap-1 text-xs text-foreground/40">
-                      <Flame size={11} />
-                      {meal.calories} cal
-                    </span>
-                    <span className="flex items-center gap-1 text-xs text-foreground/40">
-                      <DollarSign size={11} />$
-                      {meal.estimated_cost_usd?.toFixed(2)}
-                    </span>
-                  </div>
-                </CardBody>
-              </Card>
-            ))
+
+                    {/* Stats row */}
+                    <div className="flex items-center gap-4 pt-1 border-t border-divider/50">
+                      <span className="flex items-center gap-1.5 text-sm text-foreground/50">
+                        <Clock size={13} className="text-warning" />
+                        {meal.prep_time_minutes} min
+                      </span>
+                      <span className="flex items-center gap-1.5 text-sm text-foreground/50">
+                        <Flame size={13} className="text-danger" />
+                        {meal.calories} kcal
+                      </span>
+                      <span className="flex items-center gap-1.5 text-sm text-foreground/50">
+                        <DollarSign size={13} className="text-success" />
+                        {meal.estimated_cost_usd?.toFixed(2)} $
+                      </span>
+                    </div>
+                  </CardBody>
+                </Card>
+              ))}
+            </div>
           )}
         </ModalBody>
-        <ModalFooter>
+
+        <ModalFooter className="border-t border-divider">
           <Button variant="light" onPress={onClose}>
-            Cancel
+            Annuler
           </Button>
         </ModalFooter>
       </ModalContent>

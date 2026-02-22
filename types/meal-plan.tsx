@@ -16,6 +16,14 @@ export interface GeneratedMeal {
   // Set after matching against catalog — enables "View Full Recipe" navigation
   recipe_catalog_id?: string;
   spoonacular_id?: number;
+  // AI-generated meal enriched fields (present when source === "ai")
+  source?: "catalog" | "user_recipe" | "ai";
+  protein?: number;
+  carbs?: number;
+  fat?: number;
+  instructions?: string[]; // step-by-step instructions in French
+  // For catalog/user_recipe sourced meals, reference their ID
+  user_recipe_id?: string;
 }
 
 export interface GeneratedDay {

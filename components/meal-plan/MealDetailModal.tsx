@@ -18,9 +18,16 @@ import {
   ShoppingBasket,
   Tag,
   ExternalLink,
+  ListOrdered,
+  Zap,
+  Beef,
+  Wheat,
+  Droplets,
+  Sparkles,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { GeneratedMeal } from "@/types/meal-plan";
+import Image from "next/image";
 
 interface MealDetailModalProps {
   meal: GeneratedMeal | null;
@@ -58,14 +65,16 @@ export function MealDetailModal({
         .filter(Boolean)
     : [];
 
-  // Navigate to full detail page if a catalog/spoonacular id is available
+  const isAiGenerated = meal.source === "ai";
+  const hasInstructions = isAiGenerated && meal.instructions && meal.instructions.length > 0;
+  const hasMacros = meal.protein != null || meal.carbs != null || meal.fat != null;
+
+  // Navigate to full recipe detail page
   const handleViewFullRecipe = () => {
     const m = meal as any;
-    if (m.recipe_catalog_id) {
-      router.push(`/dashboard/explore/${m.recipe_catalog_id}`);
-      onClose();
-    } else if (m.spoonacular_id) {
-      router.push(`/dashboard/explore/${m.spoonacular_id}`);
+    const id = m.recipe_catalog_id || m.spoonacular_id;
+    if (id) {
+      router.push(`/explore/${id}`);
       onClose();
     }
   };
@@ -100,12 +109,22 @@ export function MealDetailModal({
                 size="sm"
                 startContent={<Star size={11} className="fill-warning" />}
               >
-                Favorite
+                Favori
               </Chip>
             )}
             {(meal as any).can_repeat && (
               <Chip variant="flat" size="sm" color="default">
-                Repeatable
+                Répétable
+              </Chip>
+            )}
+            {isAiGenerated && (
+              <Chip
+                variant="flat"
+                size="sm"
+                color="secondary"
+                startContent={<Sparkles size={11} />}
+              >
+                Générée par IA
               </Chip>
             )}
           </div>
@@ -115,6 +134,21 @@ export function MealDetailModal({
         </ModalHeader>
 
         <ModalBody>
+          {/* Hero image for AI-generated meals */}
+          {isAiGenerated && meal.image_url && (
+            <div className="relative w-full h-48 overflow-hidden">
+              <img
+                src={meal.image_url}
+                alt={meal.title}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+            </div>
+          )}
+
           {/* Stats bar */}
           <div className="flex items-center gap-6 px-6 py-4 bg-content2 border-y border-divider flex-wrap">
             <div className="flex items-center gap-2">
@@ -123,7 +157,7 @@ export function MealDetailModal({
               </div>
               <div>
                 <p className="text-[10px] text-foreground/40 uppercase tracking-widest">
-                  Prep
+                  Préparation
                 </p>
                 <p className="font-bold text-sm">
                   {meal.prep_time_minutes} min
@@ -147,10 +181,10 @@ export function MealDetailModal({
               </div>
               <div>
                 <p className="text-[10px] text-foreground/40 uppercase tracking-widest">
-                  Cost
+                  Coût
                 </p>
                 <p className="font-bold text-sm">
-                  ${meal.estimated_cost_usd?.toFixed(2)}
+                  {meal.estimated_cost_usd?.toFixed(2)} $
                 </p>
               </div>
             </div>
@@ -163,7 +197,7 @@ export function MealDetailModal({
                 <div className="flex items-center gap-2">
                   <ChefHat size={15} className="text-foreground/50" />
                   <h3 className="text-xs font-bold uppercase tracking-widest text-foreground/50">
-                    About
+                    À propos
                   </h3>
                 </div>
                 <p className="text-sm text-foreground/80 leading-relaxed">
@@ -174,13 +208,51 @@ export function MealDetailModal({
 
             <Divider />
 
+            {/* Full macros breakdown (for AI meals or when macros are available) */}
+            {hasMacros && (
+              <>
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-2">
+                    <Zap size={15} className="text-foreground/50" />
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-foreground/50">
+                      Valeurs nutritionnelles
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    {meal.protein != null && (
+                      <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-danger/5 border border-danger/10">
+                        <Beef size={16} className="text-danger mb-1" />
+                        <p className="text-xs text-foreground/50">Protéines</p>
+                        <p className="font-bold text-sm">{meal.protein}g</p>
+                      </div>
+                    )}
+                    {meal.carbs != null && (
+                      <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-warning/5 border border-warning/10">
+                        <Wheat size={16} className="text-warning mb-1" />
+                        <p className="text-xs text-foreground/50">Glucides</p>
+                        <p className="font-bold text-sm">{meal.carbs}g</p>
+                      </div>
+                    )}
+                    {meal.fat != null && (
+                      <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-primary/5 border border-primary/10">
+                        <Droplets size={16} className="text-primary mb-1" />
+                        <p className="text-xs text-foreground/50">Lipides</p>
+                        <p className="font-bold text-sm">{meal.fat}g</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <Divider />
+              </>
+            )}
+
             {/* Ingredients */}
             {ingredients.length > 0 && (
               <div className="flex flex-col gap-3">
                 <div className="flex items-center gap-2">
                   <ShoppingBasket size={15} className="text-foreground/50" />
                   <h3 className="text-xs font-bold uppercase tracking-widest text-foreground/50">
-                    Ingredients
+                    Ingrédients
                   </h3>
                 </div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
@@ -196,6 +268,33 @@ export function MealDetailModal({
               </div>
             )}
 
+            {/* Step-by-step instructions (AI-generated meals only) */}
+            {hasInstructions && (
+              <>
+                <Divider />
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-2">
+                    <ListOrdered size={15} className="text-foreground/50" />
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-foreground/50">
+                      Préparation
+                    </h3>
+                  </div>
+                  <ol className="flex flex-col gap-3">
+                    {meal.instructions!.map((step, i) => (
+                      <li key={i} className="flex gap-3">
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/15 text-primary text-xs font-bold flex items-center justify-center mt-0.5">
+                          {i + 1}
+                        </span>
+                        <p className="text-sm text-foreground/75 leading-relaxed">
+                          {step.replace(/^Étape \d+\s*:\s*/i, "").replace(/^\d+\.\s*/, "")}
+                        </p>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              </>
+            )}
+
             {/* Dietary tags */}
             {meal.dietary_tags?.length > 0 && (
               <>
@@ -204,7 +303,7 @@ export function MealDetailModal({
                   <div className="flex items-center gap-2">
                     <Tag size={15} className="text-foreground/50" />
                     <h3 className="text-xs font-bold uppercase tracking-widest text-foreground/50">
-                      Dietary Info
+                      Informations diététiques
                     </h3>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -219,12 +318,11 @@ export function MealDetailModal({
             )}
 
             {/* No full recipe available note */}
-            {!hasFullRecipePage && meal.spoonacular_search_query && (
+            {!hasFullRecipePage && !isAiGenerated && meal.spoonacular_search_query && (
               <>
                 <Divider />
                 <p className="text-xs text-foreground/40 italic">
-                  This meal was AI-generated. Save this plan to get full recipe
-                  details.
+                  Ce repas a été généré par IA. Sauvegardez ce plan pour accéder aux détails complets de la recette.
                 </p>
               </>
             )}
@@ -233,7 +331,7 @@ export function MealDetailModal({
 
         <ModalFooter className="border-t border-divider gap-2">
           <Button variant="light" onPress={onClose}>
-            Close
+            Fermer
           </Button>
           {hasFullRecipePage && (
             <Button
@@ -241,7 +339,7 @@ export function MealDetailModal({
               onPress={handleViewFullRecipe}
               endContent={<ExternalLink size={15} />}
             >
-              View Full Recipe
+              Voir la recette complète
             </Button>
           )}
         </ModalFooter>
