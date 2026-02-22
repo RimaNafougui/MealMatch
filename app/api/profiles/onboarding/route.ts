@@ -61,6 +61,10 @@ export async function POST(req: NextRequest) {
         goal_weight_kg: goal_weight_kg ?? null,
         goal_rate: goal_rate ?? null,
         daily_calorie_target: daily_calorie_target ?? null,
+        // Macro targets
+        macro_protein_pct: body.macro_protein_pct ?? 30,
+        macro_carbs_pct:   body.macro_carbs_pct   ?? 40,
+        macro_fat_pct:     body.macro_fat_pct     ?? 30,
         // Mark onboarding as done
         onboarding_completed: true,
       })

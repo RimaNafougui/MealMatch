@@ -73,7 +73,7 @@ export async function POST(req: Request) {
     const { data: profile } = await supabase
       .from("profiles")
       .select(
-        "dietary_restrictions, allergies, budget_min, budget_max, meal_plan_days, meal_plan_meals_per_day",
+        "dietary_restrictions, allergies, budget_min, budget_max, meal_plan_days, meal_plan_meals_per_day, daily_calorie_target, tdee_kcal, weight_goal, macro_protein_pct, macro_carbs_pct, macro_fat_pct",
       )
       .eq("id", userId)
       .single();
@@ -166,6 +166,24 @@ export async function POST(req: Request) {
         ? `${profile.budget_min}–${profile.budget_max} $ CAD par semaine`
         : "économique (moins de 80 $ CAD/semaine)";
 
+    // Nutritional targets derived from profile
+    const dailyCalorieTarget = profile?.daily_calorie_target ?? null;
+    const caloriesPerMeal = dailyCalorieTarget
+      ? Math.round(dailyCalorieTarget / config.meals_per_day)
+      : null;
+    const proteinPct = profile?.macro_protein_pct ?? 30;
+    const carbsPct   = profile?.macro_carbs_pct   ?? 40;
+    const fatPct     = profile?.macro_fat_pct     ?? 30;
+    const weightGoal = profile?.weight_goal ?? null;
+
+    const macroTargets = caloriesPerMeal
+      ? {
+          protein_g: Math.round((caloriesPerMeal * proteinPct) / 100 / 4),
+          carbs_g:   Math.round((caloriesPerMeal * carbsPct)   / 100 / 4),
+          fat_g:     Math.round((caloriesPerMeal * fatPct)      / 100 / 9),
+        }
+      : null;
+
     // --- Build OpenAI prompt ---
     const systemPrompt = `Tu es un assistant de planification de repas pour des étudiants universitaires au Canada.
 Tu crées des plans de repas pratiques, abordables et nutritifs.
@@ -179,6 +197,9 @@ Profil de l'utilisateur :
 - Restrictions alimentaires : ${restrictions}
 - Allergies : ${allergies}
 - Budget hebdomadaire : ${budgetRange}
+- Objectif de poids : ${weightGoal === "lose" ? "Perte de poids (déficit calorique)" : weightGoal === "gain" ? "Prise de masse (surplus calorique)" : weightGoal === "maintain" ? "Maintien du poids" : "non spécifié"}
+- Apport calorique journalier cible : ${dailyCalorieTarget ? `${dailyCalorieTarget} kcal/jour (≈ ${caloriesPerMeal} kcal par repas)` : "non spécifié"}
+- Objectifs en macronutriments par repas : ${macroTargets ? `Protéines ${macroTargets.protein_g}g (${proteinPct}%) · Glucides ${macroTargets.carbs_g}g (${carbsPct}%) · Lipides ${macroTargets.fat_g}g (${fatPct}%)` : "non spécifiés"}
 - Recettes favorites à intégrer (inclure au moins 2-3 si possible) : ${
       favoriteSummaries.length > 0
         ? JSON.stringify(favoriteSummaries.map((f: any) => ({ id: f.id, title: f.title, source: "catalog", spoonacular_id: f.spoonacular_id })))
@@ -195,6 +216,7 @@ RÈGLES IMPORTANTES :
 4. Préférer des recettes accessibles : ingrédients simples, moins de 45 min de préparation
 5. Intégrer les recettes favorites là où elles s'adaptent naturellement
 6. PRIORITÉ : utiliser les recettes du catalogue ou de l'utilisateur (champs "source": "catalog" ou "user_recipe") autant que possible
+7. NUTRITION CRITIQUE : Si un apport calorique cible est spécifié, chaque repas doit être proche de ${caloriesPerMeal ?? "la cible"} kcal. Respecter les objectifs en macronutriments (protéines/glucides/lipides) le plus possible. L'objectif de poids (perte/maintien/prise) doit guider le choix des recettes.
 7. Si aucune recette disponible ne convient pour un créneau donné, génère une recette originale — dans ce cas :
    - Fournis des instructions complètes étape par étape (minimum 4 étapes) en français
    - Précise les mesures exactes pour chaque ingrédient

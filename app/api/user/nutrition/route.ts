@@ -16,6 +16,9 @@ const NUTRITION_FIELDS = [
   "goal_weight_kg",
   "goal_rate",
   "daily_calorie_target",
+  "macro_protein_pct",
+  "macro_carbs_pct",
+  "macro_fat_pct",
 ] as const;
 
 export async function GET() {

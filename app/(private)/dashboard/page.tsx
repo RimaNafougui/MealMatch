@@ -18,6 +18,7 @@ import {
   ArrowRight,
   ChefHat,
 } from "lucide-react";
+import ProgressDashboard from "@/components/dashboard/ProgressDashboard";
 
 interface DashboardStats {
   savedRecipes: number;
@@ -197,6 +198,14 @@ export default function DashboardPage() {
             loading={loading}
           />
         </div>
+      </div>
+
+      {/* Progress Dashboard */}
+      <div>
+        <h2 className="text-sm font-semibold text-default-400 uppercase tracking-wider mb-3">
+          Ma progression
+        </h2>
+        <ProgressDashboard />
       </div>
 
       {/* Quick links */}

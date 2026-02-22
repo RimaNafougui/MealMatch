@@ -93,13 +93,14 @@ const GOAL_OPTIONS: { value: WeightGoal; label: string; emoji: string; desc: str
 // ─── Steps config ─────────────────────────────────────────────────────────────
 
 const steps = [
-  { label: "Régime",     icon: "🥗" },
+  { label: "Régime",       icon: "🥗" },
   { label: "Intolérances", icon: "⚠️" },
-  { label: "Budget",     icon: "💰" },
-  { label: "Metrics",    icon: "📏" },
-  { label: "Activité",   icon: "🏃" },
-  { label: "Objectifs",  icon: "🎯" },
-  { label: "Résumé",     icon: "📋" },
+  { label: "Budget",       icon: "💰" },
+  { label: "Metrics",      icon: "📏" },
+  { label: "Activité",     icon: "🏃" },
+  { label: "Objectifs",    icon: "🎯" },
+  { label: "Macros",       icon: "🥩" },
+  { label: "Résumé",       icon: "📋" },
 ];
 
 // ─── Toggle Chip helper ───────────────────────────────────────────────────────
@@ -199,6 +200,21 @@ export default function OnboardingForm() {
   const [weightGoal, setWeightGoal] = useState<WeightGoal | "">("");
   const [goalWeightRaw, setGoalWeightRaw] = useState<string>("");
   const [goalRate, setGoalRate] = useState<string>("");
+
+  // ── Step 6: Macro split ──
+  const [proteinPct, setProteinPct] = useState(30);
+  const [carbsPct, setCarbsPct] = useState(40);
+  const [fatPct, setFatPct] = useState(30);
+
+  // Computed grams from percentages
+  const macroGrams = (calories: number | null) => {
+    if (!calories) return null;
+    return {
+      protein: Math.round((calories * proteinPct) / 100 / 4),
+      carbs:   Math.round((calories * carbsPct)   / 100 / 4),
+      fat:     Math.round((calories * fatPct)      / 100 / 9),
+    };
+  };
 
   // ── Calculated values ──
   const [tdee, setTdee] = useState<number | null>(null);
@@ -331,6 +347,9 @@ export default function OnboardingForm() {
           goal_weight_kg: goalWeightKg,
           goal_rate: goalRate,
           daily_calorie_target: finalCalories,
+          macro_protein_pct: proteinPct,
+          macro_carbs_pct: carbsPct,
+          macro_fat_pct: fatPct,
         }),
       });
 
@@ -850,8 +869,127 @@ export default function OnboardingForm() {
                 </div>
               )}
 
-              {/* ── Step 6: Summary ── */}
+              {/* ── Step 6: Macro Split ── */}
               {currentStep === 6 && (
+                <div className="space-y-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-danger/10 flex items-center justify-center">
+                      <span className="text-xl">🥩</span>
+                    </div>
+                    <div>
+                      <h2 className="font-bold text-lg">Répartition des macronutriments</h2>
+                      <p className="text-default-500 text-xs">Définissez la part de chaque groupe nutritionnel</p>
+                    </div>
+                  </div>
+
+                  {/* Total must = 100 warning */}
+                  {proteinPct + carbsPct + fatPct !== 100 && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-warning/10 border border-warning/30">
+                      <span className="text-warning text-xs font-semibold">
+                        Total : {proteinPct + carbsPct + fatPct}% — doit être égal à 100%
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Visual bar */}
+                  <div className="flex h-4 rounded-full overflow-hidden gap-0.5">
+                    <div className="bg-danger transition-all duration-300" style={{ width: `${proteinPct}%` }} />
+                    <div className="bg-warning transition-all duration-300" style={{ width: `${carbsPct}%` }} />
+                    <div className="bg-primary transition-all duration-300" style={{ width: `${fatPct}%` }} />
+                  </div>
+                  <div className="flex justify-between text-xs text-default-400 -mt-1">
+                    <span className="text-danger font-medium">Protéines {proteinPct}%</span>
+                    <span className="text-warning font-medium">Glucides {carbsPct}%</span>
+                    <span className="text-primary font-medium">Lipides {fatPct}%</span>
+                  </div>
+
+                  {/* Protein slider */}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm font-medium text-danger">🥩 Protéines</p>
+                      <span className="text-lg font-bold text-danger">{proteinPct}%</span>
+                    </div>
+                    <Slider
+                      step={5} minValue={5} maxValue={60}
+                      value={proteinPct}
+                      onChange={(v) => {
+                        const val = v as number;
+                        setProteinPct(val);
+                        // auto-adjust fat to keep sum = 100
+                        const remaining = 100 - val - carbsPct;
+                        setFatPct(Math.max(5, Math.min(60, remaining)));
+                      }}
+                      color="danger" size="md" showTooltip
+                    />
+                  </div>
+
+                  {/* Carbs slider */}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm font-medium text-warning">🌾 Glucides</p>
+                      <span className="text-lg font-bold text-warning">{carbsPct}%</span>
+                    </div>
+                    <Slider
+                      step={5} minValue={5} maxValue={70}
+                      value={carbsPct}
+                      onChange={(v) => {
+                        const val = v as number;
+                        setCarbsPct(val);
+                        const remaining = 100 - proteinPct - val;
+                        setFatPct(Math.max(5, Math.min(60, remaining)));
+                      }}
+                      color="warning" size="md" showTooltip
+                    />
+                  </div>
+
+                  {/* Fat slider */}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm font-medium text-primary">🫒 Lipides</p>
+                      <span className="text-lg font-bold text-primary">{fatPct}%</span>
+                    </div>
+                    <Slider
+                      step={5} minValue={5} maxValue={60}
+                      value={fatPct}
+                      onChange={(v) => {
+                        const val = v as number;
+                        setFatPct(val);
+                        const remaining = 100 - proteinPct - val;
+                        setCarbsPct(Math.max(5, Math.min(70, remaining)));
+                      }}
+                      color="primary" size="md" showTooltip
+                    />
+                  </div>
+
+                  {/* Gram preview */}
+                  {dailyCalories && (() => {
+                    const g = macroGrams(dailyCalories);
+                    return g ? (
+                      <div className="flex gap-3 pt-1">
+                        <div className="flex-1 p-3 rounded-xl bg-danger/5 border border-danger/15 text-center">
+                          <p className="text-xs text-default-400">Protéines</p>
+                          <p className="font-bold text-danger">{g.protein}g</p>
+                        </div>
+                        <div className="flex-1 p-3 rounded-xl bg-warning/5 border border-warning/15 text-center">
+                          <p className="text-xs text-default-400">Glucides</p>
+                          <p className="font-bold text-warning">{g.carbs}g</p>
+                        </div>
+                        <div className="flex-1 p-3 rounded-xl bg-primary/5 border border-primary/15 text-center">
+                          <p className="text-xs text-default-400">Lipides</p>
+                          <p className="font-bold text-primary">{g.fat}g</p>
+                        </div>
+                      </div>
+                    ) : null;
+                  })()}
+
+                  <p className="text-xs text-default-400 text-center">
+                    Valeurs typiques : Protéines 25–35% • Glucides 35–50% • Lipides 20–35%
+                  </p>
+                </div>
+              )}
+
+              {/* ── Step 7: Summary ── */}
+              {currentStep === 7 && (
                 <div className="space-y-5">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-2xl bg-success/10 flex items-center justify-center">
@@ -937,6 +1075,30 @@ export default function OnboardingForm() {
                         )}
                       </div>
                     )}
+
+                    {/* Macros */}
+                    <div className="rounded-2xl bg-white/60 dark:bg-white/5 border border-divider/40 p-4 space-y-2">
+                      <p className="text-xs font-semibold text-default-500 uppercase tracking-wider mb-2">Macronutriments</p>
+                      <div className="flex h-3 rounded-full overflow-hidden gap-0.5 mb-2">
+                        <div className="bg-danger" style={{ width: `${proteinPct}%` }} />
+                        <div className="bg-warning" style={{ width: `${carbsPct}%` }} />
+                        <div className="bg-primary" style={{ width: `${fatPct}%` }} />
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="flex-1 text-center">
+                          <p className="text-xs text-default-400">Protéines</p>
+                          <p className="font-bold text-sm text-danger">{proteinPct}%{dailyCalories ? ` · ${macroGrams(dailyCalories)?.protein}g` : ""}</p>
+                        </div>
+                        <div className="flex-1 text-center">
+                          <p className="text-xs text-default-400">Glucides</p>
+                          <p className="font-bold text-sm text-warning">{carbsPct}%{dailyCalories ? ` · ${macroGrams(dailyCalories)?.carbs}g` : ""}</p>
+                        </div>
+                        <div className="flex-1 text-center">
+                          <p className="text-xs text-default-400">Lipides</p>
+                          <p className="font-bold text-sm text-primary">{fatPct}%{dailyCalories ? ` · ${macroGrams(dailyCalories)?.fat}g` : ""}</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

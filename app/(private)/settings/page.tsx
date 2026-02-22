@@ -121,6 +121,18 @@ export default function SettingsPage() {
   const [goalRate, setGoalRate] = useState<string>("");
   const [tdee, setTdee] = useState<number | null>(null);
   const [dailyCalories, setDailyCalories] = useState<number | null>(null);
+  const [proteinPct, setProteinPct] = useState(30);
+  const [carbsPct, setCarbsPct] = useState(40);
+  const [fatPct, setFatPct] = useState(30);
+
+  const macroGrams = (calories: number | null) => {
+    if (!calories) return null;
+    return {
+      protein: Math.round((calories * proteinPct) / 100 / 4),
+      carbs:   Math.round((calories * carbsPct)   / 100 / 4),
+      fat:     Math.round((calories * fatPct)      / 100 / 9),
+    };
+  };
 
   // Recalculate when inputs change
   useEffect(() => {
@@ -213,6 +225,9 @@ export default function SettingsPage() {
             }
             if (nutrition.goal_rate) setGoalRate(nutrition.goal_rate);
             if (nutrition.daily_calorie_target) setDailyCalories(nutrition.daily_calorie_target);
+            if (nutrition.macro_protein_pct) setProteinPct(nutrition.macro_protein_pct);
+            if (nutrition.macro_carbs_pct)   setCarbsPct(nutrition.macro_carbs_pct);
+            if (nutrition.macro_fat_pct)     setFatPct(nutrition.macro_fat_pct);
           }
         }
       } catch {
@@ -335,6 +350,9 @@ export default function SettingsPage() {
           goal_weight_kg: goalWeightKg,
           goal_rate: goalRate || null,
           daily_calorie_target: finalCalories || null,
+          macro_protein_pct: proteinPct,
+          macro_carbs_pct: carbsPct,
+          macro_fat_pct: fatPct,
         }),
       });
       if (!res.ok) throw new Error();
@@ -839,6 +857,102 @@ export default function SettingsPage() {
                         </div>
                       </div>
                     )}
+
+                  </CardBody>
+                </Card>
+
+                {/* Macro targets card */}
+                <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
+                  <CardHeader className="pb-2 p-0 mb-6">
+                    <h2 className="font-bold text-xl flex items-center gap-2">
+                      <span>🥩</span>
+                      Répartition des macronutriments
+                    </h2>
+                  </CardHeader>
+                  <CardBody className="p-0 flex flex-col gap-5">
+                    {/* Total warning */}
+                    {proteinPct + carbsPct + fatPct !== 100 && (
+                      <div className="px-3 py-2 rounded-xl bg-warning/10 border border-warning/30">
+                        <span className="text-warning text-xs font-semibold">
+                          Total : {proteinPct + carbsPct + fatPct}% — doit être égal à 100%
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Bar */}
+                    <div className="flex h-4 rounded-full overflow-hidden gap-0.5">
+                      <div className="bg-danger transition-all duration-300" style={{ width: `${proteinPct}%` }} />
+                      <div className="bg-warning transition-all duration-300" style={{ width: `${carbsPct}%` }} />
+                      <div className="bg-primary transition-all duration-300" style={{ width: `${fatPct}%` }} />
+                    </div>
+                    <div className="flex justify-between text-xs -mt-1">
+                      <span className="text-danger font-medium">Protéines {proteinPct}%</span>
+                      <span className="text-warning font-medium">Glucides {carbsPct}%</span>
+                      <span className="text-primary font-medium">Lipides {fatPct}%</span>
+                    </div>
+
+                    {/* Protein */}
+                    <div className="flex flex-col gap-2">
+                      <div className="flex justify-between items-center">
+                        <p className="text-sm font-medium text-danger">🥩 Protéines</p>
+                        <span className="text-lg font-bold text-danger">{proteinPct}%</span>
+                      </div>
+                      <Slider
+                        step={5} minValue={5} maxValue={60}
+                        value={proteinPct}
+                        onChange={(v) => { const val = v as number; setProteinPct(val); setFatPct(Math.max(5, Math.min(60, 100 - val - carbsPct))); }}
+                        color="danger" size="md" showTooltip
+                      />
+                    </div>
+
+                    {/* Carbs */}
+                    <div className="flex flex-col gap-2">
+                      <div className="flex justify-between items-center">
+                        <p className="text-sm font-medium text-warning">🌾 Glucides</p>
+                        <span className="text-lg font-bold text-warning">{carbsPct}%</span>
+                      </div>
+                      <Slider
+                        step={5} minValue={5} maxValue={70}
+                        value={carbsPct}
+                        onChange={(v) => { const val = v as number; setCarbsPct(val); setFatPct(Math.max(5, Math.min(60, 100 - proteinPct - val))); }}
+                        color="warning" size="md" showTooltip
+                      />
+                    </div>
+
+                    {/* Fat */}
+                    <div className="flex flex-col gap-2">
+                      <div className="flex justify-between items-center">
+                        <p className="text-sm font-medium text-primary">🫒 Lipides</p>
+                        <span className="text-lg font-bold text-primary">{fatPct}%</span>
+                      </div>
+                      <Slider
+                        step={5} minValue={5} maxValue={60}
+                        value={fatPct}
+                        onChange={(v) => { const val = v as number; setFatPct(val); setCarbsPct(Math.max(5, Math.min(70, 100 - proteinPct - val))); }}
+                        color="primary" size="md" showTooltip
+                      />
+                    </div>
+
+                    {/* Gram preview */}
+                    {dailyCalories && (() => {
+                      const g = macroGrams(dailyCalories);
+                      return g ? (
+                        <div className="flex gap-3">
+                          <div className="flex-1 p-3 rounded-xl bg-danger/5 border border-danger/15 text-center">
+                            <p className="text-xs text-default-400">Protéines</p>
+                            <p className="font-bold text-danger">{g.protein}g</p>
+                          </div>
+                          <div className="flex-1 p-3 rounded-xl bg-warning/5 border border-warning/15 text-center">
+                            <p className="text-xs text-default-400">Glucides</p>
+                            <p className="font-bold text-warning">{g.carbs}g</p>
+                          </div>
+                          <div className="flex-1 p-3 rounded-xl bg-primary/5 border border-primary/15 text-center">
+                            <p className="text-xs text-default-400">Lipides</p>
+                            <p className="font-bold text-primary">{g.fat}g</p>
+                          </div>
+                        </div>
+                      ) : null;
+                    })()}
 
                     <Button
                       color="success"
