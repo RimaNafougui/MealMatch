@@ -170,11 +170,11 @@ export default function EpiceriePage() {
     .filter(({ item }) => item.checked) ?? [];
 
   return (
-    <div className="flex flex-col gap-6 max-w-2xl">
+    <div className="flex flex-col gap-6 max-w-4xl">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Liste d&apos;épicerie</h1>
+          <h1 className="text-3xl font-bold">Liste d&apos;épicerie</h1>
           <p className="text-default-500 mt-1 text-sm">
             Gérez votre liste de courses.
           </p>

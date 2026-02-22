@@ -215,7 +215,7 @@ function LoginFormContent() {
           <Link
             href="/forgot-password"
             size="sm"
-            className="text-default-500 hover:text-primary transition-colors"
+            className="text-default-500 hover:text-success transition-colors"
           >
             Mot de passe oublié?
           </Link>
@@ -227,8 +227,8 @@ function LoginFormContent() {
         )}
 
         <Button
-          className="w-full h-12 font-bold text-md mt-2 shadow-lg shadow-primary/20"
-          color="primary"
+          className="w-full h-12 font-bold text-md mt-2 shadow-lg shadow-success/20"
+          color="success"
           isLoading={isLoading}
           type="submit"
         >
@@ -248,7 +248,7 @@ function LoginFormContent() {
         <p className="text-center w-full text-sm text-default-500 pt-4">
           Pas de compte?{" "}
           <Link
-            className="text-primary font-bold hover:underline"
+            className="text-success font-bold hover:underline"
             href="/signup"
           >
             Inscription

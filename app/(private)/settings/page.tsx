@@ -78,7 +78,7 @@ interface WeightLog {
 }
 
 function formatLogDate(iso: string) {
-  return new Date(iso + "T00:00:00").toLocaleDateString("fr-CA", { weekday: "short", month: "short", day: "numeric" });
+  return new Date(iso + "T00:00:00").toLocaleDateString("fr-FR", { weekday: "short", month: "short", day: "numeric" });
 }
 
 function SectionSkeleton() {

@@ -274,8 +274,8 @@ export default function SignUpForm() {
         )}
 
         <Button
-          className="w-full h-12 font-bold text-md mt-2 shadow-lg shadow-primary/20"
-          color="primary"
+          className="w-full h-12 font-bold text-md mt-2 shadow-lg shadow-success/20"
+          color="success"
           isLoading={isLoading}
           type="submit"
           isDisabled={!usernameAvailable || isCheckingUsername}
@@ -299,7 +299,7 @@ export default function SignUpForm() {
         <p className="text-center w-full text-sm text-default-500 pt-4">
           Déjà membre?{" "}
           <Link
-            className="text-primary font-bold hover:underline"
+            className="text-success font-bold hover:underline"
             href="/login"
           >
             Connexion

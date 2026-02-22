@@ -26,7 +26,7 @@ interface DashboardStats {
   favorites: number;
   profile: {
     name: string;
-    subscription_status?: string;
+    plan?: "free" | "premium" | "pro" | null;
   } | null;
 }
 
@@ -162,12 +162,15 @@ export default function DashboardPage() {
             </>
           )}
         </div>
-        {stats?.profile?.subscription_status &&
-          stats.profile.subscription_status !== "free" && (
-            <Chip color="success" variant="flat" size="sm">
-              {stats.profile.subscription_status === "pro" ? "Pro" : "Premium"}
-            </Chip>
-          )}
+        {stats?.profile?.plan && stats.profile.plan !== "free" && (
+          <Chip
+            color={stats.profile.plan === "pro" ? "secondary" : "warning"}
+            variant="flat"
+            size="sm"
+          >
+            {stats.profile.plan === "pro" ? "Pro" : "Premium"}
+          </Chip>
+        )}
       </div>
 
       {/* Stats row */}
