@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { formatAmount } from "@/utils/fractions";
 import {
   Card,
   CardBody,
@@ -10,8 +11,6 @@ import {
   Button,
   Tabs,
   Tab,
-  CheckboxGroup,
-  Checkbox,
   Divider,
   Skeleton,
   Image,
@@ -130,8 +129,7 @@ export default function RecipeDetailPage() {
 
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
-  const [optimisticFavorite, setOptimisticFavorite] = useState<boolean | null>(null);
+const [optimisticFavorite, setOptimisticFavorite] = useState<boolean | null>(null);
   const [copied, setCopied] = useState(false);
 
   const { data: favoriteRecipes = [], isLoading: favoritesLoading } = useFavorites();
@@ -146,9 +144,6 @@ export default function RecipeDetailPage() {
       .then((data) => {
         if (data.recipe) {
           setRecipe(data.recipe);
-          setSelectedIngredients(
-            (data.recipe.ingredients ?? []).map((_: any, i: number) => i.toString())
-          );
         }
       })
       .catch(console.error)
@@ -221,7 +216,8 @@ export default function RecipeDetailPage() {
   const prepTime = recipe.prep_time || 0;
   const servings = recipe.servings || 4;
   const calories = recipe.calories || 0;
-  const pricePerServing = recipe.price_per_serving || 0;
+  const USD_TO_CAD = 1.36;
+  const pricePerServing = (recipe.price_per_serving || 0) * USD_TO_CAD;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 flex flex-col gap-6">
@@ -351,57 +347,43 @@ export default function RecipeDetailPage() {
             {/* ── Ingrédients ─────────────────────────────────────── */}
             <Tab key="ingredients" title="Ingrédients" className="pt-4">
               <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">
-                    {recipe.ingredients?.length ?? 0} ingrédients
-                  </h3>
-                  <Chip size="sm" variant="flat" color="default">
-                    {selectedIngredients.length} / {recipe.ingredients?.length ?? 0} cochés
-                  </Chip>
-                </div>
+                <h3 className="text-lg font-semibold">
+                  {recipe.ingredients?.length ?? 0} ingrédients
+                </h3>
 
                 {recipe.ingredients && recipe.ingredients.length > 0 ? (
-                  <CheckboxGroup
-                    value={selectedIngredients}
-                    onValueChange={setSelectedIngredients}
-                    color="success"
-                  >
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
-                      {recipe.ingredients.map((item, index) => (
-                        <Checkbox
-                          key={index}
-                          value={index.toString()}
-                          classNames={{
-                            base: "max-w-full w-full",
-                            label: "w-full",
-                          }}
-                        >
-                          <div className="flex justify-between items-center w-full gap-2">
-                            <span className="text-sm">
-                              <span className="font-semibold">
-                                {item.amount} {item.unit}
-                              </span>{" "}
-                              {item.name}
-                            </span>
-                            {item.allergens && item.allergens.length > 0 && (
-                              <div className="flex gap-1 flex-shrink-0">
-                                {item.allergens.map((allergen) => (
-                                  <Chip
-                                    key={allergen}
-                                    color="danger"
-                                    size="sm"
-                                    variant="flat"
-                                  >
-                                    {allergen}
-                                  </Chip>
-                                ))}
-                              </div>
-                            )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+                    {recipe.ingredients.map((item, index) => (
+                      <div
+                        key={index}
+                        className="flex justify-between items-center gap-2 py-1.5 border-b border-divider/40 last:border-0"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-success shrink-0" />
+                          <span className="text-sm">
+                            <span className="font-semibold">
+                              {formatAmount(item.amount)}{item.unit ? ` ${item.unit}` : ""}
+                            </span>{" "}
+                            {item.name}
+                          </span>
+                        </div>
+                        {item.allergens && item.allergens.length > 0 && (
+                          <div className="flex gap-1 flex-shrink-0">
+                            {item.allergens.map((allergen) => (
+                              <Chip
+                                key={allergen}
+                                color="danger"
+                                size="sm"
+                                variant="flat"
+                              >
+                                {allergen}
+                              </Chip>
+                            ))}
                           </div>
-                        </Checkbox>
-                      ))}
-                    </div>
-                  </CheckboxGroup>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 ) : (
                   <p className="text-default-400 text-sm py-4">
                     Aucun ingrédient disponible pour cette recette.
