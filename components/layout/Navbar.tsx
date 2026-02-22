@@ -49,6 +49,7 @@ const privateNavItems = [
     icon: <LayoutDashboard size={18} />,
   },
   { label: "Explorer", href: "/explore", icon: <Compass size={18} /> },
+  { label: "Profile", href: "/profile" },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────

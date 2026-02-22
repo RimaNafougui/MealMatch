@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
@@ -23,6 +23,11 @@ import {
   Flame,
   Activity,
   Target,
+  Scale,
+  TrendingDown,
+  TrendingUp,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { logout } from "@/lib/actions/auth";
 import { toast } from "sonner";
@@ -63,7 +68,18 @@ const GOAL_OPTIONS: { value: WeightGoal; label: string }[] = [
   { value: "gain",     label: "Prendre du poids" },
 ];
 
-type Section = "profile" | "preferences" | "nutrition" | "notifications" | "privacy";
+type Section = "profile" | "preferences" | "nutrition" | "progression" | "notifications" | "privacy";
+
+interface WeightLog {
+  id: string;
+  logged_at: string;
+  weight_kg: number;
+  note?: string | null;
+}
+
+function formatLogDate(iso: string) {
+  return new Date(iso + "T00:00:00").toLocaleDateString("fr-CA", { weekday: "short", month: "short", day: "numeric" });
+}
 
 function SectionSkeleton() {
   return (
@@ -125,6 +141,30 @@ export default function SettingsPage() {
   const [carbsPct, setCarbsPct] = useState(40);
   const [fatPct, setFatPct] = useState(30);
 
+  // ── Weight log state ─────────────────────────────────────────────────────────
+  const [weightLogs, setWeightLogs]   = useState<WeightLog[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+  const [showAllLogs, setShowAllLogs] = useState(false);
+
+  const fetchWeightLogs = useCallback(async () => {
+    setLoadingLogs(true);
+    try {
+      const r = await fetch("/api/user/weight-logs?days=90");
+      const d = await r.json();
+      setWeightLogs(d.logs ?? []);
+    } catch {}
+    setLoadingLogs(false);
+  }, []);
+
+  async function deleteWeightLog(id: string) {
+    await fetch("/api/user/weight-logs", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    setWeightLogs((prev) => prev.filter((l) => l.id !== id));
+  }
+
   const macroGrams = (calories: number | null) => {
     if (!calories) return null;
     return {
@@ -133,6 +173,11 @@ export default function SettingsPage() {
       fat:     Math.round((calories * fatPct)      / 100 / 9),
     };
   };
+
+  // Fetch weight logs when section becomes active
+  useEffect(() => {
+    if (activeSection === "progression") fetchWeightLogs();
+  }, [activeSection, fetchWeightLogs]);
 
   // Recalculate when inputs change
   useEffect(() => {
@@ -370,6 +415,7 @@ export default function SettingsPage() {
     { key: "profile",       label: "Profil",          icon: <User className="w-4 h-4" /> },
     { key: "preferences",   label: "Préférences",     icon: <Globe className="w-4 h-4" /> },
     { key: "nutrition",     label: "Nutrition",        icon: <Flame className="w-4 h-4" /> },
+    { key: "progression",   label: "Progression",     icon: <Scale className="w-4 h-4" /> },
     { key: "notifications", label: "Notifications",   icon: <Bell className="w-4 h-4" /> },
     { key: "privacy",       label: "Confidentialité", icon: <Shield className="w-4 h-4" /> },
   ];
@@ -967,6 +1013,154 @@ export default function SettingsPage() {
                 </Card>
               </div>
             ))}
+
+          {/* ── Progression ── */}
+          {activeSection === "progression" && (
+            <div className="flex flex-col gap-4">
+              <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
+                <CardHeader className="pb-2 p-0 mb-4">
+                  <div className="flex items-center justify-between w-full">
+                    <h2 className="font-bold text-xl flex items-center gap-2">
+                      <Scale className="w-5 h-5 text-default-400" />
+                      Historique du poids
+                    </h2>
+                    {weightLogs.length > 0 && (
+                      <Chip size="sm" variant="flat" color="success">
+                        {weightLogs.length} entrées
+                      </Chip>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardBody className="p-0 flex flex-col gap-4">
+                  {loadingLogs ? (
+                    <div className="flex flex-col gap-2">
+                      {[1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-full rounded-xl" />)}
+                    </div>
+                  ) : weightLogs.length === 0 ? (
+                    <p className="text-sm text-default-400 text-center py-6">
+                      Aucune donnée de poids. Commencez à enregistrer depuis le tableau de bord.
+                    </p>
+                  ) : (
+                    <>
+                      {/* Summary stats */}
+                      {weightLogs.length >= 2 && (() => {
+                        const latest = weightLogs[weightLogs.length - 1];
+                        const first  = weightLogs[0];
+                        const delta  = latest.weight_kg - first.weight_kg;
+                        const dispUnit = weightUnit as "kg" | "lbs";
+                        const dispVal  = (kg: number) => dispUnit === "lbs" ? `${kgToLbs(kg).toFixed(1)} lbs` : `${kg.toFixed(1)} kg`;
+                        return (
+                          <div className="grid grid-cols-3 gap-3">
+                            <div className="p-3 rounded-xl bg-default-100 text-center">
+                              <p className="text-[10px] text-default-400 mb-0.5">Départ</p>
+                              <p className="font-bold text-sm">{dispVal(first.weight_kg)}</p>
+                            </div>
+                            <div className="p-3 rounded-xl bg-default-100 text-center">
+                              <p className="text-[10px] text-default-400 mb-0.5">Actuel</p>
+                              <p className="font-bold text-sm text-success">{dispVal(latest.weight_kg)}</p>
+                            </div>
+                            <div className={`p-3 rounded-xl text-center ${delta < 0 ? "bg-success/10" : delta > 0 ? "bg-danger/10" : "bg-default-100"}`}>
+                              <p className="text-[10px] text-default-400 mb-0.5">Variation</p>
+                              <div className="flex items-center justify-center gap-1">
+                                {delta < 0 ? <TrendingDown size={12} className="text-success" /> : delta > 0 ? <TrendingUp size={12} className="text-danger" /> : null}
+                                <p className={`font-bold text-sm ${delta < 0 ? "text-success" : delta > 0 ? "text-danger" : "text-default-400"}`}>
+                                  {delta > 0 ? "+" : ""}{dispVal(delta)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Log list */}
+                      <div className="flex flex-col divide-y divide-divider/40">
+                        {(showAllLogs ? [...weightLogs] : [...weightLogs].slice(-10)).reverse().map((log) => (
+                          <div key={log.id} className="flex items-center justify-between py-2.5 gap-3">
+                            <span className="text-xs text-default-400 w-28 shrink-0">{formatLogDate(log.logged_at)}</span>
+                            <span className="text-sm font-semibold flex-1">
+                              {weightUnit === "lbs"
+                                ? `${kgToLbs(log.weight_kg).toFixed(1)} lbs`
+                                : `${log.weight_kg.toFixed(1)} kg`}
+                            </span>
+                            {log.note && (
+                              <span className="text-xs text-default-400 italic truncate max-w-32">{log.note}</span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => deleteWeightLog(log.id)}
+                              className="p-1.5 rounded-lg hover:bg-danger/10 text-default-300 hover:text-danger transition-colors shrink-0"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+
+                      {weightLogs.length > 10 && (
+                        <button
+                          type="button"
+                          onClick={() => setShowAllLogs((s) => !s)}
+                          className="flex items-center gap-1 text-xs text-default-400 hover:text-foreground transition-colors self-start"
+                        >
+                          {showAllLogs ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                          {showAllLogs ? "Voir moins" : `Voir les ${weightLogs.length - 10} entrées plus anciennes`}
+                        </button>
+                      )}
+                    </>
+                  )}
+                </CardBody>
+              </Card>
+
+              {/* Goal progress card */}
+              {weightLogs.length > 0 && goalWeightRaw && weightGoal && (
+                <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
+                  <CardHeader className="pb-2 p-0 mb-4">
+                    <h2 className="font-bold text-xl flex items-center gap-2">
+                      <Target className="w-5 h-5 text-default-400" />
+                      Progression vers l&apos;objectif
+                    </h2>
+                  </CardHeader>
+                  <CardBody className="p-0 flex flex-col gap-4">
+                    {(() => {
+                      const latest   = weightLogs[weightLogs.length - 1];
+                      const first    = weightLogs[0];
+                      const goalKg   = weightUnit === "lbs"
+                        ? Number(goalWeightRaw) / 2.20462
+                        : Number(goalWeightRaw);
+                      const totalDist = Math.abs(first.weight_kg - goalKg);
+                      const covered   = Math.abs(first.weight_kg - latest.weight_kg);
+                      const pct       = totalDist > 0 ? Math.min(100, Math.round((covered / totalDist) * 100)) : 0;
+                      const remaining = Math.abs(latest.weight_kg - goalKg);
+                      const dispVal   = (kg: number) => weightUnit === "lbs"
+                        ? `${kgToLbs(kg).toFixed(1)} lbs`
+                        : `${kg.toFixed(1)} kg`;
+
+                      return (
+                        <>
+                          <div className="flex justify-between text-xs text-default-400 mb-1">
+                            <span>Départ : {dispVal(first.weight_kg)}</span>
+                            <span>Objectif : {dispVal(goalKg)}</span>
+                          </div>
+                          <div className="w-full bg-default-100 rounded-full h-3 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-success transition-all duration-500"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-default-400">{pct}% accompli</span>
+                            <Chip size="sm" variant="flat" color={remaining < 1 ? "success" : "primary"}>
+                              {remaining < 0.1 ? "Objectif atteint ! 🎉" : `${dispVal(remaining)} restant`}
+                            </Chip>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </CardBody>
+                </Card>
+              )}
+            </div>
+          )}
 
           {/* ── Notifications ── */}
           {activeSection === "notifications" &&

@@ -29,7 +29,7 @@ export async function GET() {
         .eq("user_id", userId),
       supabase
         .from("profiles")
-        .select("created_at, subscription_status, name, email, image, username")
+        .select("created_at, plan, name, email, image, username")
         .eq("id", userId)
         .single(),
     ]);
