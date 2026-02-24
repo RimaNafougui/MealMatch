@@ -1,22 +1,21 @@
 // app/api/stripe/checkout/route.ts
-
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(req: Request) {
-    const { priceId, userId } = await req.json();
+
+    // Récupère l'origine depuis la requête
+    const { priceId, userId, origin } = await req.json();
+
 
     const session = await stripe.checkout.sessions.create({
         mode: "subscription",
         line_items: [{ price: priceId, quantity: 1 }],
-        success_url: `${process.env.NEXT_PUBLIC_APP_URL}/billing/success`,
-        cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing`,
-        metadata: {
-            userId,
-        },
+        success_url: `${origin}/billing/success`,
+        cancel_url: `${origin}/pricing`,
+        metadata: { userId, priceId },
     });
 
     return NextResponse.json({ url: session.url });
