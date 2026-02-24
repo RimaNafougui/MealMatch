@@ -1,10 +1,24 @@
+// app/(public)/pricing/page.tsx
 "use client";
+
+import { useState, useEffect } from "react";
+import { createClient } from "@supabase/supabase-js";
+
 import { Card, CardBody, CardHeader, CardFooter } from "@heroui/card";
 import { Button } from "@heroui/button";
 import { Link } from "@heroui/link";
 import { Chip } from "@heroui/chip";
 import { Divider } from "@heroui/divider";
+
 import { CheckCircle2, Zap, Star, Users } from "lucide-react";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+const STUDENT_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PRICE_STUDENT!;
+const PREMIUM_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM!;
 
 const plans = [
   {
@@ -28,9 +42,7 @@ const plans = [
       "Export PDF",
       "Support prioritaire",
     ],
-    cta: "Commencer gratuitement",
-    href: "/signup",
-    variant: "bordered" as const,
+    type: "free",
   },
   {
     name: "Étudiant",
@@ -42,223 +54,121 @@ const plans = [
     popular: true,
     features: [
       "Plans de repas illimités",
-      "Accès à toutes les recettes (120+)",
-      "IA avancée et personnalisée",
-      "Liste d'épicerie intelligente",
-      "Suivi nutritionnel complet",
-      "Export PDF de tes plans",
-      "Favoris illimités",
+      "Accès à toutes les recettes",
+      "IA avancée",
+      "Export PDF",
       "Support prioritaire",
     ],
     unavailable: [],
-    cta: "Choisir Étudiant",
-    href: "/signup",
-    variant: "solid" as const,
+    type: "student",
   },
   {
     name: "Premium",
     price: "5,99 $CA",
     period: "par mois",
-    description: "Pour les gourmets qui veulent le meilleur de MealMatch.",
+    description: "Pour les gourmets.",
     color: "primary" as const,
     icon: <Star className="w-5 h-5" />,
     popular: false,
     features: [
-      "Tout ce qui est inclus dans Étudiant",
-      "Plans familiaux (jusqu'à 4 personnes)",
-      "Recettes exclusives premium",
-      "Planification sur 4 semaines",
-      "Conseils nutritionniste IA",
-      "Intégration calendrier",
-      "API access",
-      "Support dédié 24h/7j",
+      "Tout Étudiant",
+      "Plans familiaux",
+      "Recettes premium",
+      "Support dédié",
     ],
     unavailable: [],
-    cta: "Choisir Premium",
-    href: "/signup",
-    variant: "bordered" as const,
-  },
-];
-
-const faq = [
-  {
-    q: "Puis-je changer de plan à tout moment ?",
-    a: "Oui, tu peux upgrader ou downgrader ton plan à tout moment. Les changements prennent effet immédiatement.",
-  },
-  {
-    q: "Est-ce qu'il y a un engagement ?",
-    a: "Non, aucun engagement. Tu peux annuler ton abonnement à tout moment sans frais supplémentaires.",
-  },
-  {
-    q: "Comment fonctionne l'essai gratuit ?",
-    a: "Le plan gratuit est disponible sans limite de temps. Tu peux passer au plan payant quand tu le souhaites.",
-  },
-  {
-    q: "Quels moyens de paiement acceptez-vous ?",
-    a: "Nous acceptons les cartes de crédit et débit (Visa, Mastercard, American Express) et PayPal. Tous les prix sont en dollars canadiens (CAD).",
-  },
-  {
-    q: "Y a-t-il une remise pour les étudiants ?",
-    a: "Notre plan Étudiant est déjà conçu pour être accessible. Contacte le support avec ta carte étudiante pour des offres spéciales.",
+    type: "premium",
   },
 ];
 
 export default function PricingPage() {
+  const [userId, setUserId] = useState<string | null>(null);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUserId(data.user?.id ?? null);
+    });
+  }, []);
+
+  async function startCheckout(priceId: string, planName: string) {
+    if (!userId) {
+      window.location.href = "/signup";
+      return;
+    }
+
+    setLoadingPlan(planName);
+
+    const res = await fetch("/api/stripe/checkout", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ priceId, userId }),
+    });
+
+    const { url } = await res.json();
+    window.location.href = url;
+  }
+
+  function getPriceId(type: string) {
+    if (type === "student") return STUDENT_PRICE_ID;
+    if (type === "premium") return PREMIUM_PRICE_ID;
+    return null;
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-6 pt-16 pb-12">
-      <div className="flex flex-col gap-16 py-12">
-        {/* Hero */}
-        <section className="text-center flex flex-col items-center gap-4">
-          <Chip
-            color="success"
-            variant="flat"
-            size="sm"
-            className="font-semibold"
-          >
-            Tarification
-          </Chip>
-          <h1 className="text-4xl lg:text-6xl font-bold tracking-tight">
-            Simple et <span className="text-success">transparent</span>
-          </h1>
-          <p className="text-default-500 text-lg max-w-2xl">
-            Commence gratuitement, passe au plan payant quand tu en as besoin.
-            Pas de surprise, pas de frais cachés.
-          </p>
-        </section>
+      <section className="text-center mb-12">
+        <Chip color="success" variant="flat">Tarification</Chip>
+        <h1 className="text-5xl font-bold mt-4">Simple et transparent</h1>
+      </section>
 
-        {/* Pricing cards */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-          {plans.map((plan, index) => (
-            <Card
-              key={index}
-              className={`p-4 border ${
-                plan.popular
-                  ? "border-success shadow-lg shadow-success/20 scale-[1.02]"
-                  : "border-divider/50"
-              } backdrop-blur-xl bg-white/70 dark:bg-black/40 relative`}
-            >
-              {plan.popular && (
-                <div className="absolute top-3 left-1/2 -translate-x-1/2">
-                  <Chip
-                    color="success"
-                    variant="solid"
-                    size="sm"
-                    className="font-bold"
-                  >
-                    Populaire
-                  </Chip>
-                </div>
-              )}
-              <CardHeader className="flex flex-col items-start gap-3 pt-6">
-                <div className="flex items-center gap-2">
-                  <Chip
-                    color={plan.color}
-                    variant="flat"
-                    size="sm"
-                    startContent={plan.icon}
-                  >
-                    {plan.name}
-                  </Chip>
-                </div>
-                <div>
-                  <span className="text-4xl font-bold">{plan.price}</span>
-                  <span className="text-default-500 text-sm ml-1">
-                    / {plan.period}
-                  </span>
-                </div>
+      <section className="grid md:grid-cols-3 gap-6">
+        {plans.map((plan) => {
+          const priceId = getPriceId(plan.type);
+
+          return (
+            <Card key={plan.name} className="p-4">
+              <CardHeader className="flex flex-col items-start gap-2">
+                <Chip startContent={plan.icon}>{plan.name}</Chip>
+                <div className="text-3xl font-bold">{plan.price}</div>
                 <p className="text-default-500 text-sm">{plan.description}</p>
               </CardHeader>
 
-              <Divider className="my-2" />
+              <Divider />
 
-              <CardBody className="flex flex-col gap-2 py-4">
-                {plan.features.map((feature, i) => (
-                  <div key={i} className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />
-                    <span>{feature}</span>
-                  </div>
-                ))}
-                {plan.unavailable.map((feature, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-2 text-sm text-default-400 line-through"
-                  >
-                    <CheckCircle2 className="w-4 h-4 text-default-300 flex-shrink-0" />
-                    <span>{feature}</span>
+              <CardBody className="flex flex-col gap-2">
+                {plan.features.map((f, i) => (
+                  <div key={i} className="flex gap-2 text-sm">
+                    <CheckCircle2 className="w-4 h-4 text-success" />
+                    {f}
                   </div>
                 ))}
               </CardBody>
 
               <CardFooter>
-                <Button
-                  as={Link}
-                  href={plan.href}
-                  color={plan.popular ? "success" : plan.color}
-                  variant={plan.popular ? "solid" : plan.variant}
-                  fullWidth
-                  className="font-semibold"
-                >
-                  {plan.cta}
-                </Button>
+                {plan.type === "free" ? (
+                  <Button as={Link} href="/signup" fullWidth>
+                    Commencer gratuitement
+                  </Button>
+                ) : (
+                  <Button
+                    fullWidth
+                    color={plan.popular ? "success" : plan.color}
+                    isLoading={loadingPlan === plan.name}
+                    onPress={() =>
+                      startCheckout(priceId!, plan.name)
+                    }
+                  >
+                    Choisir {plan.name}
+                  </Button>
+                )}
               </CardFooter>
             </Card>
-          ))}
-        </section>
-
-        {/* FAQ */}
-        <section className="flex flex-col gap-8 max-w-3xl mx-auto w-full">
-          <h2 className="text-3xl font-bold text-center">
-            Questions fréquentes
-          </h2>
-          <div className="flex flex-col gap-4">
-            {faq.map((item, index) => (
-              <Card
-                key={index}
-                className="p-4 border border-divider/50 bg-white/50 dark:bg-black/20"
-              >
-                <CardBody className="flex flex-col gap-2 p-2">
-                  <h3 className="font-semibold text-base">{item.q}</h3>
-                  <p className="text-default-500 text-sm">{item.a}</p>
-                </CardBody>
-              </Card>
-            ))}
-          </div>
-        </section>
-
-        {/* CTA */}
-        <section>
-          <Card className="bg-gradient-to-r from-green-400 to-green-500 p-12 text-center border-none">
-            <CardBody className="gap-6 items-center justify-center">
-              <h2 className="text-4xl font-bold text-white">
-                Commence dès aujourd'hui
-              </h2>
-              <p className="text-white/90 text-lg max-w-xl">
-                Rejoins MealMatch gratuitement et découvre une façon plus
-                intelligente de manger.
-              </p>
-              <div className="flex gap-3">
-                <Button
-                  as={Link}
-                  href="/signup"
-                  size="lg"
-                  className="bg-white text-success font-bold"
-                >
-                  S'inscrire gratuitement
-                </Button>
-                <Button
-                  as={Link}
-                  href="/support"
-                  size="lg"
-                  variant="bordered"
-                  className="text-white border-white"
-                >
-                  Contacter le support
-                </Button>
-              </div>
-            </CardBody>
-          </Card>
-        </section>
-      </div>
+          );
+        })}
+      </section>
     </div>
   );
 }
