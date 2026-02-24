@@ -40,7 +40,7 @@ function addSecurityHeaders(res: NextResponse): NextResponse {
   // Permissions policy — disable unused browser features
   res.headers.set(
     "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=(), payment=()",
+    "camera=(), microphone=(), geolocation=(self), payment=()",
   );
   // Basic XSS protection for older browsers
   res.headers.set("X-XSS-Protection", "1; mode=block");

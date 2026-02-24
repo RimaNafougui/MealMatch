@@ -64,6 +64,9 @@ export interface ShoppingListItem {
   unit: string;
   price: number | null;
   checked: boolean;
+  aisle?: string;
+  category?: string;
+  emoji?: string;
 }
 
 export interface ShoppingList {
