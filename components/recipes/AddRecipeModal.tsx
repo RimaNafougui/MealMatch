@@ -26,6 +26,7 @@ import {
   Droplets,
   ListOrdered,
   Tag,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -173,7 +174,54 @@ export function AddRecipeModal({
     isEdit ? buildFormFromEdit() : DEFAULT_FORM,
   );
   const [saving, setSaving] = useState(false);
+  const [estimating, setEstimating] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // ─── Macro estimation via FatSecret ─────────────────────────────────────
+
+  const handleEstimateMacros = async () => {
+    const validIngredients = form.ingredients.filter((i) => i.name.trim());
+    if (validIngredients.length === 0) return;
+
+    setEstimating(true);
+    try {
+      const res = await fetch("/api/fatsecret/macros", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ingredients: validIngredients,
+          servings: form.servings || "1",
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || "Erreur FatSecret");
+
+      const { perServing, found, total_ingredients } = data;
+
+      setForm((f) => ({
+        ...f,
+        calories: String(perServing.calories),
+        protein: String(perServing.protein),
+        carbs: String(perServing.carbs),
+        fat: String(perServing.fat),
+      }));
+
+      if (found < total_ingredients) {
+        toast.success(
+          `Macros estimées (${found}/${total_ingredients} ingrédients reconnus). Vérifiez les valeurs.`,
+        );
+      } else {
+        toast.success("Macronutriments estimés avec succès !");
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erreur inconnue";
+      toast.error(`Estimation impossible : ${message}`);
+    } finally {
+      setEstimating(false);
+    }
+  };
 
   // Reset form when modal opens/closes or edit recipe changes
   const handleOpenChange = (open: boolean) => {
@@ -401,7 +449,20 @@ export function AddRecipeModal({
 
                 {/* ── Macros ── */}
                 <div className="flex flex-col gap-2">
-                  <SectionLabel icon={<Beef size={14} />} label="Macronutriments (optionnel)" />
+                  <div className="flex items-center justify-between">
+                    <SectionLabel icon={<Beef size={14} />} label="Macronutriments (optionnel)" />
+                    <Button
+                      size="sm"
+                      variant="flat"
+                      color="primary"
+                      isLoading={estimating}
+                      isDisabled={!form.ingredients.some((i) => i.name.trim())}
+                      onPress={handleEstimateMacros}
+                      startContent={!estimating && <Sparkles size={13} />}
+                    >
+                      Estimer les macros
+                    </Button>
+                  </div>
                   <div className="grid grid-cols-3 gap-3">
                     <Input
                       label="Protéines (g)"
@@ -437,6 +498,9 @@ export function AddRecipeModal({
                       startContent={<Droplets size={13} className="text-primary shrink-0" />}
                     />
                   </div>
+                  <p className="text-xs text-default-400 mt-1">
+                    Entrez vos ingrédients en bas puis cliquez sur « Estimer les macros ».
+                  </p>
                 </div>
 
                 <Divider />
