@@ -178,13 +178,24 @@ export default function PricingPage() {
                 className={`p-4 border ${plan.popular ? "border-success shadow-lg shadow-success/20 scale-[1.02]" : "border-divider/50"
                   } backdrop-blur-xl bg-white/70 dark:bg-black/40 relative`}
               >
-                {plan.popular && (
+                {/* Badge Plan Actuel */}
+                {isCurrent && (
+                  <div className="absolute top-3 right-3">
+                    <Chip color="success" variant="solid" size="sm" className="font-bold">
+                      Plan actuel
+                    </Chip>
+                  </div>
+                )}
+
+                {/* Badge Populaire */}
+                {plan.popular && !isCurrent && (
                   <div className="absolute top-3 left-1/2 -translate-x-1/2">
                     <Chip color="success" variant="solid" size="sm" className="font-bold">
                       Populaire
                     </Chip>
                   </div>
                 )}
+
                 <CardHeader className="flex flex-col items-start gap-3 pt-6">
                   <div className="flex items-center gap-2">
                     <Chip color={plan.color} variant="flat" size="sm" startContent={plan.icon}>
@@ -216,28 +227,16 @@ export default function PricingPage() {
                 </CardBody>
 
                 <CardFooter>
-                  {plan.type === "free" ? (
-                    <Button
-                      fullWidth
-                      color={plan.color}
-                      variant={plan.variant}
-                      onPress={() => alert("Plan gratuit actif")}
-                      isDisabled={isCurrent}
-                    >
-                      {plan.cta}
-                    </Button>
-                  ) : (
-                    <Button
-                      fullWidth
-                      color={plan.popular ? "success" : plan.color}
-                      variant={plan.popular ? "solid" : plan.variant}
-                      onPress={() => startCheckout(plan.type)}
-                      isDisabled={!userId || isCurrent}
-                      isLoading={loadingPlan === plan.type}
-                    >
-                      {isCurrent ? "Plan actif" : plan.cta}
-                    </Button>
-                  )}
+                  <Button
+                    fullWidth
+                    color={plan.popular ? "success" : plan.color}
+                    variant={plan.popular ? "solid" : plan.variant}
+                    onPress={() => !isCurrent && startCheckout(plan.type)}
+                    isDisabled={!userId || isCurrent}
+                    isLoading={loadingPlan === plan.type}
+                  >
+                    {isCurrent ? "Plan actif" : plan.cta}
+                  </Button>
                 </CardFooter>
               </Card>
             );
