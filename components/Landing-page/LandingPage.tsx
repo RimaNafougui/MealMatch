@@ -137,7 +137,7 @@ export function LandingPage() {
           style={{ backgroundImage: "url('/food-background.jpg')" }}
         />
         {/* Gradient overlay */}
-        <div className="absolute inset-0 z-[1] bg-gradient-to-r from-black/80 via-black/60 to-black/30" />
+        <div className="absolute inset-0 z-[1] bg-gradient-to-r from-black/60 via-black/40 to-black/20" />
 
         <div className="relative z-[2] max-w-7xl mx-auto px-6 w-full py-24">
           <motion.div
@@ -153,7 +153,7 @@ export function LandingPage() {
                 color="success"
                 variant="flat"
                 size="sm"
-                className="font-semibold tracking-wide text-xs bg-white/20 text-white border border-success/30"
+                className="font-semibold tracking-wide text-xs bg-black/20 text-white border border-success/30"
               >
                 Propulsé par l&apos;intelligence artificielle
               </Chip>
