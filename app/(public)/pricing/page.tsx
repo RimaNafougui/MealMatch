@@ -1,4 +1,3 @@
-// app/pricing/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -11,20 +10,57 @@ import { Divider } from "@heroui/divider";
 
 import { CheckCircle2, Zap, Star, Users } from "lucide-react";
 
+// Supabase client (prod)
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+// Price IDs Stripe
 const STUDENT_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PRICE_STUDENT!;
 const PREMIUM_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM!;
 
+// Plans
 const plans = [
-  { name: "Gratuit", type: "free", price: "0 $CA", period: "pour toujours", description: "Parfait pour commencer ton voyage culinaire", color: "default" as const, icon: <Users className="w-5 h-5" />, popular: false, features: ["5 plans de repas par mois", "Accès à 50 recettes", "Liste d'épicerie basique", "Suivi nutritionnel simplifié", "Support communauté"], unavailable: ["Plans de repas illimités", "IA avancée", "Export PDF", "Support prioritaire"] },
-  { name: "Étudiant", type: "student", price: "2,99 $CA", period: "par mois", description: "Idéal pour les étudiants et les amateurs de cuisine", color: "success" as const, icon: <Zap className="w-5 h-5" />, popular: true, features: ["Plans de repas illimités", "Accès à toutes les recettes (120+)", "IA avancée et personnalisée", "Liste d'épicerie intelligente", "Suivi nutritionnel complet", "Export PDF de tes plans", "Favoris illimités", "Support prioritaire"], unavailable: [] },
-  { name: "Premium", type: "premium", price: "5,99 $CA", period: "par mois", description: "Pour les utilisateurs avancés et les familles actives ", color: "primary" as const, icon: <Star className="w-5 h-5" />, popular: false, features: ["Tout ce qui est inclus dans Étudiant", "Plans familiaux (jusqu'à 4 personnes)", "Recettes exclusives premium", "Planification sur 4 semaines", "Conseils nutritionniste IA", "Intégration calendrier", "API access", "Support dédié 24h/7j"], unavailable: [] },
+  {
+    name: "Gratuit",
+    type: "free",
+    price: "0 $CA",
+    period: "pour toujours",
+    description: "Parfait pour commencer ton voyage culinaire",
+    color: "default" as const,
+    icon: <Users className="w-5 h-5" />,
+    popular: false,
+    features: ["5 plans de repas par mois", "Accès à 50 recettes", "Liste d'épicerie basique", "Suivi nutritionnel simplifié", "Support communauté"],
+    unavailable: ["Plans de repas illimités", "IA avancée", "Export PDF", "Support prioritaire"],
+  },
+  {
+    name: "Étudiant",
+    type: "student",
+    price: "2,99 $CA",
+    period: "par mois",
+    description: "Idéal pour les étudiants et les amateurs de cuisine",
+    color: "success" as const,
+    icon: <Zap className="w-5 h-5" />,
+    popular: true,
+    features: ["Plans de repas illimités", "Accès à toutes les recettes (120+)", "IA avancée et personnalisée", "Liste d'épicerie intelligente", "Suivi nutritionnel complet", "Export PDF de tes plans", "Favoris illimités", "Support prioritaire"],
+    unavailable: [],
+  },
+  {
+    name: "Premium",
+    type: "premium",
+    price: "5,99 $CA",
+    period: "par mois",
+    description: "Pour les utilisateurs avancés et les familles actives",
+    color: "primary" as const,
+    icon: <Star className="w-5 h-5" />,
+    popular: false,
+    features: ["Tout ce qui est inclus dans Étudiant", "Plans familiaux (jusqu'à 4 personnes)", "Recettes exclusives premium", "Planification sur 4 semaines", "Conseils nutritionniste IA", "Intégration calendrier", "API access", "Support dédié 24h/7j"],
+    unavailable: [],
+  },
 ];
 
+// FAQ
 const faq = [
   { q: "Puis-je changer de plan à tout moment ?", a: "Oui, tu peux upgrader ou downgrader ton plan à tout moment. Les changements prennent effet immédiatement." },
   { q: "Est-ce qu'il y a un engagement ?", a: "Non, aucun engagement. Tu peux annuler ton abonnement à tout moment sans frais supplémentaires." },
@@ -38,34 +74,34 @@ export default function PricingPage() {
   const [currentPlan, setCurrentPlan] = useState("free");
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
-  // window.location.origin sécurisé
+  // Sécurisé pour window
   const origin = typeof window !== "undefined" ? window.location.origin : "";
 
   useEffect(() => {
     async function loadUser() {
-      const { data } = await supabase.auth.getUser();
-      let uid = data.user?.id ?? null;
-
-      // ✅ En dev: injecte un userId factice si non connecté
-      if (!uid && origin.includes("localhost")) {
-        uid = "dev-user-local";
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error("Erreur getSession:", error);
+        return;
       }
 
+      const uid = session?.user.id ?? null;
       setUserId(uid);
 
-      if (!uid || uid === "dev-user-local") return;
+      if (!uid) return;
 
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("plan")
         .eq("id", uid)
         .single();
 
+      if (profileError) console.error("Erreur fetch profile:", profileError);
       if (profile?.plan) setCurrentPlan(profile.plan);
     }
 
     loadUser();
-  }, [origin]);
+  }, []);
 
   function getPriceId(type: string) {
     if (type === "student") return STUDENT_PRICE_ID;
@@ -75,7 +111,7 @@ export default function PricingPage() {
 
   async function startCheckout(priceId: string, planType: string) {
     if (!userId) {
-      alert("Connecte-toi pour passer à un plan payant.");
+      alert("Connecte-toi d'abord !");
       return;
     }
 
@@ -83,14 +119,19 @@ export default function PricingPage() {
 
     setLoadingPlan(planType);
 
-    const res = await fetch("/api/stripe/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ priceId, userId, origin, plan: planType }),
-    });
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priceId, userId, origin, plan: planType }),
+      });
 
-    const { url } = await res.json();
-    if (url) window.location.href = url; // Redirige vers Stripe
+      const { url } = await res.json();
+      if (url) window.location.href = url;
+    } catch (err) {
+      console.error("Erreur checkout:", err);
+      setLoadingPlan(null);
+    }
   }
 
   return (
@@ -154,7 +195,7 @@ export default function PricingPage() {
                 ) : (
                   <Button
                     fullWidth
-                    isDisabled={isCurrent}
+                    isDisabled={!userId || isCurrent}
                     isLoading={loadingPlan === plan.type}
                     onPress={() => startCheckout(priceId!, plan.type)}
                   >
@@ -165,6 +206,19 @@ export default function PricingPage() {
             </Card>
           );
         })}
+      </section>
+
+      {/* FAQ */}
+      <section className="max-w-3xl mx-auto flex flex-col gap-4">
+        <h2 className="text-3xl font-bold text-center">Questions fréquentes</h2>
+        {faq.map((item, i) => (
+          <Card key={i} className="p-4">
+            <CardBody>
+              <h3 className="font-semibold">{item.q}</h3>
+              <p className="text-default-500 text-sm">{item.a}</p>
+            </CardBody>
+          </Card>
+        ))}
       </section>
     </div>
   );
