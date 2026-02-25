@@ -137,7 +137,7 @@ export function LandingPage() {
           style={{ backgroundImage: "url('/food-background.jpg')" }}
         />
         {/* Gradient overlay */}
-        <div className="absolute inset-0 z-[1] bg-gradient-to-r from-black/80 via-black/60 to-black/30" />
+        <div className="absolute inset-0 z-[1] bg-gradient-to-r from-black/65 via-black/50 to-black/10" />
 
         <div className="relative z-[2] max-w-7xl mx-auto px-6 w-full py-24">
           <motion.div
@@ -153,7 +153,7 @@ export function LandingPage() {
                 color="success"
                 variant="flat"
                 size="sm"
-                className="font-semibold tracking-wide text-xs bg-white/20 text-white border border-success/30"
+                className="font-semibold tracking-wide text-xs bg-black/20 text-white border border-success/30"
               >
                 Propulsé par l&apos;intelligence artificielle
               </Chip>
@@ -162,17 +162,17 @@ export function LandingPage() {
             {/* Headline */}
             <motion.h1
               variants={fadeUp}
-              className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tighter uppercase italic leading-none text-white drop-shadow-lg"
+              className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tighter uppercase italic leading-none text-white drop-shadow-lg leading-[1]"
             >
               Bien manger.
               <br />
-              <span className="text-success">Sans réfléchir.</span>
+              <span className="text-success-200">Sans réfléchir.</span>
             </motion.h1>
 
             {/* Sub-headline */}
             <motion.p
               variants={fadeUp}
-              className="text-lg sm:text-xl text-white/75 max-w-xl leading-relaxed"
+              className="text-lg sm:text-xl text-white/95 max-w-xl leading-relaxed"
             >
               MealMatch génère des plans de repas intelligents, économiques et
               adaptés à ton rythme — en quelques secondes.
@@ -204,7 +204,7 @@ export function LandingPage() {
             {/* Trust micro-copy */}
             <motion.div
               variants={fadeUp}
-              className="flex flex-wrap gap-5 text-sm text-white/60"
+              className="flex flex-wrap gap-5 text-sm text-white/80"
             >
               {[
                 "Gratuit pour commencer",
@@ -212,7 +212,7 @@ export function LandingPage() {
                 "Résultats en 30 secondes",
               ].map((t) => (
                 <span key={t} className="flex items-center gap-1.5">
-                  <CheckCircle2 size={15} className="text-success" />
+                  <CheckCircle2 size={15} className="text-success-200" />
                   {t}
                 </span>
               ))}
