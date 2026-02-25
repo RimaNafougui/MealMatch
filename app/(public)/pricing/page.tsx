@@ -1,10 +1,11 @@
+// app/(public)/pricing/page.tsx
 "use client";
+
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 import { Card, CardBody, CardHeader, CardFooter } from "@heroui/card";
 import { Button } from "@heroui/button";
-import { Link } from "@heroui/link";
 import { Chip } from "@heroui/chip";
 import { Divider } from "@heroui/divider";
 import { CheckCircle2, Zap, Star, Users } from "lucide-react";
@@ -14,9 +15,6 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
-
-const STUDENT_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PRICE_STUDENT!;
-const PREMIUM_PRICE_ID = process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM!;
 
 const plansData = [
   {
@@ -97,8 +95,6 @@ export default function PricingPage() {
   const [currentPlan, setCurrentPlan] = useState("free");
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-
   useEffect(() => {
     async function loadUser() {
       const { data: { session }, error } = await supabase.auth.getSession();
@@ -121,13 +117,8 @@ export default function PricingPage() {
     loadUser();
   }, []);
 
-  function getPriceId(type: string) {
-    if (type === "student") return STUDENT_PRICE_ID;
-    if (type === "premium") return PREMIUM_PRICE_ID;
-    return null;
-  }
-
-  async function startCheckout(priceId: string, planType: string) {
+  // Fonction sécurisée pour lancer le checkout
+  async function startCheckout(planType: string) {
     if (!userId) {
       alert("Connecte-toi d'abord !");
       return;
@@ -137,15 +128,25 @@ export default function PricingPage() {
     setLoadingPlan(planType);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error("Utilisateur non authentifié");
+
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ priceId, userId, origin, plan: planType }),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ plan: planType }),
       });
-      const { url } = await res.json();
+
+      const { url, error } = await res.json();
+      if (error) throw new Error(error);
       if (url) window.location.href = url;
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      alert(err.message || "Erreur lors du checkout");
       setLoadingPlan(null);
     }
   }
@@ -170,7 +171,6 @@ export default function PricingPage() {
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
           {plansData.map((plan, i) => {
             const isCurrent = plan.type === currentPlan;
-            const priceId = getPriceId(plan.type);
 
             return (
               <Card
@@ -231,7 +231,7 @@ export default function PricingPage() {
                       fullWidth
                       color={plan.popular ? "success" : plan.color}
                       variant={plan.popular ? "solid" : plan.variant}
-                      onPress={() => priceId && startCheckout(priceId, plan.type)}
+                      onPress={() => startCheckout(plan.type)}
                       isDisabled={!userId || isCurrent}
                       isLoading={loadingPlan === plan.type}
                     >
