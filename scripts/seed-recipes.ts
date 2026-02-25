@@ -201,7 +201,7 @@ async function runBatch(apiKey: string, batchIndex: number) {
 
   while (totalFetched < TARGET_COUNT_PER_KEY) {
     const remaining = TARGET_COUNT_PER_KEY - totalFetched;
-    const requestSize = Math.min(remaining, 100);
+    const requestSize = Math.min(remaining, 120);
 
     console.log(
       `Fetching ${requestSize} recipes (Progress: ${totalFetched}/${TARGET_COUNT_PER_KEY})...`,
