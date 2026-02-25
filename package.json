@@ -53,6 +53,7 @@
     "@heroui/theme": "2.4.26",
     "@heroui/toast": "2.0.20",
     "@heroui/tooltip": "2.2.27",
+    "@heroui/use-disclosure": "^2.2.18",
     "@heroui/user": "2.2.25",
     "@hookform/resolvers": "^5.2.2",
     "@react-aria/ssr": "3.9.10",
