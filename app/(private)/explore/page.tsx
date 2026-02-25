@@ -183,7 +183,7 @@ export default function ExplorePage() {
     total: 0,
     totalPages: 0,
   });
-
+  const [pageInput, setPageInput] = useState("");
   const { data: favoriteRecipes = [] } = useFavorites();
   const favoriteIds = favoriteRecipes.map((r: Recipe) => r.id);
 
@@ -267,6 +267,21 @@ export default function ExplorePage() {
         : [...current, value],
     );
     resetPage();
+  };
+
+  const goToPage = () => {
+  const page = Number(pageInput);
+
+    if (
+      Number.isNaN(page) ||
+      page < 1 ||
+      page > pagination.totalPages
+    ) {
+      return;
+    }
+
+    setPagination((p) => ({ ...p, page }));
+    setPageInput("");
   };
 
   const hasActiveFilters =
@@ -751,8 +766,24 @@ export default function ExplorePage() {
           >
             Suivant
           </Button>
-        </div>
-      )}
+
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-default-500"></span>
+        <input
+          type="number"
+          min={1}
+          max={pagination.totalPages}
+          value={pageInput}
+          onChange={(e) => setPageInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && goToPage()}
+          className="w-16 px-2 py-1 text-sm border rounded-md bg-background"
+        />
+        <Button size="sm" variant="flat" onPress={goToPage}>
+          Go
+        </Button>
+      </div>
+    </div>
+  )}
     </div>
   );
 }
