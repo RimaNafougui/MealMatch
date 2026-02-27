@@ -1,20 +1,13 @@
-// app/(public)/pricing/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { useSession } from "next-auth/react";
 
 import { Card, CardBody, CardHeader, CardFooter } from "@heroui/card";
 import { Button } from "@heroui/button";
 import { Chip } from "@heroui/chip";
 import { Divider } from "@heroui/divider";
 import { CheckCircle2, Zap, Star, Users } from "lucide-react";
-
-// Supabase client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 const plansData = [
   {
@@ -91,33 +84,26 @@ const plansData = [
 ];
 
 export default function PricingPage() {
-  const [userId, setUserId] = useState<string | null>(null);
+  const { data: session, status } = useSession();
+  const userId = session?.user?.id ?? null;
+
   const [currentPlan, setCurrentPlan] = useState("free");
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadUser() {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) return console.error(error);
-
-      const uid = session?.user.id ?? null;
-      setUserId(uid);
-
-      if (!uid) return;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("plan")
-        .eq("id", uid)
-        .single();
-
-      if (profile?.plan) setCurrentPlan(profile.plan);
+    async function fetchPlan() {
+      if (!userId) return;
+      try {
+        const res = await fetch("/api/user/plan");
+        const data = await res.json();
+        setCurrentPlan(data.plan ?? "free");
+      } catch (err) {
+        console.error("Impossible de récupérer le plan:", err);
+      }
     }
+    fetchPlan();
+  }, [userId]);
 
-    loadUser();
-  }, []);
-
-  // Fonction sécurisée pour lancer le checkout
   async function startCheckout(planType: string) {
     if (!userId) {
       alert("Connecte-toi d'abord !");
@@ -128,17 +114,11 @@ export default function PricingPage() {
     setLoadingPlan(planType);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (!token) throw new Error("Utilisateur non authentifié");
-
+      // ⚡ On envoie juste l'ID utilisateur au backend
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ plan: planType }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: planType, userId }),
       });
 
       const { url, error } = await res.json();
@@ -149,6 +129,14 @@ export default function PricingPage() {
       alert(err.message || "Erreur lors du checkout");
       setLoadingPlan(null);
     }
+  }
+
+  if (status === "loading") {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        Chargement…
+      </div>
+    );
   }
 
   return (
@@ -171,14 +159,8 @@ export default function PricingPage() {
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
           {plansData.map((plan, i) => {
             const isCurrent = plan.type === currentPlan;
-
             return (
-              <Card
-                key={i}
-                className={`p-4 border ${plan.popular ? "border-success shadow-lg shadow-success/20 scale-[1.02]" : "border-divider/50"
-                  } backdrop-blur-xl bg-white/70 dark:bg-black/40 relative`}
-              >
-                {/* Badge Plan Actuel */}
+              <Card key={i} className="p-4 border backdrop-blur-xl bg-white/70 dark:bg-black/40 relative">
                 {isCurrent && (
                   <div className="absolute top-3 right-3">
                     <Chip color="success" variant="solid" size="sm" className="font-bold">
@@ -186,8 +168,6 @@ export default function PricingPage() {
                     </Chip>
                   </div>
                 )}
-
-                {/* Badge Populaire */}
                 {plan.popular && !isCurrent && (
                   <div className="absolute top-3 left-1/2 -translate-x-1/2">
                     <Chip color="success" variant="solid" size="sm" className="font-bold">
@@ -197,11 +177,9 @@ export default function PricingPage() {
                 )}
 
                 <CardHeader className="flex flex-col items-start gap-3 pt-6">
-                  <div className="flex items-center gap-2">
-                    <Chip color={plan.color} variant="flat" size="sm" startContent={plan.icon}>
-                      {plan.name}
-                    </Chip>
-                  </div>
+                  <Chip color={plan.color} variant="flat" size="sm" startContent={plan.icon}>
+                    {plan.name}
+                  </Chip>
                   <div>
                     <span className="text-4xl font-bold">{plan.price}</span>
                     <span className="text-default-500 text-sm ml-1">/ {plan.period}</span>
