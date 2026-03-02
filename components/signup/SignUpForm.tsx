@@ -263,7 +263,7 @@ export default function SignUpForm() {
             Politique de confidentialité
           </Link>{" "}
           et notre{" "}
-          <Link className="font-bold" href="#">
+          <Link className="font-bold" href="/cookie">
             Politique relative aux cookies
           </Link>
           .
