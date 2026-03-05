@@ -109,12 +109,26 @@ export default function PricingPage() {
       alert("Connecte-toi d'abord !");
       return;
     }
+
     if (planType === currentPlan) return;
 
     setLoadingPlan(planType);
 
     try {
-      // ⚡ On envoie juste l'ID utilisateur au backend
+      // 🔹 Downgrade vers FREE → annule la subscription
+      if (planType === "free") {
+        const res = await fetch("/api/stripe/cancel-subscription", {
+          method: "POST",
+        });
+
+        const { error } = await res.json();
+        if (error) throw new Error(error);
+
+        window.location.reload();
+        return;
+      }
+
+      // 🔹 Sinon checkout Stripe
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -123,7 +137,9 @@ export default function PricingPage() {
 
       const { url, error } = await res.json();
       if (error) throw new Error(error);
+
       if (url) window.location.href = url;
+
     } catch (err: any) {
       console.error(err);
       alert(err.message || "Erreur lors du checkout");
