@@ -1,4 +1,5 @@
 // /app/api/stripe/webhook/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getSupabaseServer } from "@/utils/supabase-server";
@@ -8,7 +9,12 @@ const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
 export async function POST(req: NextRequest) {
     const body = await req.text();
-    const sig = req.headers.get("stripe-signature")!;
+    const sig = req.headers.get("stripe-signature");
+
+    if (!sig) {
+        return NextResponse.json({ error: "No signature" }, { status: 400 });
+    }
+
     let event: Stripe.Event;
 
     try {
@@ -20,53 +26,101 @@ export async function POST(req: NextRequest) {
 
     const supabase = await getSupabaseServer();
 
-    switch (event.type) {
-        case "checkout.session.completed": {
-            const session = event.data.object as Stripe.Checkout.Session;
+    try {
+        switch (event.type) {
+            case "customer.subscription.created":
+            case "customer.subscription.updated":
+            case "customer.subscription.deleted": {
 
-            const customerId = session.customer as string;
-            const subscriptionId = session.subscription as string;
+                const subscription = event.data.object as any;
 
-            // Récupère la ligne item pour déterminer le plan
-            const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
-            // vérifie qu'il y a au moins un item
-            const priceId = lineItems.data?.[0]?.price?.id;
-            if (!priceId) {
-                console.error("Pas de priceId pour la session:", session.id);
-                return NextResponse.json({ error: "Pas de priceId" }, { status: 400 });
+                const customerId = subscription.customer as string;
+                const priceId = subscription.items.data[0]?.price.id;
+
+                if (!priceId) {
+                    console.error("No priceId in subscription");
+                    break;
+                }
+
+                // 🔁 Map Stripe price → internal plan
+                let plan: "free" | "student" | "premium" = "free";
+
+                if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_STUDENT) {
+                    plan = "student";
+                }
+
+                if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM) {
+                    plan = "premium";
+                }
+
+                // Si subscription inactive → downgrade
+                if (
+                    subscription.status !== "active" &&
+                    subscription.status !== "trialing"
+                ) {
+                    plan = "free";
+                }
+
+                const { data: profile } = await supabase
+                    .from("profiles")
+                    .select("id")
+                    .eq("stripe_customer_id", customerId)
+                    .single();
+
+                if (!profile) {
+                    console.error("Profile not found for customer:", customerId);
+                    break;
+                }
+
+                await supabase
+                    .from("profiles")
+                    .update({
+                        plan,
+                        stripe_subscription_id: subscription.id,
+                        stripe_price_id: priceId,
+                        subscription_status: subscription.status,
+                        current_period_end: subscription.current_period_end
+                            ? new Date(
+                                subscription.current_period_end * 1000
+                            ).toISOString()
+                            : null,
+                    })
+                    .eq("id", profile.id);
+
+                console.log("Subscription synced:", profile.id);
+                break;
             }
 
-            // Map priceId → plan
-            let plan: "student" | "premium" = "student";
-            if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM) plan = "premium";
+            case "invoice.payment_failed": {
+                const invoice = event.data.object as Stripe.Invoice;
+                const customerId = invoice.customer as string;
 
-            // Trouve l'utilisateur Supabase
-            const { data: profile } = await supabase
-                .from("profiles")
-                .select("id")
-                .eq("stripe_customer_id", customerId)
-                .single();
+                const { data: profile } = await supabase
+                    .from("profiles")
+                    .select("id")
+                    .eq("stripe_customer_id", customerId)
+                    .single();
 
-            if (profile?.id) {
-                await supabase.from("profiles").update({
-                    plan,
-                    stripe_subscription_id: subscriptionId,
-                    stripe_price_id: priceId,
-                    subscription_status: "active",
-                    current_period_end: new Date(session.expires_at! * 1000).toISOString(),
-                }).eq("id", profile.id);
-                console.log(`Plan mis à jour pour l'utilisateur ${profile.id}`);
+                if (!profile) break;
+
+                await supabase
+                    .from("profiles")
+                    .update({
+                        plan: "free",
+                        subscription_status: "past_due",
+                    })
+                    .eq("id", profile.id);
+
+                console.log("Payment failed → downgraded:", profile.id);
+                break;
             }
-            break;
+
+            default:
+                console.log(`Unhandled event type ${event.type}`);
         }
-
-        case "customer.subscription.updated":
-        case "customer.subscription.deleted":
-            // Ici tu peux mettre à jour `subscription_status` et `plan` si nécessaire
-            break;
-
-        default:
-            console.log(`Unhandled event type ${event.type}`);
+    } catch (err) {
+        console.error("Webhook handler error:", err);
+        return NextResponse.json({ error: "Webhook handler failed" }, { status: 500 });
     }
 
     return NextResponse.json({ received: true });
