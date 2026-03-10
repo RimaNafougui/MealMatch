@@ -105,16 +105,29 @@ export default function PricingPage() {
   }, [userId]);
 
   async function startCheckout(planType: string) {
-    if (!userId) {
-      alert("Connecte-toi d'abord !");
-      return;
-    }
+    if (!userId) return;
+
     if (planType === currentPlan) return;
 
     setLoadingPlan(planType);
 
     try {
-      // ⚡ On envoie juste l'ID utilisateur au backend
+      if (planType === "free") {
+        // 🔹 Downgrade → cancel subscription
+        const res = await fetch("/api/stripe/cancel-subscription", {
+          method: "POST",
+        });
+
+        const { error } = await res.json();
+        if (error) throw new Error(error);
+
+        // Met à jour le state frontend
+        setCurrentPlan("free");
+        setLoadingPlan(null);
+        return;
+      }
+
+      // 🔹 Sinon → checkout Stripe
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -123,7 +136,9 @@ export default function PricingPage() {
 
       const { url, error } = await res.json();
       if (error) throw new Error(error);
+
       if (url) window.location.href = url;
+
     } catch (err: any) {
       console.error(err);
       alert(err.message || "Erreur lors du checkout");
@@ -209,7 +224,10 @@ export default function PricingPage() {
                     fullWidth
                     color={plan.popular ? "success" : plan.color}
                     variant={plan.popular ? "solid" : plan.variant}
-                    onPress={() => !isCurrent && startCheckout(plan.type)}
+                    onPress={() => {
+                      if (!isCurrent && plan.type !== "free") startCheckout(plan.type)
+                      if (!isCurrent && plan.type === "free") startCheckout("free")
+                    }}
                     isDisabled={!userId || isCurrent}
                     isLoading={loadingPlan === plan.type}
                   >
