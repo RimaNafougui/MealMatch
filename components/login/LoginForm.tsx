@@ -59,6 +59,12 @@ function LoginFormContent() {
         return;
       }
 
+      if (status === "server_error") {
+        setError("Erreur serveur. Vérifiez votre connexion et réessayez.");
+        setIsLoading(false);
+        return;
+      }
+
       if (status === "user_not_found") {
         setError(
           looksLikeEmail
