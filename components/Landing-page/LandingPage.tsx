@@ -151,7 +151,6 @@ export function LandingPage() {
               <Chip
                 startContent={<Sparkles size={12} className="ml-1" />}
                 color="success"
-                variant="flat"
                 size="sm"
                 className="font-semibold tracking-wide text-xs bg-black/20 text-white border border-success/30"
               >
