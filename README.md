@@ -7,7 +7,7 @@ Application web qui génère des plans de repas hebdomadaires adaptés au budget
 ## Aperçu
 
 ![Landing Page](./public/screenshots/LandingPage.png)
-![On Boarding](./public/screenshots/OnBoarding.png)
+![On Boarding](./public/screenshots/Onboarding.png)
 ![Dashboard](./public/screenshots/Dashboard.png)
 ![Explore](./public/screenshots/Explore.png)
 
