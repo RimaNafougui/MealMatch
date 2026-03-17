@@ -113,6 +113,20 @@ export default function DashboardPage() {
     },
   ];
 
+  const planLabelMap: Record<string, string> = {
+    free: "Gratuit",
+    student: "Étudiant",
+    premium: "Premium",
+    pro: "Pro",
+  };
+
+  const planColorMap: Record<string, "default" | "success" | "warning" | "primary" | "secondary" | "danger"> = {
+    free: "default",
+    student: "success",
+    premium: "warning",
+    pro: "secondary",
+  };
+
   return (
     <div className="flex flex-col gap-8 max-w-4xl mx-auto">
       {/* Welcome banner */}
@@ -139,11 +153,11 @@ export default function DashboardPage() {
         </div>
         {stats?.profile?.plan && stats.profile.plan !== "free" && (
           <Chip
-            color={stats.profile.plan === "pro" ? "secondary" : "warning"}
+            color={planColorMap[stats.profile.plan] || "default"}
             variant="flat"
             size="sm"
           >
-            {stats.profile.plan === "pro" ? "Pro" : "Premium"}
+            {planLabelMap[stats.profile.plan] || stats.profile.plan}
           </Chip>
         )}
       </div>

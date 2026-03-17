@@ -147,7 +147,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           } else {
             // ── 2. No profile — check auth.users by email (filtered listUsers) ─
             const { data: authUsersData, error: authUserError } =
-              await supabase.auth.admin.listUsers({ filter: `email=${user.email!}` } as any);
+              await supabase.auth.admin.listUsers({ filter: user.email! } as any);
 
             if (authUserError) {
               console.error("[auth] Error fetching auth user:", authUserError.message);
