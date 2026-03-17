@@ -9,7 +9,7 @@ const PRIVATE_PREFIXES = [
   "/settings",
   "/explore",
   "/onboarding",
-  "/api/user",
+  "/api/user/",
   "/api/profiles",
   "/api/meal-plan",
   "/api/recipes/user",
@@ -40,7 +40,7 @@ function addSecurityHeaders(res: NextResponse): NextResponse {
   // Permissions policy — disable unused browser features
   res.headers.set(
     "Permissions-Policy",
-    "camera=(), microphone=(), geolocation=(), payment=()",
+    "camera=(), microphone=(), geolocation=(self), payment=()",
   );
   // Basic XSS protection for older browsers
   res.headers.set("X-XSS-Protection", "1; mode=block");
@@ -65,7 +65,7 @@ function addSecurityHeaders(res: NextResponse): NextResponse {
   return res;
 }
 
-export default auth(async function middleware(req: NextRequest & { auth: any }) {
+export default auth(async function proxy(req: NextRequest & { auth: any }) {
   const { pathname } = req.nextUrl;
   const session = req.auth;
 
@@ -92,5 +92,7 @@ export default auth(async function middleware(req: NextRequest & { auth: any }) 
 
 export const config = {
   // Run on all routes except Next.js internals and static files
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };

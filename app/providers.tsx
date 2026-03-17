@@ -6,8 +6,8 @@ import * as React from "react";
 import { HeroUIProvider } from "@heroui/system";
 import { useRouter } from "next/navigation";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
-import { SessionProvider } from "next-auth/react";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { useSession, SessionProvider } from "next-auth/react";
+import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 import { getQueryClient } from "@/lib/queryClient";
@@ -25,6 +25,22 @@ declare module "@react-types/shared" {
   }
 }
 
+function SessionWatcher() {
+  const { data: session } = useSession();
+  const queryClient = useQueryClient();
+  const userId = session?.user?.id ?? null;
+  const prevUserIdRef = React.useRef(userId);
+
+  React.useEffect(() => {
+    if (prevUserIdRef.current !== userId) {
+      queryClient.clear();
+      prevUserIdRef.current = userId;
+    }
+  }, [userId, queryClient]);
+
+  return null;
+}
+
 export function Providers({ children, themeProps }: ProvidersProps) {
   const router = useRouter();
   const queryClient = getQueryClient();
@@ -32,6 +48,7 @@ export function Providers({ children, themeProps }: ProvidersProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <SessionProvider>
+        <SessionWatcher />
         <HeroUIProvider navigate={router.push}>
           <NextThemesProvider {...themeProps}>{children}</NextThemesProvider>
         </HeroUIProvider>
