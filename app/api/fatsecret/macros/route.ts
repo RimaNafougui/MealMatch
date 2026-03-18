@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// Types
 
 interface IngredientInput {
     name: string;
-    amount: string; // e.g. "200"
-    unit: string;   // e.g. "g", "ml", "cup", "tbsp", etc.
+    amount: string; // ex: "200"
+    unit: string;   // ex: "g", "ml", "cup", "tbsp", etc.
 }
 
 interface Macros {
@@ -15,11 +15,11 @@ interface Macros {
     fat: number;
 }
 
-// ─── Unit → grams/ml conversion table ────────────────────────────────────────
-// Values in grams (or ml, treated equally for density≈1).
+// Table de conversion des unités vers grammes ou millilitres
+// Les valeurs sont en grammes (ou ml, assumant une densité d'environ 1).
 
 const UNIT_TO_GRAMS: Record<string, number> = {
-    // metric
+    // système métrique
     g: 1,
     gram: 1,
     grams: 1,
@@ -32,14 +32,14 @@ const UNIT_TO_GRAMS: Record<string, number> = {
     l: 1000,
     liter: 1000,
     liters: 1000,
-    // imperial / common
+    // système impérial ou commun
     oz: 28.35,
     ounce: 28.35,
     ounces: 28.35,
     lb: 453.59,
     pound: 453.59,
     pounds: 453.59,
-    // volume (approximate, density ≈ 1 for most liquids/pastes)
+    // volume (approximatif, densité ≈ 1 pour la plupart des liquides/pâtes)
     cup: 240,
     cups: 240,
     tbsp: 15,
@@ -48,7 +48,7 @@ const UNIT_TO_GRAMS: Record<string, number> = {
     tsp: 5,
     teaspoon: 5,
     teaspoons: 5,
-    // French
+    // termes français usuels
     tasse: 240,
     "c. à soupe": 15,
     "c. à thé": 5,
@@ -56,18 +56,18 @@ const UNIT_TO_GRAMS: Record<string, number> = {
 
 function toGrams(amount: string, unit: string): number {
     const qty = parseFloat(amount);
-    if (isNaN(qty) || qty <= 0) return 100; // default to 100g if no valid amount
+    if (isNaN(qty) || qty <= 0) return 100; // 100g par défaut si la quantité est invalide
 
     const key = unit.toLowerCase().trim();
     const multiplier = UNIT_TO_GRAMS[key];
 
     if (multiplier) return qty * multiplier;
 
-    // Unknown unit → assume it's a count (e.g. "1 egg") — use 50g as default weight
+    // Unité inconnue → suppose une quantité unitaire (ex: "1 oeuf") — 50g par défaut
     return qty * 50;
 }
 
-// ─── OAuth 2.0 token fetch ────────────────────────────────────────────────────
+// Récupération du jeton OAuth 2.0 pour FatSecret
 
 async function getFatSecretToken(): Promise<string> {
     const clientId = process.env.FATSECRET_CLIENT_ID;
@@ -97,7 +97,7 @@ async function getFatSecretToken(): Promise<string> {
     return json.access_token as string;
 }
 
-// ─── Food search ──────────────────────────────────────────────────────────────
+// Recherche d'aliments et calcul des macros
 
 interface FatSecretServingRaw {
     serving_description?: string;
@@ -120,7 +120,7 @@ async function searchFoodMacros(
     token: string,
     ingredient: IngredientInput,
 ): Promise<Macros | null> {
-    // Step 1: search for the food
+    // Étape 1 : rechercher l'aliment
     const searchUrl = new URL("https://platform.fatsecret.com/rest/server.api");
     searchUrl.searchParams.set("method", "foods.search");
     searchUrl.searchParams.set("search_expression", ingredient.name);
@@ -141,7 +141,7 @@ async function searchFoodMacros(
     const foodId: string = food?.food_id;
     if (!foodId) return null;
 
-    // Step 2: get full nutritional details (per 100g serving)
+    // Étape 2 : obtenir les détails nutritionnels complets (portion de 100g)
     const detailUrl = new URL("https://platform.fatsecret.com/rest/server.api");
     detailUrl.searchParams.set("method", "food.get.v2");
     detailUrl.searchParams.set("food_id", foodId);
@@ -157,7 +157,7 @@ async function searchFoodMacros(
     const foodDetail: FatSecretFoodRaw = detailData?.food;
     if (!foodDetail) return null;
 
-    // Pick the "100g" serving if available, else the first serving
+    // Sélectionner la portion de 100g si disponible, sinon la première portion
     const rawServings = foodDetail.servings?.serving;
     const servingsList: FatSecretServingRaw[] = rawServings
         ? Array.isArray(rawServings)
@@ -181,7 +181,7 @@ async function searchFoodMacros(
 
     const referenceGrams = parseFloat(per100.metric_serving_amount ?? "100");
 
-    // Convert to ingredient weight
+    // Convertir selon le poids de l'ingrédient demandé
     const ingredientGrams = toGrams(ingredient.amount, ingredient.unit);
     const ratio = ingredientGrams / referenceGrams;
 
@@ -193,7 +193,7 @@ async function searchFoodMacros(
     };
 }
 
-// ─── POST /api/fatsecret/macros ───────────────────────────────────────────────
+// Route de l'API : POST /api/fatsecret/macros
 
 export async function POST(req: NextRequest) {
     try {
@@ -211,12 +211,12 @@ export async function POST(req: NextRequest) {
 
         const token = await getFatSecretToken();
 
-        // Fetch macros for all ingredients in parallel
+        // Récupérer les macros de tous les ingrédients en parallèle
         const results = await Promise.all(
             validIngredients.map((ing) => searchFoodMacros(token, ing)),
         );
 
-        // Sum up; skip null results (not found)
+        // Additionner les macros ; ignorer les résultats null (non trouvés)
         const total: Macros = { calories: 0, protein: 0, carbs: 0, fat: 0 };
         let found = 0;
         for (const m of results) {
@@ -236,7 +236,7 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Per-serving values
+        // Valeurs par portion
         const perServing: Macros = {
             calories: Math.round(total.calories / servings),
             protein: Math.round((total.protein / servings) * 10) / 10,
