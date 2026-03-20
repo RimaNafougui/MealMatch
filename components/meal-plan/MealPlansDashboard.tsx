@@ -308,7 +308,7 @@ export function MealPlansDashboard({
           color="success"
           variant={activePlan ? "bordered" : "solid"}
           startContent={<Sparkles size={16} />}
-          className="font-bold text-white"
+          className="font-bold text-white bg-success"
         >
           {activePlan ? "Modifier le plan" : "Générer un plan"}
         </Button>

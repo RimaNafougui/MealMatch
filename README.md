@@ -1,7 +1,30 @@
 # MealMatch
 
-Application qui génère des plans de repas hebdomadaires adaptés au budget étudiant,
-avec recettes faciles, liste d'épicerie automatique et suivi nutritionnel.
+Application web qui génère des plans de repas hebdomadaires adaptés au budget étudiant, avec recettes faciles, liste d'épicerie automatique et suivi nutritionnel.
+
+---
+
+## Aperçu
+
+![Landing Page](./public/screenshots/LandingPage.png)
+![On Boarding](./public/screenshots/Onboarding.png)
+![Dashboard](./public/screenshots/Dashboard.png)
+![Explore](./public/screenshots/Explore.png)
+
+## Fonctionnalités
+
+- **Exploration de recettes** — recherche filtrée par ingrédients, nutriments, régime alimentaire et allergies
+- **Génération de plan de repas** — planning hebdomadaire adapté au budget et aux préférences
+- **Liste d'épicerie automatique** — générée à partir du plan de repas
+- **Suivi nutritionnel** — calories, protéines, glucides, lipides par repas
+- **Favoris** — sauvegarder et retrouver ses recettes préférées
+- **Partage de recette** — via lien URL
+- **Onboarding personnalisé** — profil utilisateur (budget, restrictions, objectifs, métriques corporelles)
+- **Abonnements** — plans Free, Premium et Pro via Stripe
+- **Thème clair / sombre** — basculement automatique ou manuel
+- **Authentification** — Google, GitHub, ou courriel + mot de passe
+
+---
 
 ## Tech Stack
 
@@ -15,58 +38,64 @@ avec recettes faciles, liste d'épicerie automatique et suivi nutritionnel.
 - Payments: Stripe
 - Caching: Redis (Optional)
 
-## Developper / contributeur
+# NextAuth
+AUTH_SECRET=
+AUTH_GOOGLE_ID=
+AUTH_GOOGLE_SECRET=
+AUTH_GITHUB_ID=
+AUTH_GITHUB_SECRET=
 
-- **Rima Nafougui** - Scrum Master 
-- **Jimmy Chhan** - Développeur 1 
-- **Charly Smith Alcide** - Développeur 2 
-- **Julien Guibord** - Développeur 3/Testeur
+# Spoonacular
+SPOONACULAR_API_KEY=
 
-## Fonctionnalités
+# OpenAI
+OPENAI_API_KEY=
 
-- Calculer et afficher le prix du/des repas suggéré(s) 
-- Configuration du profil de l’utilisateur (budget, préférences restrictions alimentaires) 
-- Possibilité de générer une seule recette ou un planning pour la semaine. 
-- Pouvoir mesurer la valeur nutritionnelle d’un repas. 
-- Pouvoir mettre une recette en favoris. 
-- Pouvoir partager une recette en lien URL 
-- Génération de menus selon le budget
-- Pouvoir générer une liste d'épicerie
-- Filtres : végétarien, sans gluten, allergies, etc.
-- Vidéo de recette rapide 
+# Stripe
+STRIPE_SECRET_KEY=
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+STRIPE_WEBHOOK_SECRET=
 
-## Tree
+# Upstash Redis
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+```
 
-# Documentation
+---
 
-## Next.js
-Next.js est utilisé pour :
+## Scripts disponibles
 
-- Gérer le routing (dashboard, recettes, favoris, profil)
+```bash
+pnpm dev          # Démarrage en développement (Turbopack)
+pnpm build        # Build de production
+pnpm start        # Démarrage en production
+pnpm lint         # Lint + auto-fix
+pnpm seed:recipes # Seed des recettes en base de données
+```
 
-- Afficher les pages rapidement et SEO-friendly
+---
 
-- Intégrer les API routes pour Stripe ou Supabase
+## Documentation technique
 
-- Supporter le fetching côté serveur et la génération dynamique de menus et recettes
+### Spoonacular API
 
-## API Spoonacular
-Spoonacular API est utilisée pour rechercher des recettes, obtenir les instructions et vidéos, calculer les valeurs nutritionnelles et générer des listes d’épicerie adaptées au budget et aux préférences de l’utilisateur.
+Utilisée pour les recettes, vidéos, valeurs nutritionnelles et listes d'épicerie.
 
-- Chercher une recette (sans instructions):
-ex: https://api.spoonacular.com/recipes/complexSearch?apiKey=XXXX&query=pasta&number=2 (donnera 2 recettes de pâtes)
+| Endpoint                             | Description                              |
+| ------------------------------------ | ---------------------------------------- |
+| `/recipes/complexSearch`             | Recherche par mots-clés, filtres, budget |
+| `/recipes/{id}/analyzedInstructions` | Instructions de préparation              |
+| `/recipes/findByNutrients`           | Recettes par nutriments (min/max)        |
+| `/recipes/findByIngredients`         | Recettes par ingrédients disponibles     |
+| `/food/videos/search`                | Vidéos YouTube associées                 |
 
-- Chercher un video youtube:
-ex: https://api.spoonacular.com/food/videos/search?apiKey=XXXX&query=pasta&number=1 (donnera 1 video de recette de pâtes)
+### Supabase
 
-- Chercher une recette spécifique avec instructions de preparation:
-ex: https://api.spoonacular.com/recipes/{id de la recette}/analyzedInstructions?apiKey=XXXX
+Stockage des données utilisateurs : profil, favoris, plans de repas, préférences et métriques. Les migrations sont dans `supabase/migrations/`.
 
-- Chercher une recette avec des spécification sur les nutriments:
-ex: https://api.spoonacular.com/recipes/findByNutrients?minCarbs=10&maxCarbs=50&number=3&apiKey=XXXX (donnera 3 recettes avec minimum 10g carbs et maximum 50g carbs)
+### NextAuth v5
 
-- Chercher une recette avec des spécification sur les ingrédients:
-ex: https://api.spoonacular.com/recipes/findByIngredients?ingredients=apples,+flour,+sugar&number=2&apiKey=XXXX (donnera 2 recettes incluant les ingrédients pomme, farine sucre)
+Authentification JWT avec trois providers : Google, GitHub et Credentials (email/mot de passe). La session est accessible côté serveur via `auth()` et côté client via `useSession()`.
 
 ## API FatSecret
 FatSecret API est utilisée pour l'autocomplétion des ingrédients et le calcul des macronutriments (calories, protéines, glucides, lipides) lors de la création de recettes. Elle utilise OAuth 2.0 Client Credentials (scope `premier`) côté serveur.
@@ -86,22 +115,23 @@ FatSecret API est utilisée pour l'autocomplétion des ingrédients et le calcul
 ## TanStack Query
 TanStack Query est utilisé pour gérer les appels à l’API Spoonacular et à Supabase, en assurant un cache intelligent des recettes, une interface réactive et une synchronisation automatique après les actions de l’utilisateur (favoris, menus, etc.).
 
-## NextAuth
-NextAuth est utilisé pour permettre aux utilisateurs de se connecter via Google, Apple ou GitHub et pour sécuriser l’accès aux fonctionnalités personnalisées comme les favoris, les menus et les paiements.
+Gère le cache des appels Spoonacular et Supabase. Assure la synchronisation après chaque action utilisateur (favoris, menus, profil).
 
-## SupaBase
-Supabase est utilisé comme backend pour stocker les données utilisateurs (favoris, menus, préférences) et sécuriser l’accès aux données via des règles de permissions.
+### Stripe
 
-## Tailwind
-Tailwind CSS est utilisé pour styliser l’interface utilisateur de manière rapide, cohérente et responsive, sans avoir recours à de gros fichiers CSS personnalisés.
+Trois plans d'abonnement (Free, Premium, Pro). Les webhooks Stripe mettent à jour le plan utilisateur dans Supabase en temps réel.
 
-## Stripe
-Stripe permet aux utilisateurs de souscrire à des abonnements premium pour accéder à des menus spéciaux ou des fonctionnalités exclusives, tout en sécurisant les transactions.
+### Upstash Redis
 
-## Redis (optionnel)
-Redis permetterai de mettre en cache les recettes et menus pour que les utilisateurs obtiennent leurs résultats plus rapidement et que l’application reste fluide même avec beaucoup de requêtes.
+Cache des réponses Spoonacular pour réduire la consommation d'API et améliorer les temps de réponse.
 
-## Sources
+---
+
+## Design System
+
+Consulter [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) avant de contribuer. Ce document définit les règles de couleurs, typographie, composants, icônes et animations à respecter dans tout le projet.
+
+---
 
 - https://spoonacular.com/food-api
 - https://nextjs.org/docs
