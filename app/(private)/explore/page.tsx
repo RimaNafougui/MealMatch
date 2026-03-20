@@ -270,13 +270,9 @@ export default function ExplorePage() {
   };
 
   const goToPage = () => {
-  const page = Number(pageInput);
+    const page = Number(pageInput);
 
-    if (
-      Number.isNaN(page) ||
-      page < 1 ||
-      page > pagination.totalPages
-    ) {
+    if (Number.isNaN(page) || page < 1 || page > pagination.totalPages) {
       return;
     }
 
@@ -309,7 +305,7 @@ export default function ExplorePage() {
   return (
     <div className="max-w-7xl mx-auto flex flex-col gap-6">
       {/* ── Header ── */}
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col pt-10 gap-1">
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <Leaf className="text-success" size={28} />
           Explorer les Recettes
@@ -767,23 +763,23 @@ export default function ExplorePage() {
             Suivant
           </Button>
 
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-default-500"></span>
-        <input
-          type="number"
-          min={1}
-          max={pagination.totalPages}
-          value={pageInput}
-          onChange={(e) => setPageInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && goToPage()}
-          className="w-16 px-2 py-1 text-sm border rounded-md bg-background"
-        />
-        <Button size="sm" variant="flat" onPress={goToPage}>
-          Go
-        </Button>
-      </div>
-    </div>
-  )}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-default-500"></span>
+            <input
+              type="number"
+              min={1}
+              max={pagination.totalPages}
+              value={pageInput}
+              onChange={(e) => setPageInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && goToPage()}
+              className="w-16 px-2 py-1 text-sm border rounded-md bg-background"
+            />
+            <Button size="sm" variant="flat" onPress={goToPage}>
+              Go
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
