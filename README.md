@@ -10,6 +10,7 @@ avec recettes faciles, liste d'épicerie automatique et suivi nutritionnel.
 - Database: Supabase
 - Authentification: OAuth , NextAuth (Google , Apple)
 - API Recipe: Spoonacular API.
+- API Nutrition: FatSecret API.
 - State Management: TanStack Query
 - Payments: Stripe
 - Caching: Redis (Optional)
@@ -67,6 +68,21 @@ ex: https://api.spoonacular.com/recipes/findByNutrients?minCarbs=10&maxCarbs=50&
 - Chercher une recette avec des spécification sur les ingrédients:
 ex: https://api.spoonacular.com/recipes/findByIngredients?ingredients=apples,+flour,+sugar&number=2&apiKey=XXXX (donnera 2 recettes incluant les ingrédients pomme, farine sucre)
 
+## API FatSecret
+FatSecret API est utilisée pour l'autocomplétion des ingrédients et le calcul des macronutriments (calories, protéines, glucides, lipides) lors de la création de recettes. Elle utilise OAuth 2.0 Client Credentials (scope `premier`) côté serveur.
+
+- Obtenir un token OAuth 2.0 :
+  - `POST https://oauth.fatsecret.com/connect/token` avec `grant_type=client_credentials&scope=premier`
+
+- Autocomplétion des aliments :
+  - `GET https://platform.fatsecret.com/rest/server.api?method=foods.autocomplete&expression=apple&max_results=6&format=json`
+
+- Rechercher un aliment :
+  - `GET https://platform.fatsecret.com/rest/server.api?method=foods.search&search_expression=apple&max_results=1&format=json`
+
+- Obtenir les détails nutritionnels d'un aliment (par `food_id`) :
+  - `GET https://platform.fatsecret.com/rest/server.api?method=food.get.v2&food_id=XXXX&format=json`
+
 ## TanStack Query
 TanStack Query est utilisé pour gérer les appels à l’API Spoonacular et à Supabase, en assurant un cache intelligent des recettes, une interface réactive et une synchronisation automatique après les actions de l’utilisateur (favoris, menus, etc.).
 
@@ -94,4 +110,4 @@ Redis permetterai de mettre en cache les recettes et menus pour que les utilisat
 - https://next-auth.js.org/
 - https://tanstack.com/query/latest
 - https://docs.stripe.com/
-
+- https://platform.fatsecret.com
