@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Modal,
   ModalContent,
@@ -176,6 +176,50 @@ export function AddRecipeModal({
   const [saving, setSaving] = useState(false);
   const [estimating, setEstimating] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // ─── Ingredient autocomplete state ──────────────────────────────────────
+
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [activeIdx, setActiveIdx] = useState<number | null>(null); // which ingredient input is focused
+  const [suggestionOpen, setSuggestionOpen] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setSuggestionOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const fetchSuggestions = useCallback(async (query: string) => {
+    if (query.length < 2) { setSuggestions([]); setSuggestionOpen(false); return; }
+    try {
+      const res = await fetch(`/api/fatsecret/autocomplete?q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      setSuggestions(Array.isArray(data.suggestions) ? data.suggestions : []);
+      setSuggestionOpen(true);
+    } catch {
+      setSuggestions([]);
+    }
+  }, []);
+
+  const handleIngredientNameChange = (idx: number, value: string) => {
+    updateIngredient(idx, "name", value);
+    setActiveIdx(idx);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchSuggestions(value), 300);
+  };
+
+  const handleSuggestionSelect = (idx: number, name: string) => {
+    updateIngredient(idx, "name", name);
+    setSuggestions([]);
+    setSuggestionOpen(false);
+  };
 
   // ─── Macro estimation via FatSecret ─────────────────────────────────────
 
@@ -524,17 +568,40 @@ export function AddRecipeModal({
                     <p className="text-danger text-xs">{errors.ingredients}</p>
                   )}
 
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-2" ref={wrapperRef}>
                     {form.ingredients.map((ing, idx) => (
                       <div key={idx} className="flex gap-2 items-start">
-                        <Input
-                          placeholder="Nom de l'ingrédient"
-                          value={ing.name}
-                          onValueChange={(v) => updateIngredient(idx, "name", v)}
-                          variant="bordered"
-                          size="sm"
-                          className="flex-[2]"
-                        />
+                        {/* Ingredient name with autocomplete */}
+                        <div className="flex-[2] relative">
+                          <Input
+                            placeholder="Nom de l'ingrédient"
+                            value={ing.name}
+                            onValueChange={(v) => handleIngredientNameChange(idx, v)}
+                            onFocus={() => {
+                              setActiveIdx(idx);
+                              if (ing.name.length >= 2) fetchSuggestions(ing.name);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Escape") setSuggestionOpen(false);
+                            }}
+                            variant="bordered"
+                            size="sm"
+                          />
+                          {/* Suggestions dropdown */}
+                          {suggestionOpen && activeIdx === idx && suggestions.length > 0 && (
+                            <ul className="absolute z-50 top-full left-0 right-0 mt-1 bg-content1 border border-divider rounded-lg shadow-lg overflow-hidden max-h-44 overflow-y-auto">
+                              {suggestions.map((s) => (
+                                <li
+                                  key={s}
+                                  className="px-3 py-2 text-sm cursor-pointer hover:bg-default-100 transition-colors capitalize"
+                                  onMouseDown={(e) => { e.preventDefault(); handleSuggestionSelect(idx, s); }}
+                                >
+                                  {s}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
                         <Input
                           placeholder="Quantité"
                           value={ing.amount}

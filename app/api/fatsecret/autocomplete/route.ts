@@ -1,10 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
 
-/**
- * Route API pour l'autocomplétion des ingrédients.
- * Utilise l'API Spoonacular en remplacement de FatSecret qui nécessite une licence payante.
- */
+// ─── Helper : OAuth 2.0 token FatSecret ──────────────────────────────────────
 
+async function getFatSecretToken(): Promise<string> {
+  const clientId = process.env.FATSECRET_CLIENT_ID;
+  const clientSecret = process.env.FATSECRET_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    throw new Error(
+      "FATSECRET_CLIENT_ID ou FATSECRET_CLIENT_SECRET manquant dans .env.local",
+    );
+  }
+
+  const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString(
+    "base64",
+  );
+
+  const res = await fetch("https://oauth.fatsecret.com/connect/token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Authorization: `Basic ${credentials}`,
+    },
+    body: "grant_type=client_credentials&scope=premier",
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`FatSecret OAuth échoué (${res.status}): ${text}`);
+  }
+
+  const json = await res.json();
+  return json.access_token as string;
+}
+
+// ─── Route : GET /api/fatsecret/autocomplete?q=<query> ───────────────────────
+
+/**
+ * Autocomplétion des ingrédients via FatSecret `foods.autocomplete`.
+ * Utilise OAuth 2.0 Client Credentials (côté serveur uniquement).
+ * Les limites FatSecret sont illimitées, contrairement à Spoonacular.
+ */
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q")?.trim();
 
@@ -13,36 +50,42 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const apiKey = process.env.NEXT_PUBLIC_SPOONACULAR_API_KEY;
+    const token = await getFatSecretToken();
 
-    if (!apiKey) {
-      throw new Error("Clé Spoonacular manquante");
-    }
-
-    const url = new URL("https://api.spoonacular.com/food/ingredients/autocomplete");
-    url.searchParams.set("query", q);
-    url.searchParams.set("number", "6");
-    url.searchParams.set("metaInformation", "false");
-    url.searchParams.set("apiKey", apiKey);
+    const url = new URL("https://platform.fatsecret.com/rest/server.api");
+    url.searchParams.set("method", "foods.autocomplete");
+    url.searchParams.set("expression", q);
+    url.searchParams.set("max_results", "6");
+    url.searchParams.set("format", "json");
 
     const res = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
 
     if (!res.ok) {
-      console.error("Spoonacular API error:", await res.text());
+      console.error("FatSecret autocomplete error:", await res.text());
       return NextResponse.json({ suggestions: [] });
     }
 
     const data = await res.json();
 
-    // Format retourné par Spoonacular : [{ name: "apple", image: "apple.jpg" }, ...]
-    const suggestions = Array.isArray(data) ? data.map((item: any) => item.name) : [];
+    // Réponse FatSecret : { suggestions: { suggestion: string | string[] } }
+    const raw = data?.suggestions?.suggestion;
+    let suggestions: string[] = [];
+
+    if (Array.isArray(raw)) {
+      suggestions = raw;
+    } else if (typeof raw === "string") {
+      suggestions = [raw];
+    }
 
     return NextResponse.json({ suggestions });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Erreur interne";
-    return NextResponse.json({ error: message, suggestions: [] }, { status: 500 });
+    return NextResponse.json(
+      { error: message, suggestions: [] },
+      { status: 500 },
+    );
   }
 }
-

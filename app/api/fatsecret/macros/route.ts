@@ -85,7 +85,7 @@ async function getFatSecretToken(): Promise<string> {
             "Content-Type": "application/x-www-form-urlencoded",
             Authorization: `Basic ${credentials}`,
         },
-        body: "grant_type=client_credentials&scope=basic",
+        body: "grant_type=client_credentials&scope=premier",
     });
 
     if (!res.ok) {
