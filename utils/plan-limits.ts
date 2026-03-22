@@ -2,7 +2,7 @@ export type Plan = "free" | "student" | "premium";
 
 export const PLAN_LIMITS = {
   free: {
-    mealPlansPerMonth: 5,
+    mealPlansPerMonth: 2,
     maxRecipes: 50,
     maxFavorites: 10,
     advancedAI: false,

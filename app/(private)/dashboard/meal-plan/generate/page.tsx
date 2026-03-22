@@ -16,6 +16,7 @@ import { Button } from "@heroui/button";
 import { toast } from "sonner";
 import { GenerateConfig } from "@/components/meal-plan/GenerateConfig";
 import { MealPlanGrid } from "@/components/meal-plan/MealPlanGrid";
+import { MealPlanPaywallModal } from "@/components/meal-plan/MealPlanPaywallModal";
 import { useUserPlan } from "@/hooks/useUserPlan";
 import {
   MealPlanConfig,
@@ -118,6 +119,9 @@ export default function GenerateMealPlanPage() {
   const [checkingPlan, setCheckingPlan] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [planReady, setPlanReady] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [monthlyCount, setMonthlyCount] = useState<number | null>(null);
+  const [monthlyLimit, setMonthlyLimit] = useState<number | null>(null);
 
   // Load saved config preferences
   useEffect(() => {
@@ -135,6 +139,22 @@ export default function GenerateMealPlanPage() {
     };
     if (session?.user) loadConfig();
   }, [session]);
+
+  // Fetch monthly usage for free users
+  useEffect(() => {
+    if (planLoading || userPlan !== "free") return;
+    const fetchUsage = async () => {
+      try {
+        const res = await fetch("/api/meal-plan/usage");
+        if (res.ok) {
+          const data = await res.json();
+          setMonthlyCount(data.count ?? 0);
+          setMonthlyLimit(data.limit ?? 2);
+        }
+      } catch {}
+    };
+    fetchUsage();
+  }, [userPlan, planLoading]);
 
   // Auto-save config when changed
   const handleConfigChange = async (newConfig: MealPlanConfig) => {
@@ -199,7 +219,7 @@ export default function GenerateMealPlanPage() {
 
       if (!res.ok) {
         if (data.error === "monthly_limit_reached") {
-          toast.error(data.message || "Limite mensuelle atteinte.");
+          setShowPaywall(true);
           return;
         }
         throw new Error(data.error || "Failed to generate");
@@ -210,6 +230,7 @@ export default function GenerateMealPlanPage() {
       setSavedPlanId(data.plan.id);
       setHasExistingPlan(true);
       setExistingPlanDate(format(new Date(), "MMMM d 'at' h:mm a"));
+      setMonthlyCount((c) => (c !== null ? c + 1 : null));
       toast.success("Meal plan generated! Review and edit below.");
 
       // Slight delay for fade-in animation
@@ -257,8 +278,18 @@ export default function GenerateMealPlanPage() {
     "MMM d, yyyy",
   );
 
+  const showUsageBar =
+    userPlan === "free" && !planLoading && monthlyCount !== null && monthlyLimit !== null;
+
   return (
     <div className="max-w-7xl mx-auto py-8 px-4 md:px-6">
+      {/* Paywall modal */}
+      <MealPlanPaywallModal
+        isOpen={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        limit={monthlyLimit ?? 2}
+      />
+
       {/* Page header */}
       <div className="flex flex-col gap-2 mb-8">
         <div className="flex items-center gap-3">
@@ -288,6 +319,24 @@ export default function GenerateMealPlanPage() {
           restrictions, budget, and favourite recipes. You can edit any meal
           before saving.
         </p>
+
+        {/* Usage counter for free users */}
+        {showUsageBar && (
+          <div className="mt-2 max-w-xs">
+            <div className="flex items-center justify-between text-xs text-foreground/50 mb-1">
+              <span>{monthlyCount}/{monthlyLimit} meal plans used this month</span>
+              {monthlyCount! >= monthlyLimit! && (
+                <span className="text-danger font-medium">Limite atteinte</span>
+              )}
+            </div>
+            <Progress
+              size="sm"
+              value={(monthlyCount! / monthlyLimit!) * 100}
+              color={monthlyCount! >= monthlyLimit! ? "danger" : monthlyCount! >= monthlyLimit! - 1 ? "warning" : "primary"}
+              className="max-w-xs"
+            />
+          </div>
+        )}
 
         {/* Indeterminate progress bar during generation */}
         {isGenerating && (
