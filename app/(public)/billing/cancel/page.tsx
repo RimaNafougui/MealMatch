@@ -9,9 +9,9 @@ export default function BillingCancelPage() {
 
     return (
         <div className="max-w-2xl mx-auto p-6 text-center flex flex-col gap-6">
-            <h1 className="text-4xl font-bold text-danger">Paiement échoué ❌</h1>
+            <h1 className="text-4xl font-bold text-warning">Paiement annulé</h1>
             <p className="text-default-500 text-lg">
-                Il y a eu un problème avec ton paiement. Vérifie tes informations ou réessaie.
+                Tu as annulé le paiement. Ton plan actuel reste inchangé.
             </p>
             <Button onPress={() => router.push("/pricing")} className="mx-auto">
                 Retour à la tarification

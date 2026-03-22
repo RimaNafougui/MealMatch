@@ -366,7 +366,7 @@ export default function GenerateMealPlanPage() {
           <div className="flex-1 min-w-0 flex items-center justify-center py-24">
             <div className="flex flex-col items-center gap-3">
               <Spinner size="lg" color="success" />
-              <p className="text-foreground/40 text-sm">Loading your plan...</p>
+              <p className="text-foreground/40 text-sm">Chargement de votre plan...</p>
             </div>
           </div>
         </div>
@@ -401,10 +401,10 @@ export default function GenerateMealPlanPage() {
                 <Spinner size="lg" color="success" />
                 <div className="text-center">
                   <p className="font-semibold text-foreground/80">
-                    Generating your meal plan...
+                    Génération de votre plan en cours...
                   </p>
                   <p className="text-xs text-foreground/40 mt-1">
-                    Our AI is crafting {config.days_count * config.meals_per_day} personalized meals for you
+                    Notre IA prépare {config.days_count * config.meals_per_day} repas personnalisés pour vous
                   </p>
                 </div>
               </div>
@@ -419,7 +419,7 @@ export default function GenerateMealPlanPage() {
                   </div>
                   <div className="flex-1">
                     <p className="font-semibold text-sm text-danger">
-                      Generation failed
+                      Échec de la génération
                     </p>
                     <p className="text-xs text-foreground/50 mt-0.5">{error}</p>
                   </div>
@@ -430,7 +430,7 @@ export default function GenerateMealPlanPage() {
                     startContent={<RefreshCw size={14} />}
                     onPress={handleGenerate}
                   >
-                    Retry
+                    Réessayer
                   </Button>
                 </CardBody>
               </Card>
@@ -452,9 +452,9 @@ export default function GenerateMealPlanPage() {
                 }`}
               >
                 <h2 className="text-sm font-bold uppercase tracking-widest text-foreground/50 mb-4">
-                  Your Meal Plan
+                  Votre plan de repas
                   <span className="ml-2 text-foreground/30 font-normal normal-case tracking-normal">
-                    — hover any meal to edit
+                    — survolez un repas pour le modifier
                   </span>
                 </h2>
                 <MealPlanGrid
@@ -481,11 +481,11 @@ export default function GenerateMealPlanPage() {
                     className="text-foreground/20 mx-auto mb-3"
                   />
                   <p className="text-foreground/40 text-sm max-w-xs">
-                    Configure your preferences and click{" "}
+                    Configurez vos préférences et cliquez sur{" "}
                     <span className="font-semibold text-foreground/60">
-                      Generate Meal Plan
+                      Générer un plan
                     </span>{" "}
-                    to get started.
+                    pour commencer.
                   </p>
                 </div>
               </div>

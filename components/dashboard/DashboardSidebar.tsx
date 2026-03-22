@@ -14,8 +14,6 @@ import {
 } from "lucide-react";
 import NextLink from "next/link";
 import { usePathname } from "next/navigation";
-
-import { Logo } from "@/components/logo";
 import { useUserPlan } from "@/hooks/useUserPlan";
 
 export const navLinks = [
@@ -63,9 +61,7 @@ export default function DashboardSidebar({
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-divider">
-        <NextLink href="/dashboard" className="flex items-center gap-2">
-          <Logo />
-        </NextLink>
+        Menu
         <button
           onClick={onToggleDesktop}
           className="p-1.5 rounded-lg hover:bg-default-100 transition-colors text-default-400"

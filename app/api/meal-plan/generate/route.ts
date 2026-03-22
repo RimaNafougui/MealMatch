@@ -89,12 +89,12 @@ export async function POST(req: Request) {
 
     if (userPlan === "free") {
       // Monthly limit: max 5 per month for free users
-      const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
+      const monthStart = startOfMonth(new Date()).toISOString();
       const { count: monthlyCount } = await supabase
         .from("meal_plan_usage")
         .select("id", { count: "exact", head: true })
         .eq("user_id", userId)
-        .gte("generated_at", monthStart + "T00:00:00Z");
+        .gte("generated_at", monthStart);
 
       if ((monthlyCount ?? 0) >= limits.mealPlansPerMonth) {
         return NextResponse.json(

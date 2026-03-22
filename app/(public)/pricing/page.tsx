@@ -8,6 +8,7 @@ import { Button } from "@heroui/button";
 import { Chip } from "@heroui/chip";
 import { Divider } from "@heroui/divider";
 import { CheckCircle2, Zap, Star, Users } from "lucide-react";
+import { toast } from "sonner";
 
 const plansData = [
   {
@@ -152,7 +153,7 @@ export default function PricingPage() {
 
     } catch (err: any) {
       console.error(err);
-      alert(err.message || "Erreur lors du checkout");
+      toast.error(err.message || "Erreur lors du checkout");
       setLoadingPlan(null);
     }
   }

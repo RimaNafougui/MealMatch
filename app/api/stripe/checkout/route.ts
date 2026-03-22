@@ -3,15 +3,19 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getSupabaseServer } from "@/utils/supabase-server";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
-const PRICE_IDS: Record<string, string> = {
-    student: process.env.NEXT_PUBLIC_STRIPE_PRICE_STUDENT!,
-    premium: process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM!,
-};
-
 export async function POST(req: NextRequest) {
     try {
+        if (!process.env.STRIPE_SECRET_KEY) {
+            return NextResponse.json({ error: "Stripe non configuré" }, { status: 503 });
+        }
+
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+        const PRICE_IDS: Record<string, string | undefined> = {
+            student: process.env.NEXT_PUBLIC_STRIPE_PRICE_STUDENT,
+            premium: process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM,
+        };
+
         const { plan, userId } = await req.json();
 
         if (!userId) {
@@ -56,7 +60,7 @@ export async function POST(req: NextRequest) {
             mode: "subscription",
             payment_method_types: ["card"],
             customer: customerId,
-            line_items: [{ price: PRICE_IDS[plan], quantity: 1 }],
+            line_items: [{ price: PRICE_IDS[plan] as string, quantity: 1 }],
             success_url: `${req.headers.get("origin")}/billing/success`,
             cancel_url: `${req.headers.get("origin")}/billing/cancel`,
         });

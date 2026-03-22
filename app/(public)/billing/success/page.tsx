@@ -2,14 +2,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
 import { Button } from "@heroui/button";
 import { useRouter } from "next/navigation";
-
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 export default function BillingSuccessPage() {
     const [plan, setPlan] = useState<string | null>(null);
@@ -17,18 +11,14 @@ export default function BillingSuccessPage() {
 
     useEffect(() => {
         async function loadPlan() {
-            const { data } = await supabase.auth.getUser();
-            const userId = data.user?.id ?? null;
-
-            if (!userId) return;
-
-            const { data: profile } = await supabase
-                .from("profiles")
-                .select("plan")
-                .eq("id", userId)
-                .single();
-
-            if (profile?.plan) setPlan(profile.plan);
+            try {
+                const res = await fetch("/api/user/plan");
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data.plan) setPlan(data.plan);
+            } catch {
+                // non-blocking — fallback message shown
+            }
         }
 
         loadPlan();
