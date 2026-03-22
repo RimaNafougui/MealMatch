@@ -10,7 +10,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { User, Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { debounce } from "lodash";
+import { debounce } from "@/lib/debounce";
 
 import {
   SignInButtonGithub,

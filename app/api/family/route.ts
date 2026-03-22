@@ -33,7 +33,7 @@ export async function GET() {
     const supabase = getSupabaseServer();
     const { data, error } = await supabase
       .from("family_members")
-      .select("*")
+      .select("id, name, dietary_restrictions, allergies, created_at")
       .eq("owner_id", session.user.id)
       .order("created_at", { ascending: true });
 

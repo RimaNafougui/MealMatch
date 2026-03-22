@@ -27,7 +27,7 @@ export async function POST(
 
     const { data: list, error: fetchError } = await supabase
       .from("shopping_lists")
-      .select("*")
+      .select("id, items")
       .eq("id", listId)
       .eq("user_id", session.user.id)
       .single();
@@ -84,7 +84,7 @@ export async function DELETE(
 
     const { data: list, error: fetchError } = await supabase
       .from("shopping_lists")
-      .select("*")
+      .select("id, items")
       .eq("id", listId)
       .eq("user_id", session.user.id)
       .single();
@@ -139,7 +139,7 @@ export async function PATCH(
     // Fetch current list
     const { data: list, error: fetchError } = await supabase
       .from("shopping_lists")
-      .select("*")
+      .select("id, items")
       .eq("id", listId)
       .eq("user_id", session.user.id)
       .single();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardBody } from "@heroui/card";
 import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
@@ -340,11 +340,19 @@ export default function RecettesPage() {
 
   // ─── Filtered lists ───────────────────────────────────────────────────────
 
-  const filteredSaved = savedRecipes.filter((r) =>
-    r.title.toLowerCase().includes(search.toLowerCase()),
+  const filteredSaved = useMemo(
+    () =>
+      savedRecipes.filter((r) =>
+        r.title.toLowerCase().includes(search.toLowerCase()),
+      ),
+    [savedRecipes, search],
   );
-  const filteredUser = userRecipes.filter((r) =>
-    r.title.toLowerCase().includes(search.toLowerCase()),
+  const filteredUser = useMemo(
+    () =>
+      userRecipes.filter((r) =>
+        r.title.toLowerCase().includes(search.toLowerCase()),
+      ),
+    [userRecipes, search],
   );
 
   // ─── Render ───────────────────────────────────────────────────────────────

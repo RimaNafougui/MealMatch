@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Input,
   Select,
@@ -199,8 +199,10 @@ export default function ExplorePage() {
   // Meal type tab
   const [mealType, setMealType] = useState<string>("all");
 
-  // Filters
+  // Filters — searchInput is the raw input value; searchQuery is debounced (triggers API)
+  const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
   const [selectedIntolerances, setSelectedIntolerances] = useState<string[]>(
     [],
@@ -281,7 +283,21 @@ export default function ExplorePage() {
 
   const resetPage = () => setPagination((p) => ({ ...p, page: 1 }));
 
+  // Debounce search: wait 300ms after last keystroke before firing the API call
+  useEffect(() => {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    const delay = searchInput ? 300 : 0;
+    searchTimer.current = setTimeout(() => {
+      setSearchQuery(searchInput);
+      setPagination((p) => ({ ...p, page: 1 }));
+    }, delay);
+    return () => {
+      if (searchTimer.current) clearTimeout(searchTimer.current);
+    };
+  }, [searchInput]);
+
   const clearFilters = () => {
+    setSearchInput("");
     setSearchQuery("");
     setSelectedDietary([]);
     setSelectedIntolerances([]);
@@ -317,7 +333,7 @@ export default function ExplorePage() {
   };
 
   const hasActiveFilters =
-    searchQuery ||
+    searchInput ||
     selectedDietary.length > 0 ||
     selectedIntolerances.length > 0 ||
     maxPrepTime ||
@@ -327,7 +343,7 @@ export default function ExplorePage() {
     maxServings;
 
   const activeFilterCount = [
-    searchQuery ? 1 : 0,
+    searchInput ? 1 : 0,
     selectedDietary.length,
     selectedIntolerances.length,
     maxPrepTime ? 1 : 0,
@@ -389,11 +405,8 @@ export default function ExplorePage() {
         <div className="flex gap-2 items-center">
           <Input
             placeholder="Rechercher une recette..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              resetPage();
-            }}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             startContent={
               <Search size={16} className="text-default-400 shrink-0" />
             }

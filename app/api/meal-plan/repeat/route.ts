@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     // --- Load the source plan (must belong to user) ---
     const { data: sourcePlan, error: fetchError } = await supabase
       .from("meal_plans")
-      .select("*")
+      .select("meals, total_calories, total_cost, days_count, meals_per_day, meal_labels")
       .eq("id", plan_id)
       .eq("user_id", userId)
       .single();
