@@ -2,11 +2,19 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getSupabaseServer } from "@/utils/supabase-server";
 import OpenAI from "openai";
+import { z } from "zod";
 import { GeneratedMealPlan, MealPlanConfig } from "@/types/meal-plan";
 import { startOfWeek, startOfMonth, format, addDays } from "date-fns";
 import { mealPlanRateLimit } from "@/utils/rate-limit";
 import { cacheDel, cacheDelPattern, CacheKey } from "@/utils/redis";
 import { getLimits } from "@/utils/plan-limits";
+
+const generateSchema = z.object({
+  days_count: z.number().int().min(1).max(28).default(5),
+  meals_per_day: z.number().int().min(1).max(6).default(3),
+  meal_labels: z.array(z.string()).optional(),
+  week_start: z.string().optional(),
+});
 
 export const maxDuration = 60; // Vercel: allow up to 60s for AI generation
 
@@ -55,10 +63,15 @@ export async function POST(req: Request) {
       );
     }
     const supabase = getSupabaseServer();
-    const body = await req.json();
+    const rawBody = await req.json();
+    const parsed = generateSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Configuration invalide", details: parsed.error.flatten() }, { status: 400 });
+    }
+    const { days_count, meals_per_day, meal_labels, week_start } = parsed.data;
     const config: MealPlanConfig = {
-      days_count: body.days_count ?? 5,
-      meals_per_day: body.meals_per_day ?? 3,
+      days_count: days_count as MealPlanConfig["days_count"],
+      meals_per_day: meals_per_day as MealPlanConfig["meals_per_day"],
     };
 
     // --- Fetch user profile (includes plan) ---
@@ -329,8 +342,8 @@ Notes sur les champs :
 - Pour source "ai" : recipe_catalog_id = null, user_recipe_id = null, instructions = ["Étape 1 : ...", "Étape 2 : ...", ...], image_url = URL unsplash
 - spoonacular_id doit être renseigné si la recette vient du catalogue et a un spoonacular_id`;
 
-    // --- Call OpenAI ---
-    const completion = await openai.chat.completions.create({
+    // --- Call OpenAI (streaming) ---
+    const stream = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         { role: "system", content: systemPrompt },
@@ -338,9 +351,14 @@ Notes sur les champs :
       ],
       temperature: 0.7,
       max_tokens: 6000,
+      stream: true,
     });
 
-    const rawContent = completion.choices[0]?.message?.content || "";
+    let rawContent = "";
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta?.content;
+      if (delta) rawContent += delta;
+    }
 
     let mealPlan: GeneratedMealPlan;
     try {

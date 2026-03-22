@@ -32,7 +32,10 @@ import {
   ExternalLink,
   AlertCircle,
   CheckCircle2,
+  Mail,
 } from "lucide-react";
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/modal";
+import { useDisclosure } from "@heroui/use-disclosure";
 import { logout } from "@/lib/actions/auth";
 import { toast } from "sonner";
 import {
@@ -374,6 +377,18 @@ export default function SettingsPage() {
   const [hasStripeCustomer, setHasStripeCustomer] = useState(false);
   const [loadingPortal, setLoadingPortal] = useState(false);
 
+  // ── Email change state ────────────────────────────────────────────────────────
+  const [newEmail, setNewEmail] = useState("");
+  const [savingEmail, setSavingEmail] = useState(false);
+
+  // ── Avatar upload state ───────────────────────────────────────────────────────
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  // ── Account deletion state ────────────────────────────────────────────────────
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const { isOpen: isDeleteModalOpen, onOpen: onDeleteModalOpen, onClose: onDeleteModalClose } = useDisclosure();
+
   // ── Weight log state ─────────────────────────────────────────────────────────
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
@@ -570,6 +585,59 @@ export default function SettingsPage() {
       toast.error("Erreur lors de la mise à jour du profil");
     } finally {
       setSavingProfile(false);
+    }
+  }
+
+  async function uploadAvatar(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarPreview(URL.createObjectURL(file));
+    setUploadingAvatar(true);
+    try {
+      const form = new FormData();
+      form.append("avatar", file);
+      const res = await fetch("/api/user/avatar", { method: "POST", body: form });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error); setAvatarPreview(null); return; }
+      toast.success("Photo de profil mise à jour !");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
+
+  async function saveEmail() {
+    if (!newEmail) return;
+    setSavingEmail(true);
+    try {
+      const res = await fetch("/api/user/email", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: newEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error);
+        return;
+      }
+      toast.success("Email mis à jour ! Vérifie ta boîte mail pour confirmer.");
+      setNewEmail("");
+    } finally {
+      setSavingEmail(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    setDeletingAccount(true);
+    try {
+      const res = await fetch("/api/user/account", { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Erreur lors de la suppression du compte");
+        return;
+      }
+      await logout();
+    } finally {
+      setDeletingAccount(false);
     }
   }
 
@@ -823,13 +891,25 @@ export default function SettingsPage() {
                   </CardHeader>
                   <CardBody className="p-0 flex flex-col gap-6">
                     <div className="flex items-center gap-4">
-                      <Avatar
-                        isBordered
-                        color="success"
-                        name={initials}
-                        src={session?.user?.image || undefined}
-                        className="w-16 m-1 h-16 text-xl font-bold"
-                      />
+                      <label className="relative cursor-pointer group">
+                        <Avatar
+                          isBordered
+                          color="success"
+                          name={initials}
+                          src={avatarPreview || session?.user?.image || undefined}
+                          className="w-16 m-1 h-16 text-xl font-bold"
+                        />
+                        <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity text-white text-[10px] font-semibold">
+                          {uploadingAvatar ? "…" : "Modifier"}
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          className="sr-only"
+                          onChange={uploadAvatar}
+                          disabled={uploadingAvatar}
+                        />
+                      </label>
                       <div>
                         <p className="font-semibold">
                           {session?.user?.name || "Utilisateur"}
@@ -837,6 +917,7 @@ export default function SettingsPage() {
                         <p className="text-default-400 text-xs">
                           {session?.user?.email}
                         </p>
+                        <p className="text-default-300 text-[10px] mt-0.5">Clique sur la photo pour changer</p>
                       </div>
                     </div>
                     <Divider className="bg-divider/50" />
@@ -850,15 +931,6 @@ export default function SettingsPage() {
                         }
                         variant="flat"
                       />
-                      <Input
-                        label="Adresse email"
-                        placeholder="ton@email.com"
-                        type="email"
-                        value={profileForm.email}
-                        variant="flat"
-                        isReadOnly
-                        description="L'adresse email ne peut pas être modifiée ici."
-                      />
                     </div>
                     <Button
                       color="success"
@@ -868,6 +940,36 @@ export default function SettingsPage() {
                       isLoading={savingProfile}
                     >
                       Sauvegarder le profil
+                    </Button>
+                  </CardBody>
+                </Card>
+
+                <Card className="p-4 sm:p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
+                  <CardHeader className="pb-2 p-0 mb-6">
+                    <h2 className="font-bold text-xl flex items-center gap-2">
+                      <Mail className="w-5 h-5 text-default-400" />
+                      Changer l&apos;adresse email
+                    </h2>
+                  </CardHeader>
+                  <CardBody className="p-0 flex flex-col gap-4">
+                    <Input
+                      label="Nouvelle adresse email"
+                      placeholder="nouvelle@email.com"
+                      type="email"
+                      value={newEmail}
+                      onValueChange={setNewEmail}
+                      variant="flat"
+                    />
+                    <Button
+                      color="success"
+                      variant="flat"
+                      className="font-semibold w-fit"
+                      startContent={<Mail className="w-4 h-4" />}
+                      onPress={saveEmail}
+                      isLoading={savingEmail}
+                      isDisabled={!newEmail}
+                    >
+                      Mettre à jour l&apos;email
                     </Button>
                   </CardBody>
                 </Card>
@@ -1937,6 +2039,7 @@ export default function SettingsPage() {
                     variant="bordered"
                     startContent={<Trash2 className="w-4 h-4" />}
                     className="font-semibold w-fit"
+                    onPress={onDeleteModalOpen}
                   >
                     Supprimer mon compte
                   </Button>
@@ -1958,6 +2061,30 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+
+      <Modal isOpen={isDeleteModalOpen} onClose={onDeleteModalClose}>
+        <ModalContent>
+          <ModalHeader className="text-danger">Supprimer mon compte</ModalHeader>
+          <ModalBody>
+            <p className="text-default-600 text-sm">
+              Cette action est irréversible. Toutes tes données seront définitivement supprimées.
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="flat" onPress={onDeleteModalClose}>
+              Annuler
+            </Button>
+            <Button
+              color="danger"
+              onPress={handleDeleteAccount}
+              isLoading={deletingAccount}
+              startContent={<Trash2 className="w-4 h-4" />}
+            >
+              Supprimer définitivement
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

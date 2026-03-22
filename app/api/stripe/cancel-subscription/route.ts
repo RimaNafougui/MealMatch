@@ -26,5 +26,12 @@ export async function POST() {
 
     await stripe.subscriptions.cancel(profile.stripe_subscription_id);
 
+    // Immediately downgrade the plan so the UI reflects the change
+    // before the Stripe webhook fires (eliminates the race condition)
+    await supabase
+        .from("profiles")
+        .update({ plan: "free", is_premium: false, subscription_status: "canceled" })
+        .eq("id", session.user.id);
+
     return NextResponse.json({ success: true });
 }

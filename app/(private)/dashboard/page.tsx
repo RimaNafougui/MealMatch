@@ -223,6 +223,31 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Getting started — shown only when all stats are 0 */}
+      {!loading && stats?.mealPlans === 0 && stats?.savedRecipes === 0 && (
+        <Card className="border border-success/20 bg-success/5 p-4 sm:p-6">
+          <CardBody className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-0">
+            <div className="p-3 rounded-xl bg-success/10 shrink-0">
+              <Sparkles size={24} className="text-success" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-success">Bienvenue sur MealMatch !</p>
+              <p className="text-sm text-default-500 mt-1">
+                Commence par générer ton premier plan de repas ou explore nos recettes.
+              </p>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <Button as={Link} href="/dashboard/meal-plan/generate" size="sm" color="success" variant="flat" className="font-semibold">
+                Générer un plan
+              </Button>
+              <Button as={Link} href="/explore" size="sm" variant="flat" className="font-semibold">
+                Explorer les recettes
+              </Button>
+            </div>
+          </CardBody>
+        </Card>
+      )}
+
       {/* Progress Dashboard */}
       <div>
         <h2 className="text-sm font-semibold text-default-400 uppercase tracking-wider mb-3">

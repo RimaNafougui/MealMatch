@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getSupabaseServer } from "@/utils/supabase-server";
+import { z } from "zod";
 import {
   aggregateIngredients,
   parseIngredientsSummary,
@@ -8,6 +9,8 @@ import {
 } from "@/lib/shopping-list-utils";
 import type { GeneratedMealPlan, GeneratedMeal } from "@/types/meal-plan";
 import { getLimits } from "@/utils/plan-limits";
+
+const schema = z.object({ mealPlanId: z.string().uuid("ID de plan invalide") });
 
 // POST – generate an organized shopping list from a saved meal plan
 export async function POST(req: NextRequest) {
@@ -18,11 +21,11 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { mealPlanId } = body;
-
-    if (!mealPlanId) {
-      return NextResponse.json({ error: "mealPlanId is required" }, { status: 400 });
+    const parsed = schema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Données invalides" }, { status: 400 });
     }
+    const { mealPlanId } = parsed.data;
 
     const supabase = getSupabaseServer();
 

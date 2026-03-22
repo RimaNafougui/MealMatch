@@ -105,7 +105,7 @@ export async function POST(req: Request) {
           name: name || null,
           username: rawUsername ? rawUsername.toLowerCase() : null,
         },
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/auth/callback`,
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
       },
     });
 
