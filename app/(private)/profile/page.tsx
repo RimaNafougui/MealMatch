@@ -28,6 +28,7 @@ import {
   Droplets,
 } from "lucide-react";
 import { kgToLbs } from "@/utils/nutrition";
+import { getLimits } from "@/utils/plan-limits";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -144,8 +145,8 @@ export default function ProfilePage() {
   const initials    = displayName.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
 
   const plan = profile?.plan ?? "free";
-  const planLabel = plan === "pro" ? "Pro" : plan === "premium" ? "Premium" : "Gratuit";
-  const planColor = plan === "pro" ? "secondary" : plan === "premium" ? "warning" : "default";
+  const planLabel = plan === "student" ? "Étudiant" : plan === "premium" ? "Premium" : "Gratuit";
+  const planColor = plan === "student" ? "success" : plan === "premium" ? "warning" : "default";
 
   const unit       = (nutrition?.weight_unit as "kg" | "lbs") ?? "kg";
   const latestLog  = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1] : null;
@@ -177,6 +178,9 @@ export default function ProfilePage() {
 
   const chartColor = nutrition?.weight_goal === "lose" ? "#17c964"
     : nutrition?.weight_goal === "gain" ? "#006fee" : "#f5a524";
+
+  const planLimits = getLimits(plan);
+  const showAdvancedNutrition = planLimits.advancedAI;
 
   const age = nutrition?.birth_year
     ? new Date().getFullYear() - nutrition.birth_year : null;
@@ -296,10 +300,21 @@ export default function ProfilePage() {
               </p>
             ) : (
               <>
-                {/* Mini chart */}
+                {/* Mini chart — student/premium only */}
+                {!showAdvancedNutrition ? (
+                  <div className="flex flex-col items-center gap-2 py-2">
+                    <p className="text-xs text-default-400 text-center">
+                      Le graphique de progression est disponible avec le plan Étudiant ou Premium.
+                    </p>
+                    <Button as={Link} href="/pricing" size="sm" variant="flat" color="primary" className="font-semibold">
+                      Voir les plans
+                    </Button>
+                  </div>
+                ) : (
                 <div className="w-full">
                   <MiniSparkline logs={weightLogs} color={chartColor} />
                 </div>
+                )}
 
                 {/* Delta stats */}
                 {delta !== null && (
@@ -350,38 +365,49 @@ export default function ProfilePage() {
               </p>
             ) : (
               <>
-                {/* TDEE + calorie target */}
+                {/* Calorie target — always shown */}
                 <div className="flex gap-3">
-                  {nutrition.tdee_kcal && (
+                  {showAdvancedNutrition && nutrition.tdee_kcal && (
                     <div className="flex-1 p-3 rounded-xl bg-warning/5 border border-warning/15 text-center">
                       <p className="text-[10px] text-default-400 mb-0.5">TDEE</p>
                       <p className="font-bold text-warning text-sm">{nutrition.tdee_kcal.toLocaleString()} kcal</p>
                     </div>
                   )}
                   <div className="flex-1 p-3 rounded-xl bg-primary/5 border border-primary/15 text-center">
-                    <p className="text-[10px] text-default-400 mb-0.5">Objectif</p>
+                    <p className="text-[10px] text-default-400 mb-0.5">Objectif calorique</p>
                     <p className="font-bold text-primary text-sm">{dailyCal!.toLocaleString()} kcal</p>
                   </div>
                 </div>
 
-                {/* Macro ring + breakdown */}
-                <div className="flex items-center gap-4">
-                  <MacroDonut protein={proteinPct} carbs={carbsPct} fat={fatPct} size={72} />
-                  <div className="flex flex-col gap-1.5 flex-1 text-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-1 text-default-500"><Beef size={11} className="text-danger" />Protéines</span>
-                      <span className="font-bold text-danger">{proteinPct}%{macroGrams ? ` · ${macroGrams.protein}g` : ""}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-1 text-default-500"><Wheat size={11} className="text-warning" />Glucides</span>
-                      <span className="font-bold text-warning">{carbsPct}%{macroGrams ? ` · ${macroGrams.carbs}g` : ""}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-1 text-default-500"><Droplets size={11} className="text-primary" />Lipides</span>
-                      <span className="font-bold text-primary">{fatPct}%{macroGrams ? ` · ${macroGrams.fat}g` : ""}</span>
+                {/* Macro ring + breakdown — student/premium only */}
+                {showAdvancedNutrition ? (
+                  <div className="flex items-center gap-4">
+                    <MacroDonut protein={proteinPct} carbs={carbsPct} fat={fatPct} size={72} />
+                    <div className="flex flex-col gap-1.5 flex-1 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1 text-default-500"><Beef size={11} className="text-danger" />Protéines</span>
+                        <span className="font-bold text-danger">{proteinPct}%{macroGrams ? ` · ${macroGrams.protein}g` : ""}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1 text-default-500"><Wheat size={11} className="text-warning" />Glucides</span>
+                        <span className="font-bold text-warning">{carbsPct}%{macroGrams ? ` · ${macroGrams.carbs}g` : ""}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1 text-default-500"><Droplets size={11} className="text-primary" />Lipides</span>
+                        <span className="font-bold text-primary">{fatPct}%{macroGrams ? ` · ${macroGrams.fat}g` : ""}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2 py-1">
+                    <p className="text-xs text-default-400 text-center">
+                      La répartition détaillée en macronutriments est disponible avec le plan Étudiant.
+                    </p>
+                    <Button as={Link} href="/pricing" size="sm" variant="flat" color="primary" className="font-semibold">
+                      Voir les plans
+                    </Button>
+                  </div>
+                )}
               </>
             )}
           </CardBody>

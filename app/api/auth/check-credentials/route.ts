@@ -54,27 +54,36 @@ export async function POST(req: NextRequest) {
     let resolvedEmail: string;
 
     if (isEmail(identifier)) {
-      // Check that an account with this email actually exists in profiles
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("email")
-        .eq("email", identifier)
+        .ilike("email", identifier)
         .single();
 
-      if (!profile) {
+      if (profileError && profileError.code !== "PGRST116") {
+        // PGRST116 = no rows found (expected). Anything else is a real DB error.
+        console.error("[check-credentials] Profile lookup error:", profileError.message);
+        return NextResponse.json({ status: "server_error" }, { status: 500 });
+      }
+
+      if (!profile?.email) {
         return NextResponse.json({ status: "user_not_found" }, { status: 200 });
       }
 
       resolvedEmail = profile.email;
     } else {
-      // Treat as username — look up the corresponding email
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("email")
         .ilike("username", identifier)
         .single();
 
-      if (!profile) {
+      if (profileError && profileError.code !== "PGRST116") {
+        console.error("[check-credentials] Username lookup error:", profileError.message);
+        return NextResponse.json({ status: "server_error" }, { status: 500 });
+      }
+
+      if (!profile?.email) {
         return NextResponse.json({ status: "user_not_found" }, { status: 200 });
       }
 
@@ -96,14 +105,13 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ status: "email_not_confirmed" }, { status: 200 });
       }
 
-      // Any other Supabase auth error at this point means the password is wrong
-      // (we already confirmed the account exists above)
       return NextResponse.json({ status: "wrong_password" }, { status: 200 });
     }
 
     // ── Step 3: success — return the resolved email for NextAuth signIn ───────
     return NextResponse.json({ status: "ok", resolvedEmail }, { status: 200 });
-  } catch {
-    return NextResponse.json({ status: "user_not_found" }, { status: 200 });
+  } catch (err) {
+    console.error("[check-credentials] Unexpected error:", err);
+    return NextResponse.json({ status: "server_error" }, { status: 500 });
   }
 }

@@ -11,6 +11,7 @@ interface GenerateConfigProps {
   isGenerating: boolean;
   hasExistingPlan: boolean;
   existingPlanDate?: string;
+  userPlan?: string;
 }
 
 export function GenerateConfig({
@@ -20,7 +21,9 @@ export function GenerateConfig({
   isGenerating,
   hasExistingPlan,
   existingPlanDate,
+  userPlan = "free",
 }: GenerateConfigProps) {
+  const canRegenerate = userPlan === "student" || userPlan === "premium";
   const [config, setConfig] = useState<MealPlanConfig>(initialConfig);
 
   const update = (patch: Partial<MealPlanConfig>) => {
@@ -159,26 +162,36 @@ export function GenerateConfig({
         </Chip>
       </div>
 
-      {/* Generate button */}
-      {hasExistingPlan ? (
+      {/* Generate / Regenerate button */}
+      {hasExistingPlan && !canRegenerate ? (
         <div className="p-4 rounded-xl bg-warning-50 border border-warning-200 text-warning-700 text-sm">
-          <p className="font-semibold">Plan already generated this week</p>
+          <p className="font-semibold">Plan déjà généré cette semaine</p>
           <p className="text-xs mt-1 opacity-80">
-            Generated on {existingPlanDate}. You can edit your current plan
-            below.
+            Généré le {existingPlanDate}. Vous pouvez modifier votre plan ci-dessous.
           </p>
         </div>
       ) : (
-        <Button
-          color="primary"
-          size="lg"
-          className="w-full font-bold h-14 text-base shadow-lg shadow-primary/20"
-          onPress={onGenerate}
-          isLoading={isGenerating}
-          startContent={!isGenerating && <Sparkles size={20} />}
-        >
-          {isGenerating ? "Generating your plan..." : "Generate Meal Plan"}
-        </Button>
+        <div className="flex flex-col gap-2">
+          <Button
+            color="primary"
+            size="lg"
+            className="w-full font-bold h-14 text-base shadow-lg shadow-primary/20"
+            onPress={onGenerate}
+            isLoading={isGenerating}
+            startContent={!isGenerating && <Sparkles size={20} />}
+          >
+            {isGenerating
+              ? "Génération en cours..."
+              : hasExistingPlan
+              ? "Régénérer le plan"
+              : "Générer le plan de repas"}
+          </Button>
+          {hasExistingPlan && (
+            <p className="text-xs text-foreground/40 text-center">
+              Régénérer remplacera votre plan actuel de la semaine.
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

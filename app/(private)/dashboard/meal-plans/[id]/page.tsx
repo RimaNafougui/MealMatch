@@ -19,8 +19,13 @@ import {
   AlertTriangle,
   ChefHat,
   RotateCcw,
+  Printer,
+  Download,
+  Lock,
 } from "lucide-react";
 import type { SavedMealPlan, GeneratedMeal, GeneratedDay } from "@/types/meal-plan";
+import { useUserPlan } from "@/hooks/useUserPlan";
+import { getLimits } from "@/utils/plan-limits";
 
 const MEAL_LABELS: Record<string, string> = {
   breakfast: "Petit-déjeuner",
@@ -146,6 +151,20 @@ export default function MealPlanDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [repeating, setRepeating] = useState(false);
 
+  const { data: planData } = useUserPlan();
+  const userPlan: string = planData?.plan ?? "free";
+  const limits = getLimits(userPlan);
+
+  const handlePrint = () => window.print();
+
+  const handleCalendarExport = () => {
+    const url = `/api/calendar/export?planId=${planId}`;
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "mealmatch-plan.ics";
+    a.click();
+  };
+
   useEffect(() => {
     async function fetchPlan() {
       try {
@@ -238,13 +257,23 @@ export default function MealPlanDetailPage() {
 
   return (
     <div className="max-w-5xl mx-auto flex flex-col gap-6">
+      <style>{`
+        @media print {
+          nav, aside, header, footer,
+          [data-no-print], .no-print { display: none !important; }
+          body { background: white !important; }
+          .print-friendly { break-inside: avoid; }
+        }
+      `}</style>
+
       {/* Back */}
       <Button
         as={Link}
         href="/dashboard/meal-plans"
         variant="light"
         startContent={<ArrowLeft size={16} />}
-        className="text-default-500 w-fit"
+        className="text-default-500 w-fit no-print"
+        data-no-print
       >
         Retour aux plans
       </Button>
@@ -324,7 +353,7 @@ export default function MealPlanDetailPage() {
       )}
 
       {/* Actions */}
-      <div className="flex gap-3 flex-wrap pb-8">
+      <div className="flex gap-3 flex-wrap pb-8 no-print" data-no-print>
         <Button
           as={Link}
           href="/meal-plan/generate"
@@ -354,6 +383,50 @@ export default function MealPlanDetailPage() {
         >
           {repeating ? "Répétition…" : "Répéter pour la semaine prochaine"}
         </Button>
+
+        {/* PDF Export — student/premium */}
+        {limits.pdfExport ? (
+          <Button
+            variant="flat"
+            startContent={<Printer size={16} />}
+            onPress={handlePrint}
+            className="font-semibold"
+          >
+            Télécharger PDF
+          </Button>
+        ) : (
+          <Button
+            variant="flat"
+            isDisabled
+            startContent={<Lock size={16} />}
+            className="font-semibold text-default-400"
+            title="Disponible avec le plan Étudiant"
+          >
+            Télécharger PDF
+          </Button>
+        )}
+
+        {/* Calendar Export — premium */}
+        {limits.calendarExport ? (
+          <Button
+            variant="flat"
+            startContent={<Download size={16} />}
+            onPress={handleCalendarExport}
+            className="font-semibold"
+          >
+            Exporter vers calendrier
+          </Button>
+        ) : (
+          <Button
+            variant="flat"
+            isDisabled
+            startContent={<Lock size={16} />}
+            className="font-semibold text-default-400"
+            title="Disponible avec le plan Premium"
+          >
+            Exporter vers calendrier
+          </Button>
+        )}
       </div>
     </div>
   );

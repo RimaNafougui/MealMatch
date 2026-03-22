@@ -1,0 +1,96 @@
+import { NextResponse } from "next/server";
+import { auth } from "@/auth";
+import { getSupabaseServer } from "@/utils/supabase-server";
+import { getLimits } from "@/utils/plan-limits";
+import OpenAI from "openai";
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+export async function POST(req: Request) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const supabase = getSupabaseServer();
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("plan, dietary_restrictions, allergies, daily_calorie_target, weight_goal, tdee_kcal")
+      .eq("id", session.user.id)
+      .single();
+
+    const userPlan = profile?.plan ?? "free";
+    const limits = getLimits(userPlan);
+
+    if (!limits.nutritionist) {
+      return NextResponse.json(
+        { error: "premium_required", message: "L'accès au nutritionniste IA nécessite le plan Premium." },
+        { status: 403 },
+      );
+    }
+
+    const { message, history } = await req.json();
+    if (!message || typeof message !== "string") {
+      return NextResponse.json({ error: "message is required" }, { status: 400 });
+    }
+
+    // Fetch recent meal plan for context
+    const { data: recentPlan } = await supabase
+      .from("meal_plans")
+      .select("meals, total_calories, days_count")
+      .eq("user_id", session.user.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    const profileContext = [
+      profile?.dietary_restrictions?.length ? `Restrictions alimentaires : ${profile.dietary_restrictions.join(", ")}` : null,
+      profile?.allergies?.length ? `Allergies : ${profile.allergies.join(", ")}` : null,
+      profile?.daily_calorie_target ? `Objectif calorique journalier : ${profile.daily_calorie_target} kcal` : null,
+      profile?.weight_goal ? `Objectif de poids : ${profile.weight_goal}` : null,
+      recentPlan ? `Plan de repas récent : ${recentPlan.days_count} jours, ~${recentPlan.total_calories} cal/jour` : null,
+    ].filter(Boolean).join("\n");
+
+    const systemPrompt = `Tu es une nutritionniste diplômée et enregistrée, spécialisée dans la nutrition des étudiants universitaires au Canada.
+Tu fournis des conseils nutritionnels personnalisés, scientifiquement fondés et adaptés au mode de vie étudiant.
+Réponds toujours en français. Sois bienveillante, encourageante et pratique.
+Ne remplace pas un avis médical — redirige vers un professionnel de santé pour les questions médicales.
+
+⚠️ PÉRIMÈTRE STRICT — Tu réponds UNIQUEMENT aux sujets suivants :
+• Nutrition, alimentation, macronutriments, micronutriments, calories
+• Plans de repas, recettes, habitudes alimentaires
+• Activité physique, exercice, entraînement, récupération musculaire
+• Gestion du poids, composition corporelle, objectifs fitness
+• Santé digestive, hydratation, suppléments alimentaires
+
+Pour TOUTE question hors de ce périmètre (technologie, politique, mathématiques, actualités, etc.), réponds EXACTEMENT cette phrase et rien d'autre :
+"Je suis spécialisée en nutrition et activité physique uniquement. Je ne peux pas vous aider avec ce sujet. Avez-vous une question sur votre alimentation ou votre activité physique ?"
+
+Profil de l'utilisateur :
+${profileContext || "Non renseigné"}`;
+
+    // Build conversation history for context (exclude the welcome message if it's the system one)
+    const conversationHistory = (Array.isArray(history) ? history : [])
+      .filter((m: any) => m.role === "user" || m.role === "assistant")
+      .slice(-10)
+      .map((m: any) => ({ role: m.role as "user" | "assistant", content: String(m.content) }));
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...conversationHistory,
+        { role: "user", content: message },
+      ],
+      temperature: 0.7,
+      max_tokens: 800,
+    });
+
+    const reply = completion.choices[0]?.message?.content ?? "";
+    return NextResponse.json({ reply });
+  } catch (error) {
+    console.error("Nutritionist API error:", error);
+    return NextResponse.json({ error: "Failed to get nutritionist response" }, { status: 500 });
+  }
+}

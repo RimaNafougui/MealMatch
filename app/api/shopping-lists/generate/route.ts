@@ -7,6 +7,7 @@ import {
   type RawIngredient,
 } from "@/lib/shopping-list-utils";
 import type { GeneratedMealPlan, GeneratedMeal } from "@/types/meal-plan";
+import { getLimits } from "@/utils/plan-limits";
 
 // POST – generate an organized shopping list from a saved meal plan
 export async function POST(req: NextRequest) {
@@ -24,6 +25,14 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = getSupabaseServer();
+
+    // Fetch user plan
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("plan")
+      .eq("id", session.user.id)
+      .single();
+    const userPlan = profileData?.plan ?? "free";
 
     // Fetch meal plan (verify ownership)
     const { data: mealPlan, error: planError } = await supabase
@@ -129,8 +138,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Aggregate, classify, and sort ingredients
-    const organizedItems = aggregateIngredients(rawIngredients);
+    // Free users get a flat list; paid users get the intelligent aisle-organized list
+    let organizedItems;
+    if (userPlan === "free") {
+      // Basic flat list: deduplicate by name only, no aisle grouping
+      const seen = new Map<string, { name: string; quantity: number; unit: string; category: string }>();
+      for (const ing of rawIngredients) {
+        const key = ing.name.toLowerCase().trim();
+        if (seen.has(key)) {
+          seen.get(key)!.quantity += ing.quantity ?? 1;
+        } else {
+          seen.set(key, { name: ing.name, quantity: ing.quantity ?? 1, unit: ing.unit ?? "", category: "Divers" });
+        }
+      }
+      organizedItems = Array.from(seen.values());
+    } else {
+      // Aggregate, classify, and sort ingredients (intelligent aisle-organized list)
+      organizedItems = aggregateIngredients(rawIngredients);
+    }
 
     const totalCost = organizedItems.reduce(
       (sum, item) => sum + (item.price ?? 0) * (item.quantity ?? 1),
@@ -176,7 +201,7 @@ export async function POST(req: NextRequest) {
       result = data;
     }
 
-    return NextResponse.json(result);
+    return NextResponse.json({ ...result, plan: userPlan });
   } catch (err) {
     console.error("POST /api/shopping-lists/generate error:", err);
     return NextResponse.json({ error: "Failed to generate shopping list" }, { status: 500 });

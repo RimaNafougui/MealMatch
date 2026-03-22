@@ -1,11 +1,13 @@
 "use client";
 
 import { Button } from "@heroui/react";
-import { Home, Utensils, Calendar, ShoppingCart, Heart, X } from "lucide-react";
+import { Chip } from "@heroui/chip";
+import { Home, Utensils, Calendar, ShoppingCart, Heart, Brain, Users } from "lucide-react";
 import NextLink from "next/link";
 import { usePathname } from "next/navigation";
 
 import { Logo } from "@/components/logo";
+import { useUserPlan } from "@/hooks/useUserPlan";
 
 const navLinks = [
   { label: "Accueil", href: "/dashboard", icon: Home },
@@ -13,6 +15,11 @@ const navLinks = [
   { label: "Meal Plans", href: "/dashboard/meal-plans", icon: Calendar },
   { label: "Epicerie", href: "/dashboard/epicerie", icon: ShoppingCart },
   { label: "Favoris", href: "/dashboard/favoris", icon: Heart },
+];
+
+const premiumLinks = [
+  { label: "Nutritionniste IA", href: "/dashboard/nutritionist", icon: Brain },
+  { label: "Famille", href: "/dashboard/family", icon: Users },
 ];
 
 interface DashboardSidebarProps {
@@ -25,6 +32,9 @@ export default function DashboardSidebar({
   onClose,
 }: DashboardSidebarProps) {
   const pathname = usePathname();
+  const { data: planData } = useUserPlan();
+  const userPlan = planData?.plan ?? "free";
+  const isPremium = userPlan === "premium";
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
@@ -66,6 +76,39 @@ export default function DashboardSidebar({
                   color={active ? "primary" : "default"}
                   className="w-full justify-start gap-3"
                   startContent={<Icon size={18} />}
+                  onClick={onClose}
+                >
+                  {link.label}
+                </Button>
+              );
+            })}
+
+            <div className="pt-3 pb-1">
+              <p className="px-2 text-[10px] font-semibold text-default-400 uppercase tracking-wider">
+                Premium
+              </p>
+            </div>
+
+            {premiumLinks.map((link) => {
+              const Icon = link.icon;
+              const active = isActive(link.href);
+
+              return (
+                <Button
+                  key={link.href}
+                  as={NextLink}
+                  href={link.href}
+                  variant={active ? "flat" : "light"}
+                  color={active ? "primary" : "default"}
+                  className="w-full justify-start gap-3"
+                  startContent={<Icon size={18} />}
+                  endContent={
+                    !isPremium ? (
+                      <Chip size="sm" color="warning" variant="flat" className="text-[10px] h-4 ml-auto">
+                        Premium
+                      </Chip>
+                    ) : null
+                  }
                   onClick={onClose}
                 >
                   {link.label}

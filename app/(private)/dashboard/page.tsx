@@ -16,9 +16,12 @@ import {
   CalendarDays,
   ArrowRight,
   ChefHat,
+  Brain,
+  Users,
 } from "lucide-react";
 import ProgressDashboard from "@/components/dashboard/ProgressDashboard";
 import { useStats } from "@/hooks/useUserData";
+import { useUserPlan } from "@/hooks/useUserPlan";
 
 function StatCard({
   label,
@@ -58,6 +61,9 @@ function StatCard({
 export default function DashboardPage() {
   const { data: session } = useSession();
   const { data: stats, isLoading: loading } = useStats();
+  const { data: planData } = useUserPlan();
+  const livePlan = planData?.plan ?? stats?.profile?.plan ?? "free";
+  const isPremium = livePlan === "premium";
 
   const displayName =
     stats?.profile?.name || session?.user?.name || "Utilisateur";
@@ -111,6 +117,28 @@ export default function DashboardPage() {
       icon: <BookOpen size={20} className="text-default-500" />,
       bg: "bg-default-100",
     },
+    ...(isPremium
+      ? [
+          {
+            label: "Nutritionniste IA",
+            description: "Conseils nutrition personnalisés",
+            href: "/dashboard/nutritionist",
+            icon: <Brain size={20} className="text-primary" />,
+            bg: "bg-primary/10",
+            badge: "Premium",
+            badgeColor: "warning" as const,
+          },
+          {
+            label: "Famille",
+            description: "Gérer les membres de la famille",
+            href: "/dashboard/family",
+            icon: <Users size={20} className="text-secondary" />,
+            bg: "bg-secondary/10",
+            badge: "Premium",
+            badgeColor: "warning" as const,
+          },
+        ]
+      : []),
   ];
 
   const planLabelMap: Record<string, string> = {
@@ -151,13 +179,13 @@ export default function DashboardPage() {
             </>
           )}
         </div>
-        {stats?.profile?.plan && stats.profile.plan !== "free" && (
+        {livePlan !== "free" && (
           <Chip
-            color={planColorMap[stats.profile.plan] || "default"}
+            color={planColorMap[livePlan] || "default"}
             variant="flat"
             size="sm"
           >
-            {planLabelMap[stats.profile.plan] || stats.profile.plan}
+            {planLabelMap[livePlan] || livePlan}
           </Chip>
         )}
       </div>

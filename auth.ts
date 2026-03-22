@@ -159,7 +159,9 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
             );
 
             if (existingAuthUser) {
-              // Auth user exists but profile is missing — create it.
+              // Auth user exists but profile was not found by email.
+              // It may have been created by a DB trigger (without the email column).
+              // Try insert first; if it fails with a duplicate key, upsert instead.
               userId = existingAuthUser.id;
               const autoUsername = await generateUniqueUsername(user.name, user.email!);
 
@@ -176,8 +178,22 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
                 });
 
               if (profileInsertError) {
-                console.error("[auth] Error creating profile:", profileInsertError.message);
-                return false;
+                if (profileInsertError.code === "23505") {
+                  // Profile already exists (created by DB trigger without email).
+                  // Patch the missing fields instead.
+                  await supabase
+                    .from("profiles")
+                    .update({
+                      email: user.email!,
+                      name: user.name,
+                      image: user.image,
+                      updated_at: new Date().toISOString(),
+                    })
+                    .eq("id", userId);
+                } else {
+                  console.error("[auth] Error creating profile:", profileInsertError.message);
+                  return false;
+                }
               }
             } else {
               // ── 3. New user entirely — create auth user + profile ────────
@@ -212,8 +228,21 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
                 });
 
               if (profileError) {
-                console.error("[auth] Error creating profile:", profileError.message);
-                return false;
+                if (profileError.code === "23505") {
+                  // Trigger already created the profile — patch the email/name/image.
+                  await supabase
+                    .from("profiles")
+                    .update({
+                      email: user.email!,
+                      name: user.name,
+                      image: user.image,
+                      updated_at: new Date().toISOString(),
+                    })
+                    .eq("id", userId);
+                } else {
+                  console.error("[auth] Error creating profile:", profileError.message);
+                  return false;
+                }
               }
             }
 

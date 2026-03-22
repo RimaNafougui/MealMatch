@@ -8,6 +8,7 @@ import {
   Flame,
   DollarSign,
   Star,
+  Lock,
 } from "lucide-react";
 import { GeneratedMeal } from "@/types/meal-plan";
 
@@ -20,6 +21,8 @@ interface MealSlotProps {
   onMealUpdate: (day: string, slot: string, meal: GeneratedMeal) => void;
   onRepeatRequest: (day: string, slot: string) => void;
   onViewDetail: (meal: GeneratedMeal) => void;
+  canRegenerate?: boolean;
+  onRegenerated?: () => void;
 }
 
 export function MealSlot({
@@ -31,10 +34,13 @@ export function MealSlot({
   onMealUpdate,
   onRepeatRequest,
   onViewDetail,
+  canRegenerate = true,
+  onRegenerated,
 }: MealSlotProps) {
   const [isRegenerating, setIsRegenerating] = useState(false);
 
   const handleRegenerate = async () => {
+    if (!canRegenerate) return;
     setIsRegenerating(true);
     try {
       const res = await fetch("/api/meal-plan/regenerate-slot", {
@@ -51,6 +57,7 @@ export function MealSlot({
       const data = await res.json();
       if (data.success && data.meal) {
         onMealUpdate(day, slot, data.meal);
+        onRegenerated?.();
       }
     } catch (err) {
       console.error("Regenerate error:", err);
@@ -106,11 +113,13 @@ export function MealSlot({
               variant="light"
               className="min-w-6 w-6 h-6"
               onPress={handleRegenerate}
-              isDisabled={isRegenerating}
-              title="Get AI suggestion"
+              isDisabled={isRegenerating || !canRegenerate}
+              title={canRegenerate ? "Régénérer avec l'IA" : "Limite de régénérations atteinte (plan gratuit)"}
             >
               {isRegenerating ? (
                 <Spinner size="sm" color="current" />
+              ) : !canRegenerate ? (
+                <Lock size={13} className="text-default-300" />
               ) : (
                 <RefreshCw size={13} />
               )}

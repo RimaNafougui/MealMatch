@@ -16,6 +16,7 @@ import { Button } from "@heroui/button";
 import { toast } from "sonner";
 import { GenerateConfig } from "@/components/meal-plan/GenerateConfig";
 import { MealPlanGrid } from "@/components/meal-plan/MealPlanGrid";
+import { useUserPlan } from "@/hooks/useUserPlan";
 import {
   MealPlanConfig,
   GeneratedMealPlan,
@@ -97,6 +98,10 @@ function MealPlanGridSkeleton({ days, meals }: { days: number; meals: number }) 
 export default function GenerateMealPlanPage() {
   const { data: session } = useSession();
   const router = useRouter();
+  const { data: planData, isLoading: planLoading } = useUserPlan();
+  const userPlan = planData?.plan ?? "free";
+  const maxSlotRegens = userPlan === "free" ? 2 : Infinity;
+  const [slotRegenCount, setSlotRegenCount] = useState(0);
 
   const [config, setConfig] = useState<MealPlanConfig>({
     days_count: 5,
@@ -193,14 +198,8 @@ export default function GenerateMealPlanPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        if (data.error === "already_generated") {
-          toast.error("You've already generated a plan this week!");
-          setHasExistingPlan(true);
-          setExistingPlanDate(
-            data.generated_at
-              ? format(new Date(data.generated_at), "MMMM d 'at' h:mm a")
-              : "earlier this week",
-          );
+        if (data.error === "monthly_limit_reached") {
+          toast.error(data.message || "Limite mensuelle atteinte.");
           return;
         }
         throw new Error(data.error || "Failed to generate");
@@ -302,7 +301,7 @@ export default function GenerateMealPlanPage() {
         )}
       </div>
 
-      {checkingPlan ? (
+      {checkingPlan || planLoading ? (
         /* Initial load skeleton */
         <div className="flex flex-col xl:flex-row gap-8">
           <div className="xl:w-80 shrink-0 flex flex-col gap-6">
@@ -351,6 +350,7 @@ export default function GenerateMealPlanPage() {
                 isGenerating={isGenerating}
                 hasExistingPlan={hasExistingPlan}
                 existingPlanDate={existingPlanDate}
+                userPlan={userPlan}
               />
             </div>
           </div>
@@ -429,6 +429,10 @@ export default function GenerateMealPlanPage() {
                   onPlanChange={setGeneratedPlan}
                   onSave={handleSave}
                   isSaving={isSaving}
+                  userPlan={userPlan}
+                  slotRegenCount={slotRegenCount}
+                  maxSlotRegens={maxSlotRegens}
+                  onSlotRegenerated={() => setSlotRegenCount((c) => c + 1)}
                 />
               </div>
             )}

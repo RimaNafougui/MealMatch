@@ -18,12 +18,14 @@ export async function POST(req: Request) {
     const { day, slot, current_meal, existing_meals, plan_id } =
       await req.json();
 
-    // Fetch user profile for restrictions
+    // Fetch user profile for restrictions + nutrition goals
     const { data: profile } = await supabase
       .from("profiles")
-      .select("dietary_restrictions, allergies, budget_min, budget_max")
+      .select("plan, dietary_restrictions, allergies, budget_min, budget_max, daily_calorie_target, macro_protein_pct, macro_carbs_pct, macro_fat_pct, weight_goal, meal_plan_meals_per_day")
       .eq("id", userId)
       .single();
+
+    const userPlan = profile?.plan ?? "free";
 
     const restrictions = profile?.dietary_restrictions?.length
       ? profile.dietary_restrictions.join(", ")
@@ -32,16 +34,48 @@ export async function POST(req: Request) {
       ? profile.allergies.join(", ")
       : "none";
 
+    // Allergen pre-filter
+    const allergenToExclusionTag: Record<string, string> = {
+      gluten: "gluten-free", blé: "gluten-free", wheat: "gluten-free",
+      dairy: "dairy-free", lactose: "dairy-free", lait: "dairy-free",
+      nuts: "nut-free", noix: "nut-free", peanuts: "nut-free",
+    };
+    const requiredSafeTags = (profile?.allergies || [])
+      .map((a: string) => allergenToExclusionTag[a.toLowerCase().trim()])
+      .filter(Boolean);
+
+    // Nutrition targets
+    const mealsPerDay = profile?.meal_plan_meals_per_day ?? 3;
+    const dailyCalorieTarget = profile?.daily_calorie_target ?? null;
+    const caloriesPerMeal = dailyCalorieTarget ? Math.round(dailyCalorieTarget / mealsPerDay) : null;
+    const proteinPct = profile?.macro_protein_pct ?? 30;
+    const carbsPct   = profile?.macro_carbs_pct   ?? 40;
+    const fatPct     = profile?.macro_fat_pct     ?? 30;
+    const macroTargets = caloriesPerMeal ? {
+      protein_g: Math.round((caloriesPerMeal * proteinPct) / 100 / 4),
+      carbs_g:   Math.round((caloriesPerMeal * carbsPct)   / 100 / 4),
+      fat_g:     Math.round((caloriesPerMeal * fatPct)      / 100 / 9),
+    } : null;
+
     // Build list of already used meal titles to avoid repetition
     const usedTitles = (existing_meals || [])
       .map((m: GeneratedMeal) => m.title)
       .filter((t: string) => t !== current_meal?.title);
 
-    // --- Fetch a sample of recipes from catalog ---
-    const { data: catalogRecipes } = await supabase
+    // --- Fetch recipes from catalog and pre-filter by allergen safety ---
+    const { data: allCatalog } = await supabase
       .from("recipes_catalog")
       .select("id, title, calories, prep_time, dietary_tags, price_per_serving, protein, carbs, fat, spoonacular_id")
-      .limit(30);
+      .limit(60);
+
+    let catalogRecipes = allCatalog || [];
+    if (requiredSafeTags.length > 0) {
+      const safe = catalogRecipes.filter((r: any) => {
+        const tags = (r.dietary_tags || []).map((t: string) => t.toLowerCase());
+        return requiredSafeTags.every((rt: string) => tags.includes(rt));
+      });
+      if (safe.length >= 8) catalogRecipes = safe;
+    }
 
     // --- Fetch user's own recipes ---
     const { data: userRecipes } = await supabase
@@ -82,18 +116,29 @@ export async function POST(req: Request) {
     const systemPrompt = `Tu es un assistant de planification de repas. Réponds uniquement en JSON valide. Pas de markdown, pas d'explication.
 Tout le contenu (titres, descriptions, instructions) doit être en FRANÇAIS.`;
 
+    const allergyLine = allergies !== "none"
+      ? `\n⚠️ ALLERGIES CRITIQUES — NE JAMAIS UTILISER : ${allergies}`
+      : "";
+    const nutritionLine = caloriesPerMeal
+      ? `\n🎯 Cibles par repas : ${caloriesPerMeal} kcal · Protéines ${macroTargets?.protein_g}g · Glucides ${macroTargets?.carbs_g}g · Lipides ${macroTargets?.fat_g}g`
+      : "";
+
     const userPrompt = `Suggère UN repas alternatif pour ${day} ${slot}.
+${allergyLine}
+${nutritionLine}
 
 Repas actuel remplacé : "${current_meal?.title || "aucun"}"
 Déjà utilisés dans ce plan (à éviter) : ${usedTitles.slice(0, 10).join(", ") || "aucun"}
 Restrictions alimentaires : ${restrictions}
-Allergies : ${allergies}
 Budget cible : environ ${((profile?.budget_min || 0 + (profile?.budget_max || 80)) / 2 / 21).toFixed(2)} $ par repas
 
 Recettes disponibles (catalogue + recettes de l'utilisateur) :
 ${JSON.stringify(allAvailableRecipes.slice(0, 30), null, 0)}
 
 RÈGLES :
+- ⚠️ Respecter ABSOLUMENT les allergies — aucun ingrédient interdit même en trace
+- Respecter les restrictions alimentaires : ${restrictions}
+- 🎯 Choisir une recette dont les valeurs nutritionnelles sont proches des cibles définies
 - Utilise en priorité une recette du catalogue ou de l'utilisateur (source "catalog" ou "user_recipe")
 - Si aucune ne convient, génère une recette originale (source "ai") avec instructions complètes en français et valeurs nutritionnelles précises
 - Pour source "ai" : fournis une image_url unsplash pertinente (ex: https://source.unsplash.com/800x600/?salade,legumes)
@@ -155,7 +200,7 @@ Retourne exactement cet objet JSON (un seul repas, pas un tableau) :
       }
     }
 
-    return NextResponse.json({ success: true, meal });
+    return NextResponse.json({ success: true, meal, userPlan });
   } catch (error) {
     console.error("Regenerate slot error:", error);
     return NextResponse.json(

@@ -1,9 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { getSupabaseServer } from "@/utils/supabase-server";
 import { withCache, CacheKey, TTL } from "@/utils/redis";
+import { getLimits } from "@/utils/plan-limits";
 
 export async function GET(req: NextRequest) {
   try {
+    const session = await auth();
+    const userId = session?.user?.id;
+
+    // Determine plan: fetch from DB for authenticated users
+    let userPlan = "free";
+    if (userId) {
+      const supabase = getSupabaseServer();
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("plan")
+        .eq("id", userId)
+        .single();
+      userPlan = profileData?.plan ?? "free";
+    }
+    const limits = getLimits(userPlan);
+
     const searchParams = req.nextUrl.searchParams;
 
     const search      = searchParams.get("search") || "";
@@ -17,11 +35,24 @@ export async function GET(req: NextRequest) {
     const maxServings = searchParams.get("max_servings");
     const mealType    = searchParams.get("meal_type");
     const page        = parseInt(searchParams.get("page") || "1");
-    const limit       = parseInt(searchParams.get("limit") || "12");
+    let   limit       = parseInt(searchParams.get("limit") || "12");
+
+    // Cap free users to 50 total results (first page only)
+    if (userPlan === "free") {
+      limit = Math.min(limit, limits.maxRecipes);
+      if ((page - 1) * limit >= limits.maxRecipes) {
+        return NextResponse.json({
+          recipes: [],
+          pagination: { page, limit, total: limits.maxRecipes, totalPages: Math.ceil(limits.maxRecipes / limit) },
+          plan_limited: true,
+        });
+      }
+    }
 
     // Build a stable cache key from all query params (sorted for consistency)
     const cacheParams = new URLSearchParams({
       search, page: String(page), limit: String(limit),
+      plan: userPlan,
       ...(dietaryTags.length  ? { dietary_tags: dietaryTags.sort().join(",") }  : {}),
       ...(intolerances.length ? { intolerances: intolerances.sort().join(",") } : {}),
       ...(maxPrepTime ? { max_prep_time: maxPrepTime } : {}),
@@ -43,6 +74,11 @@ export async function GET(req: NextRequest) {
         let query = supabase
           .from("recipes_catalog")
           .select("*", { count: "exact" });
+
+        // Filter out premium recipes for free/student users
+        if (!limits.premiumRecipes) {
+          query = query.or("is_premium.is.null,is_premium.eq.false");
+        }
 
         if (search) {
           query = query.ilike("title", `%${search}%`);
@@ -85,9 +121,15 @@ export async function GET(req: NextRequest) {
         if (minServings) query = query.gte("servings", parseInt(minServings));
         if (maxServings) query = query.lte("servings", parseInt(maxServings));
 
+        // For free users, cap the range so they never exceed maxRecipes total
+        const effectiveOffset = userPlan === "free" ? Math.min(offset, limits.maxRecipes - 1) : offset;
+        const effectiveEnd = userPlan === "free"
+          ? Math.min(effectiveOffset + limit - 1, limits.maxRecipes - 1)
+          : effectiveOffset + limit - 1;
+
         query = query
           .order("created_at", { ascending: false })
-          .range(offset, offset + limit - 1);
+          .range(effectiveOffset, effectiveEnd);
 
         const { data: recipes, error, count } = await query;
 

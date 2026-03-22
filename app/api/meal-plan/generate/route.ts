@@ -3,9 +3,10 @@ import { auth } from "@/auth";
 import { getSupabaseServer } from "@/utils/supabase-server";
 import OpenAI from "openai";
 import { GeneratedMealPlan, MealPlanConfig } from "@/types/meal-plan";
-import { startOfWeek, format, addDays } from "date-fns";
+import { startOfWeek, startOfMonth, format, addDays } from "date-fns";
 import { mealPlanRateLimit } from "@/utils/rate-limit";
 import { cacheDel, cacheDelPattern, CacheKey } from "@/utils/redis";
+import { getLimits } from "@/utils/plan-limits";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -58,7 +59,19 @@ export async function POST(req: Request) {
       meals_per_day: body.meals_per_day ?? 3,
     };
 
-    // --- Check weekly generation limit ---
+    // --- Fetch user profile (includes plan) ---
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select(
+        "plan, dietary_restrictions, allergies, budget_min, budget_max, meal_plan_days, meal_plan_meals_per_day, daily_calorie_target, tdee_kcal, weight_goal, macro_protein_pct, macro_carbs_pct, macro_fat_pct",
+      )
+      .eq("id", userId)
+      .single();
+
+    const userPlan = profile?.plan ?? "free";
+    const limits = getLimits(userPlan);
+
+    // --- Check generation limit ---
     const weekStart = getWeekStart(new Date());
     const weekStartStr = format(weekStart, "yyyy-MM-dd");
     const weekEnd = format(
@@ -66,32 +79,34 @@ export async function POST(req: Request) {
       "yyyy-MM-dd",
     );
 
+    // Check if a usage record already exists this week (to avoid duplicate inserts)
     const { data: existingUsage } = await supabase
       .from("meal_plan_usage")
-      .select("id, generated_at")
+      .select("id")
       .eq("user_id", userId)
       .eq("week_start_date", weekStartStr)
-      .single();
+      .maybeSingle();
 
-    if (existingUsage) {
-      return NextResponse.json(
-        {
-          error: "already_generated",
-          message: "You have already generated a meal plan this week.",
-          generated_at: existingUsage.generated_at,
-        },
-        { status: 429 },
-      );
+    if (userPlan === "free") {
+      // Monthly limit: max 5 per month for free users
+      const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
+      const { count: monthlyCount } = await supabase
+        .from("meal_plan_usage")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .gte("generated_at", monthStart + "T00:00:00Z");
+
+      if ((monthlyCount ?? 0) >= limits.mealPlansPerMonth) {
+        return NextResponse.json(
+          {
+            error: "monthly_limit_reached",
+            message: `Vous avez atteint la limite de ${limits.mealPlansPerMonth} plans de repas par mois pour le plan gratuit.`,
+          },
+          { status: 429 },
+        );
+      }
     }
-
-    // --- Fetch user profile ---
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select(
-        "dietary_restrictions, allergies, budget_min, budget_max, meal_plan_days, meal_plan_meals_per_day, daily_calorie_target, tdee_kcal, weight_goal, macro_protein_pct, macro_carbs_pct, macro_fat_pct",
-      )
-      .eq("id", userId)
-      .single();
+    // Student and premium users can regenerate freely — no weekly block.
 
     // --- Fetch user favorites ---
     const { data: favorites } = await supabase
@@ -120,13 +135,6 @@ export async function POST(req: Request) {
         spoonacular_id: r.spoonacular_id,
       }));
 
-    // --- Fetch a sample of recipes from catalog (up to 40) matching user restrictions ---
-    const catalogQuery = supabase
-      .from("recipes_catalog")
-      .select("id, title, calories, prep_time, dietary_tags, price_per_serving, ingredients, spoonacular_id, protein, carbs, fat")
-      .limit(40);
-
-    // Apply dietary restriction filters if present
     const restrictions = profile?.dietary_restrictions?.length
       ? profile.dietary_restrictions.join(", ")
       : "none";
@@ -134,7 +142,34 @@ export async function POST(req: Request) {
       ? profile.allergies.join(", ")
       : "none";
 
-    const { data: catalogRecipes } = await catalogQuery;
+    // --- Allergen tag mapping: exclude recipes likely to contain the allergen ---
+    const allergenToExclusionTag: Record<string, string> = {
+      gluten: "gluten-free", blé: "gluten-free", wheat: "gluten-free",
+      dairy: "dairy-free", lactose: "dairy-free", lait: "dairy-free",
+      nuts: "nut-free", "noix": "nut-free", peanuts: "nut-free",
+      shellfish: "shellfish-free", fruits_de_mer: "shellfish-free",
+      eggs: "egg-free", oeufs: "egg-free", soy: "soy-free", soja: "soy-free",
+    };
+    const requiredSafeTags = (profile?.allergies || [])
+      .map((a: string) => allergenToExclusionTag[a.toLowerCase().trim()])
+      .filter(Boolean);
+
+    // --- Fetch a larger pool then filter by allergen safety ---
+    const { data: allCatalogRecipes } = await supabase
+      .from("recipes_catalog")
+      .select("id, title, calories, prep_time, dietary_tags, price_per_serving, ingredients, spoonacular_id, protein, carbs, fat")
+      .limit(80);
+
+    // Pre-filter: keep only recipes safe for user's allergies (if we have enough)
+    let catalogRecipes = allCatalogRecipes || [];
+    if (requiredSafeTags.length > 0) {
+      const safeRecipes = catalogRecipes.filter((r: any) => {
+        const tags = (r.dietary_tags || []).map((t: string) => t.toLowerCase());
+        return requiredSafeTags.every((rt: string) => tags.includes(rt));
+      });
+      // Only use the filtered pool if it contains enough recipes; otherwise fall back
+      if (safeRecipes.length >= 10) catalogRecipes = safeRecipes;
+    }
 
     // --- Fetch user's own recipes ---
     const { data: userRecipes } = await supabase
@@ -206,15 +241,27 @@ TOUJOURS répondre en JSON valide uniquement. Pas de markdown, pas d'explication
 Le JSON doit être parseable directement par JSON.parse().
 Tout le contenu (titres, descriptions, instructions) doit être en FRANÇAIS.`;
 
+    const allergyBlock = allergies !== "none"
+      ? `\n⚠️ ALLERGIES CRITIQUES (NE JAMAIS UTILISER CES INGRÉDIENTS) : ${allergies}\nTout repas contenant ces allergènes est INTERDIT et peut être dangereux pour la santé.`
+      : "";
+
+    const nutritionBlock = dailyCalorieTarget
+      ? `\n🎯 OBJECTIFS NUTRITIONNELS OBLIGATOIRES :
+- Calories totales/jour : ${dailyCalorieTarget} kcal → ${caloriesPerMeal} kcal par repas (±10% acceptable)
+- Protéines/repas : ${macroTargets?.protein_g}g (${proteinPct}% des calories)
+- Glucides/repas : ${macroTargets?.carbs_g}g (${carbsPct}% des calories)
+- Lipides/repas : ${macroTargets?.fat_g}g (${fatPct}% des calories)
+- Objectif de poids : ${weightGoal === "lose" ? "PERTE DE POIDS — choisir des recettes hypocaloriques, riches en protéines et fibres, faibles en graisses saturées" : weightGoal === "gain" ? "PRISE DE MASSE — choisir des recettes caloriques, riches en protéines et glucides complexes" : weightGoal === "maintain" ? "MAINTIEN — équilibre calorique" : "non spécifié"}
+Ces valeurs nutritionnelles DOIVENT être reflétées dans les champs calories, protein, carbs, fat de chaque repas.`
+      : "";
+
     const userPrompt = `Génère un plan de repas de ${config.days_count} jours (${days.join(", ")}) avec ${config.meals_per_day} repas par jour (${mealLabels.join(", ")}).
+${allergyBlock}
+${nutritionBlock}
 
 Profil de l'utilisateur :
 - Restrictions alimentaires : ${restrictions}
-- Allergies : ${allergies}
 - Budget hebdomadaire : ${budgetRange}
-- Objectif de poids : ${weightGoal === "lose" ? "Perte de poids (déficit calorique)" : weightGoal === "gain" ? "Prise de masse (surplus calorique)" : weightGoal === "maintain" ? "Maintien du poids" : "non spécifié"}
-- Apport calorique journalier cible : ${dailyCalorieTarget ? `${dailyCalorieTarget} kcal/jour (≈ ${caloriesPerMeal} kcal par repas)` : "non spécifié"}
-- Objectifs en macronutriments par repas : ${macroTargets ? `Protéines ${macroTargets.protein_g}g (${proteinPct}%) · Glucides ${macroTargets.carbs_g}g (${carbsPct}%) · Lipides ${macroTargets.fat_g}g (${fatPct}%)` : "non spécifiés"}
 - Recettes favorites à intégrer (inclure au moins 2-3 si possible) : ${
       favoriteSummaries.length > 0
         ? JSON.stringify(favoriteSummaries.map((f: any) => ({ id: f.id, title: f.title, source: "catalog", spoonacular_id: f.spoonacular_id })))
@@ -224,21 +271,21 @@ Profil de l'utilisateur :
 Recettes disponibles dans la bibliothèque (catalogue + recettes de l'utilisateur) :
 ${JSON.stringify(allAvailableRecipes.slice(0, 50), null, 0)}
 
-RÈGLES IMPORTANTES :
-1. Respecter STRICTEMENT toutes les restrictions alimentaires et allergies
-2. Rester dans le budget hebdomadaire
-3. Varier les cuisines et ingrédients au cours de la semaine — éviter de répéter le même repas
-4. Préférer des recettes accessibles : ingrédients simples, moins de 45 min de préparation
-5. Intégrer les recettes favorites là où elles s'adaptent naturellement
-6. PRIORITÉ : utiliser les recettes du catalogue ou de l'utilisateur (champs "source": "catalog" ou "user_recipe") autant que possible
-7. NUTRITION CRITIQUE : Si un apport calorique cible est spécifié, chaque repas doit être proche de ${caloriesPerMeal ?? "la cible"} kcal. Respecter les objectifs en macronutriments (protéines/glucides/lipides) le plus possible. L'objectif de poids (perte/maintien/prise) doit guider le choix des recettes.
-7. Si aucune recette disponible ne convient pour un créneau donné, génère une recette originale — dans ce cas :
-   - Fournis des instructions complètes étape par étape (minimum 4 étapes) en français
-   - Précise les mesures exactes pour chaque ingrédient
-   - Fournis les valeurs nutritionnelles complètes (calories, protéines, glucides, lipides)
-   - Indique source: "ai"
-   - Génère une URL d'image descriptive pour la recette (utilise unsplash.com avec une requête pertinente, ex: https://source.unsplash.com/800x600/?pasta,tomato)
-8. Pour les recettes du catalogue ou de l'utilisateur, inclure leur "id" et "source" exacts
+RÈGLES IMPORTANTES (dans l'ordre de priorité) :
+1. ⚠️ SÉCURITÉ ALIMENTAIRE : Respecter ABSOLUMENT toutes les allergies et restrictions. Ne jamais inclure un ingrédient interdit, même en trace.
+2. Respecter les restrictions alimentaires : ${restrictions !== "none" ? `les recettes doivent être compatibles avec : ${restrictions}` : "aucune restriction"}
+3. 🎯 NUTRITION : Chaque repas DOIT être proche des cibles caloriques et en macronutriments définies. Vérifie les valeurs nutritionnelles et ajuste si besoin.
+4. Rester dans le budget hebdomadaire
+5. Varier les cuisines et ingrédients — ne jamais répéter le même repas dans le plan
+6. Préférer des recettes accessibles : ingrédients simples, moins de 45 min de préparation
+7. Intégrer les recettes favorites là où elles s'adaptent naturellement
+8. PRIORITÉ : utiliser les recettes du catalogue ou de l'utilisateur autant que possible
+9. Si aucune recette disponible ne convient, génère une recette originale (source "ai") avec :
+   - Instructions étape par étape complètes en français (minimum 4 étapes)
+   - Mesures exactes pour chaque ingrédient
+   - Valeurs nutritionnelles précises (calories, protéines, glucides, lipides)
+   - URL d'image unsplash pertinente (ex: https://source.unsplash.com/800x600/?salade,poulet)
+10. Pour les recettes du catalogue ou de l'utilisateur, inclure leur "id" et "source" exacts
 
 Retourne EXACTEMENT cette structure JSON :
 {
@@ -350,13 +397,15 @@ Notes sur les champs :
       }));
     }
 
-    // --- Save usage record ---
-    await supabase.from("meal_plan_usage").insert({
-      user_id: userId,
-      week_start_date: weekStartStr,
-      days_count: config.days_count,
-      meals_per_day: config.meals_per_day,
-    });
+    // --- Save usage record (only on first generation; regenerations reuse the existing record) ---
+    if (!existingUsage) {
+      await supabase.from("meal_plan_usage").insert({
+        user_id: userId,
+        week_start_date: weekStartStr,
+        days_count: config.days_count,
+        meals_per_day: config.meals_per_day,
+      });
+    }
 
     // --- Save draft meal plan ---
     const { data: savedPlan, error: saveError } = await supabase

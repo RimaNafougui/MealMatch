@@ -90,6 +90,17 @@ export default function PricingPage() {
   const [currentPlan, setCurrentPlan] = useState("free");
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
+  const planOrder: Record<string, number> = { free: 0, student: 1, premium: 2 };
+
+  function getButtonLabel(planType: string, isCurrent: boolean): string {
+    if (isCurrent) return "Plan actuel";
+    const currentOrder = planOrder[currentPlan] ?? 0;
+    const targetOrder = planOrder[planType] ?? 0;
+    if (planType === "free") return "Rétrograder au gratuit";
+    if (targetOrder > currentOrder) return "Passer à ce plan";
+    return "Rétrograder";
+  }
+
   useEffect(() => {
     async function fetchPlan() {
       if (!userId) return;
@@ -223,15 +234,12 @@ export default function PricingPage() {
                   <Button
                     fullWidth
                     color={plan.popular ? "success" : plan.color}
-                    variant={plan.popular ? "solid" : plan.variant}
-                    onPress={() => {
-                      if (!isCurrent && plan.type !== "free") startCheckout(plan.type)
-                      if (!isCurrent && plan.type === "free") startCheckout("free")
-                    }}
+                    variant={plan.popular ? "solid" : isCurrent ? "bordered" : plan.variant}
+                    onPress={() => { if (!isCurrent) startCheckout(plan.type); }}
                     isDisabled={!userId || isCurrent}
                     isLoading={loadingPlan === plan.type}
                   >
-                    {isCurrent ? "Plan actif" : plan.cta}
+                    {getButtonLabel(plan.type, isCurrent)}
                   </Button>
                 </CardFooter>
               </Card>

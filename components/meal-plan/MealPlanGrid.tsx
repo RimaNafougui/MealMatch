@@ -18,6 +18,10 @@ interface MealPlanGridProps {
   onPlanChange: (plan: GeneratedMealPlan) => void;
   onSave: () => void;
   isSaving: boolean;
+  userPlan?: string;
+  slotRegenCount?: number;
+  maxSlotRegens?: number;
+  onSlotRegenerated?: () => void;
 }
 
 export function MealPlanGrid({
@@ -27,7 +31,12 @@ export function MealPlanGrid({
   onPlanChange,
   onSave,
   isSaving,
+  userPlan = "free",
+  slotRegenCount = 0,
+  maxSlotRegens = Infinity,
+  onSlotRegenerated,
 }: MealPlanGridProps) {
+  const canRegenerateSlot = slotRegenCount < maxSlotRegens;
   const [repeatModal, setRepeatModal] = useState<{
     isOpen: boolean;
     day: string;
@@ -177,6 +186,8 @@ export function MealPlanGrid({
                         onMealUpdate={handleMealUpdate}
                         onRepeatRequest={handleRepeatRequest}
                         onViewDetail={setDetailMeal}
+                        canRegenerate={canRegenerateSlot}
+                        onRegenerated={onSlotRegenerated}
                       />
                     ) : (
                       <div className="h-full min-h-[100px] rounded-xl border border-dashed border-divider flex items-center justify-center">
@@ -191,11 +202,19 @@ export function MealPlanGrid({
         </div>
       </div>
 
-      {/* Hint */}
-      <p className="text-xs text-foreground/40 text-center">
-        Hover over any meal to swap, regenerate with AI, or repeat from another
-        slot
-      </p>
+      {/* Hint + slot regen counter for free users */}
+      <div className="flex flex-col items-center gap-1">
+        <p className="text-xs text-foreground/40 text-center">
+          Survolez un repas pour le modifier, le régénérer par IA, ou le répéter
+        </p>
+        {userPlan === "free" && (
+          <p className="text-xs text-center font-medium text-warning-600">
+            {canRegenerateSlot
+              ? `${maxSlotRegens - slotRegenCount} régénération${maxSlotRegens - slotRegenCount > 1 ? "s" : ""} de recette restante${maxSlotRegens - slotRegenCount > 1 ? "s" : ""} (plan gratuit)`
+              : "Limite de régénérations atteinte — passez à un plan payant pour des régénérations illimitées"}
+          </p>
+        )}
+      </div>
 
       {/* Accept & Save */}
       <Button

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getSupabaseServer } from "@/utils/supabase-server";
+import { getLimits } from "@/utils/plan-limits";
 
 // POST favorite
 export async function POST(req: Request) {
@@ -13,6 +14,33 @@ export async function POST(req: Request) {
     const { recipeId } = await req.json();
 
     const supabase = getSupabaseServer();
+
+    // Fetch plan and enforce favorites limit for free users
+    const { data: profileData } = await supabase
+        .from("profiles")
+        .select("plan")
+        .eq("id", session.user.id)
+        .single();
+
+    const userPlan = profileData?.plan ?? "free";
+    const limits = getLimits(userPlan);
+
+    if (isFinite(limits.maxFavorites)) {
+        const { count } = await supabase
+            .from("user_favorites")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", session.user.id);
+
+        if ((count ?? 0) >= limits.maxFavorites) {
+            return NextResponse.json(
+                {
+                    error: "favorites_limit_reached",
+                    message: `Vous avez atteint la limite de ${limits.maxFavorites} favoris pour le plan gratuit.`,
+                },
+                { status: 403 },
+            );
+        }
+    }
 
     const { error } = await supabase.from("user_favorites").insert({
         recipe_id: recipeId,

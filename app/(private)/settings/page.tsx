@@ -28,6 +28,10 @@ import {
   TrendingUp,
   ChevronDown,
   ChevronUp,
+  CreditCard,
+  ExternalLink,
+  AlertCircle,
+  CheckCircle2,
 } from "lucide-react";
 import { logout } from "@/lib/actions/auth";
 import { toast } from "sonner";
@@ -81,6 +85,7 @@ type Section =
   | "nutrition"
   | "progression"
   | "notifications"
+  | "subscription"
   | "privacy";
 
 interface WeightLog {
@@ -112,9 +117,210 @@ function SectionSkeleton() {
   );
 }
 
+// ─── Subscription section component ──────────────────────────────────────────
+
+const PLAN_LABELS: Record<string, string> = {
+  free: "Gratuit",
+  student: "Étudiant",
+  premium: "Premium",
+};
+
+const PLAN_COLORS: Record<string, "default" | "success" | "warning" | "primary"> = {
+  free: "default",
+  student: "success",
+  premium: "warning",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  active: "Actif",
+  trialing: "Période d'essai",
+  past_due: "Paiement en retard",
+  canceled: "Annulé",
+  incomplete: "Incomplet",
+  unpaid: "Impayé",
+};
+
+function SubscriptionSection({
+  plan,
+  status,
+  periodEnd,
+  hasStripeCustomer,
+  loadingPortal,
+  onManage,
+}: {
+  plan: string;
+  status: string | null;
+  periodEnd: string | null;
+  hasStripeCustomer: boolean;
+  loadingPortal: boolean;
+  onManage: () => void;
+}) {
+  const isPaid = plan === "student" || plan === "premium";
+  const isCanceled = status === "canceled";
+  const isPastDue = status === "past_due";
+  const isActive = status === "active" || status === "trialing";
+
+  const periodEndDate = periodEnd
+    ? new Date(periodEnd).toLocaleDateString("fr-CA", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : null;
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Current plan card */}
+      <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
+        <CardHeader className="pb-2 p-0 mb-5">
+          <h2 className="font-bold text-xl">Mon abonnement</h2>
+        </CardHeader>
+        <CardBody className="p-0 flex flex-col gap-5">
+
+          {/* Plan badge row */}
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-xl ${isPaid ? "bg-success/10" : "bg-default-100"}`}>
+                <CreditCard className={`w-5 h-5 ${isPaid ? "text-success" : "text-default-400"}`} />
+              </div>
+              <div>
+                <p className="text-xs text-default-400 mb-0.5">Plan actuel</p>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-lg">{PLAN_LABELS[plan] ?? plan}</span>
+                  <Chip
+                    size="sm"
+                    color={PLAN_COLORS[plan] ?? "default"}
+                    variant="flat"
+                  >
+                    {PLAN_LABELS[plan] ?? plan}
+                  </Chip>
+                </div>
+              </div>
+            </div>
+
+            {/* Status badge */}
+            {status && (
+              <div className="flex items-center gap-1.5">
+                {isActive && <CheckCircle2 className="w-4 h-4 text-success" />}
+                {(isCanceled || isPastDue) && <AlertCircle className="w-4 h-4 text-warning" />}
+                <span className={`text-sm font-medium ${isActive ? "text-success" : "text-warning"}`}>
+                  {STATUS_LABELS[status] ?? status}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <Divider />
+
+          {/* Period info */}
+          {periodEndDate && isPaid && (
+            <div className="flex flex-col gap-1">
+              <p className="text-xs text-default-400">
+                {isCanceled ? "Accès jusqu'au" : "Prochain renouvellement"}
+              </p>
+              <p className="text-sm font-semibold">{periodEndDate}</p>
+              {isCanceled && (
+                <p className="text-xs text-warning">
+                  Votre abonnement a été annulé. Vous conservez l&apos;accès jusqu&apos;à cette date.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Past due warning */}
+          {isPastDue && (
+            <div className="flex items-start gap-2 p-3 rounded-xl bg-warning/10 border border-warning/20">
+              <AlertCircle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-warning">
+                Le dernier paiement a échoué. Veuillez mettre à jour votre moyen de paiement pour conserver l&apos;accès à vos fonctionnalités.
+              </p>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex flex-col gap-3">
+            {isPaid && hasStripeCustomer ? (
+              <Button
+                color="primary"
+                variant="flat"
+                startContent={<ExternalLink className="w-4 h-4" />}
+                onPress={onManage}
+                isLoading={loadingPortal}
+                className="font-semibold w-fit"
+              >
+                Gérer l&apos;abonnement
+              </Button>
+            ) : (
+              <Button
+                as="a"
+                href="/pricing"
+                color="success"
+                variant="flat"
+                startContent={<CreditCard className="w-4 h-4" />}
+                className="font-semibold w-fit"
+              >
+                Passer à un plan payant
+              </Button>
+            )}
+          </div>
+        </CardBody>
+      </Card>
+
+      {/* What's included */}
+      <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
+        <CardHeader className="pb-2 p-0 mb-4">
+          <h3 className="font-semibold text-base">Ce qui est inclus</h3>
+        </CardHeader>
+        <CardBody className="p-0">
+          {plan === "free" && (
+            <div className="flex flex-col gap-2 text-sm text-default-500">
+              <p>✓ 5 plans de repas par mois</p>
+              <p>✓ Accès à 50 recettes</p>
+              <p>✓ Liste d&apos;épicerie basique</p>
+              <p className="text-default-300">✗ Export PDF</p>
+              <p className="text-default-300">✗ Suivi nutritionnel avancé</p>
+              <p className="text-default-300">✗ Nutritionniste IA</p>
+            </div>
+          )}
+          {plan === "student" && (
+            <div className="flex flex-col gap-2 text-sm text-default-500">
+              <p>✓ Plans de repas illimités</p>
+              <p>✓ 120+ recettes</p>
+              <p>✓ Export PDF</p>
+              <p>✓ Suivi nutritionnel complet</p>
+              <p>✓ Liste d&apos;épicerie par rayon</p>
+              <p className="text-default-300">✗ Nutritionniste IA</p>
+              <p className="text-default-300">✗ Plans familiaux</p>
+            </div>
+          )}
+          {plan === "premium" && (
+            <div className="flex flex-col gap-2 text-sm text-default-500">
+              <p>✓ Tout du plan Étudiant</p>
+              <p>✓ Nutritionniste IA personnalisée</p>
+              <p>✓ Plans familiaux (4 personnes)</p>
+              <p>✓ Recettes premium exclusives</p>
+              <p>✓ Planification 4 semaines</p>
+              <p>✓ Export calendrier (.ics)</p>
+              <p>✓ Accès API développeur</p>
+            </div>
+          )}
+        </CardBody>
+      </Card>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const { data: session } = useSession();
   const [activeSection, setActiveSection] = useState<Section>("profile");
+
+  // Auto-navigate to subscription section when returning from Stripe portal
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const s = params.get("section");
+    const valid: Section[] = ["profile", "preferences", "nutrition", "progression", "notifications", "subscription", "privacy"];
+    if (s && valid.includes(s as Section)) setActiveSection(s as Section);
+  }, []);
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
@@ -160,6 +366,13 @@ export default function SettingsPage() {
   const [proteinPct, setProteinPct] = useState(30);
   const [carbsPct, setCarbsPct] = useState(40);
   const [fatPct, setFatPct] = useState(30);
+
+  // ── Subscription state ───────────────────────────────────────────────────────
+  const [subPlan, setSubPlan] = useState<string>("free");
+  const [subStatus, setSubStatus] = useState<string | null>(null);
+  const [subPeriodEnd, setSubPeriodEnd] = useState<string | null>(null);
+  const [hasStripeCustomer, setHasStripeCustomer] = useState(false);
+  const [loadingPortal, setLoadingPortal] = useState(false);
 
   // ── Weight log state ─────────────────────────────────────────────────────────
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
@@ -245,12 +458,13 @@ export default function SettingsPage() {
     async function loadAll() {
       setLoading(true);
       try {
-        const [profileRes, prefsRes, notifsRes, nutritionRes] =
+        const [profileRes, prefsRes, notifsRes, nutritionRes, subRes] =
           await Promise.all([
             fetch("/api/user/profile"),
             fetch("/api/user/preferences"),
             fetch("/api/user/notifications"),
             fetch("/api/user/nutrition"),
+            fetch("/api/user/subscription"),
           ]);
 
         if (profileRes.ok) {
@@ -324,6 +538,14 @@ export default function SettingsPage() {
             if (nutrition.macro_fat_pct) setFatPct(nutrition.macro_fat_pct);
           }
         }
+
+        if (subRes.ok) {
+          const sub = await subRes.json();
+          setSubPlan(sub.plan ?? "free");
+          setSubStatus(sub.subscription_status ?? null);
+          setSubPeriodEnd(sub.current_period_end ?? null);
+          setHasStripeCustomer(!!sub.has_stripe_customer);
+        }
       } catch {
         toast.error("Impossible de charger les paramètres");
       } finally {
@@ -348,6 +570,23 @@ export default function SettingsPage() {
       toast.error("Erreur lors de la mise à jour du profil");
     } finally {
       setSavingProfile(false);
+    }
+  }
+
+  async function openStripePortal() {
+    setLoadingPortal(true);
+    try {
+      const res = await fetch("/api/stripe/portal", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Impossible d'accéder au portail");
+        return;
+      }
+      window.location.href = data.url;
+    } catch {
+      toast.error("Erreur de connexion au portail Stripe");
+    } finally {
+      setLoadingPortal(false);
     }
   }
 
@@ -513,6 +752,11 @@ export default function SettingsPage() {
       key: "notifications",
       label: "Notifications",
       icon: <Bell className="w-4 h-4" />,
+    },
+    {
+      key: "subscription",
+      label: "Abonnement",
+      icon: <CreditCard className="w-4 h-4" />,
     },
     {
       key: "privacy",
@@ -1601,6 +1845,18 @@ export default function SettingsPage() {
                 </CardBody>
               </Card>
             ))}
+
+          {/* ── Subscription ── */}
+          {activeSection === "subscription" && (
+            <SubscriptionSection
+              plan={subPlan}
+              status={subStatus}
+              periodEnd={subPeriodEnd}
+              hasStripeCustomer={hasStripeCustomer}
+              loadingPortal={loadingPortal}
+              onManage={openStripePortal}
+            />
+          )}
 
           {/* ── Privacy ── */}
           {activeSection === "privacy" && (

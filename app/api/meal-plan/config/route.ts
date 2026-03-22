@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getSupabaseServer } from "@/utils/supabase-server";
+import { getLimits } from "@/utils/plan-limits";
 
 export async function PATCH(req: Request) {
   try {
@@ -11,11 +12,29 @@ export async function PATCH(req: Request) {
 
     const { days_count, meals_per_day } = await req.json();
 
-    if (days_count && ![5, 7].includes(days_count)) {
+    if (days_count && ![5, 7, 14, 21, 28].includes(days_count)) {
       return NextResponse.json(
-        { error: "days_count must be 5 or 7" },
+        { error: "days_count must be 5, 7, 14, 21, or 28" },
         { status: 400 },
       );
+    }
+
+    // Gate multi-week planning to premium
+    if (days_count && days_count > 7) {
+      const supabase = getSupabaseServer();
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("plan")
+        .eq("id", session.user.id)
+        .single();
+      const userPlan = profileData?.plan ?? "free";
+      const limits = getLimits(userPlan);
+      if (limits.weeksPlanning < Math.ceil(days_count / 7)) {
+        return NextResponse.json(
+          { error: "premium_required", message: "La planification sur plus d'une semaine nécessite le plan Premium." },
+          { status: 403 },
+        );
+      }
     }
     if (meals_per_day && ![1, 2, 3].includes(meals_per_day)) {
       return NextResponse.json(
