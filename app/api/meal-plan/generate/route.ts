@@ -8,7 +8,9 @@ import { mealPlanRateLimit } from "@/utils/rate-limit";
 import { cacheDel, cacheDelPattern, CacheKey } from "@/utils/redis";
 import { getLimits } from "@/utils/plan-limits";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+export const maxDuration = 60; // Vercel: allow up to 60s for AI generation
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 55_000, maxRetries: 1 });
 
 const WEEKDAYS_5 = ["monday", "tuesday", "wednesday", "thursday", "friday"];
 const WEEKDAYS_7 = [

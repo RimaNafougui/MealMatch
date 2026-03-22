@@ -159,7 +159,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="flex flex-col gap-5 sm:gap-8 max-w-4xl mx-auto">
+    <div className="flex flex-col gap-6">
       {/* Welcome banner */}
       <div className="rounded-2xl bg-gradient-to-r from-success/20 via-success/10 to-transparent border border-success/20 p-4 sm:p-6 flex items-center gap-4">
         <div className="p-3 rounded-xl bg-success/20 hidden sm:flex">

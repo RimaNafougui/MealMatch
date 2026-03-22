@@ -401,7 +401,7 @@ export default function NutritionistPage() {
   const userPlan: string = planData?.plan ?? "free";
 
   return (
-    <div className="max-w-4xl mx-auto flex flex-col gap-4 sm:gap-6">
+    <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
           <BrainCircuit size={28} className="text-success" />

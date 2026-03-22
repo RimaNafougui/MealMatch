@@ -48,6 +48,10 @@ export async function POST(req: Request) {
     });
 
     if (error) {
+        // Unique constraint violation — already favorited, treat as success
+        if (error.code === "23505") {
+            return NextResponse.json({ success: true });
+        }
         console.error("Supabase Error:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }

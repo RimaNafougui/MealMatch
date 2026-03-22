@@ -122,6 +122,12 @@ export default function SignUpForm() {
     const password = formData.get("password") as string;
     const confirmPassword = formData.get("confirmPassword") as string;
 
+    if (password.length < 8) {
+      setError("Le mot de passe doit contenir au moins 8 caractères");
+      setIsLoading(false);
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("Les mots de passe ne correspondent pas");
       setIsLoading(false);
@@ -221,7 +227,7 @@ export default function SignUpForm() {
           label="Mot de passe"
           name="password"
           placeholder="••••••••"
-          minLength={6}
+          minLength={8}
           variant="bordered"
           labelPlacement="outside"
           startContent={<Lock size={18} className="text-default-400" />}

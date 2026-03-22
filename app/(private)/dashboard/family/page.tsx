@@ -188,7 +188,7 @@ export default function FamilyPage() {
   const userPlan: string = planData?.plan ?? "free";
 
   return (
-    <div className="max-w-2xl mx-auto flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
           <Users size={28} className="text-primary" />
