@@ -47,7 +47,7 @@ const DAY_LABELS: Record<string, string> = {
 
 function MealCard({ meal }: { meal: GeneratedMeal }) {
   return (
-    <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-default-50 dark:bg-default-100/10 border border-divider/40">
+    <div className="meal-slot-card flex flex-col gap-1.5 p-3 rounded-xl bg-default-50 dark:bg-default-100/10 border border-divider/40">
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-semibold text-default-400 uppercase tracking-wide">
           {MEAL_LABELS[meal.slot] || meal.slot}
@@ -92,7 +92,7 @@ function MealCard({ meal }: { meal: GeneratedMeal }) {
 
 function DayCard({ day }: { day: GeneratedDay }) {
   return (
-    <Card className="border border-divider/50 bg-white/70 dark:bg-black/30">
+    <Card className="print-card border border-divider/50 bg-white/70 dark:bg-black/30">
       <CardHeader className="pb-2 px-4 pt-4">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-success" />
@@ -259,12 +259,85 @@ export default function MealPlanDetailPage() {
     <div className="max-w-5xl mx-auto flex flex-col gap-6">
       <style>{`
         @media print {
+          /* Hide all app chrome */
           nav, aside, header, footer,
           [data-no-print], .no-print { display: none !important; }
-          body { background: white !important; }
-          .print-friendly { break-inside: avoid; }
+
+          /* Page setup */
+          @page { size: A4; margin: 16mm; }
+          body { background: white !important; color: #111 !important; font-family: -apple-system, sans-serif; }
+
+          /* Show print-only elements */
+          .print-only { display: block !important; }
+
+          /* Reset card backgrounds */
+          .print-card {
+            background: white !important;
+            border: 1px solid #e4e4e7 !important;
+            border-radius: 8px !important;
+            break-inside: avoid;
+            padding: 12px;
+            margin-bottom: 8px;
+          }
+
+          /* 3-column grid → 2-column on A4 */
+          .days-grid {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 10px !important;
+          }
+
+          /* Meal slot cards */
+          .meal-slot-card {
+            background: #f9f9f9 !important;
+            border: 1px solid #e4e4e7 !important;
+            border-radius: 6px;
+            break-inside: avoid;
+            padding: 8px;
+            margin-bottom: 6px;
+          }
+
+          /* Typography */
+          h1 { font-size: 20px !important; }
+          h2 { font-size: 14px !important; }
+          .text-xs { font-size: 11px !important; }
+          .text-sm { font-size: 12px !important; }
+
+          /* Chips: flatten */
+          [data-slot="base"] { background: #f4f4f5 !important; color: #3f3f46 !important; border: none !important; }
         }
+
+        /* Hide print-only elements on screen */
+        .print-only { display: none; }
       `}</style>
+
+      {/* Print-only header */}
+      <div className="print-only" style={{ marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #18181b", paddingBottom: 12, marginBottom: 16 }}>
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.5 }}>🍽 MealMatch</div>
+            <div style={{ fontSize: 12, color: "#71717a", marginTop: 2 }}>Plan de repas personnalisé</div>
+          </div>
+          <div style={{ textAlign: "right", fontSize: 11, color: "#71717a" }}>
+            <div>Généré le {new Date().toLocaleDateString("fr-CA", { day: "numeric", month: "long", year: "numeric" })}</div>
+            {plan && (
+              <div style={{ marginTop: 2, fontWeight: 600, color: "#18181b", fontSize: 12 }}>
+                {new Date(plan.week_start_date).toLocaleDateString("fr-CA", { day: "numeric", month: "short" })}
+                {" → "}
+                {new Date(plan.week_end_date).toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" })}
+              </div>
+            )}
+          </div>
+        </div>
+        {plan && (
+          <div style={{ display: "flex", gap: 24, fontSize: 12, color: "#3f3f46", marginBottom: 4 }}>
+            <span>📅 {plan.days_count} jours</span>
+            <span>🍴 {days.reduce((s, d) => s + d.meals.length, 0)} repas</span>
+            {avgCalories > 0 && <span>🔥 ~{avgCalories} cal/jour</span>}
+            {(plan.total_cost ?? 0) > 0 && <span>💵 ~{Number(plan.total_cost).toFixed(2)} $CA/sem.</span>}
+          </div>
+        )}
+      </div>
 
       {/* Back */}
       <Button
@@ -340,7 +413,7 @@ export default function MealPlanDetailPage() {
 
       {/* Days grid */}
       {days.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="days-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {days.map((day, i) => (
             <DayCard key={i} day={day} />
           ))}
@@ -388,21 +461,23 @@ export default function MealPlanDetailPage() {
         {limits.pdfExport ? (
           <Button
             variant="flat"
+            color="primary"
             startContent={<Printer size={16} />}
             onPress={handlePrint}
             className="font-semibold"
           >
-            Télécharger PDF
+            Exporter en PDF
           </Button>
         ) : (
           <Button
+            as={Link}
+            href="/pricing"
             variant="flat"
-            isDisabled
             startContent={<Lock size={16} />}
-            className="font-semibold text-default-400"
-            title="Disponible avec le plan Étudiant"
+            className="font-semibold text-default-400 border border-dashed border-default-300"
           >
-            Télécharger PDF
+            Exporter en PDF
+            <Chip size="sm" color="warning" variant="flat" className="ml-1 text-[10px] h-4">Étudiant+</Chip>
           </Button>
         )}
 

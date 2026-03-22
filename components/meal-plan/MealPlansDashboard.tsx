@@ -302,16 +302,29 @@ export function MealPlansDashboard({
             <p className="text-sm text-default-400">Semaine du {weekLabel}</p>
           </div>
         </div>
-        <Button
-          as={NextLink}
-          href="/meal-plan/generate"
-          color="success"
-          variant={activePlan ? "bordered" : "solid"}
-          startContent={<Sparkles size={16} />}
-          className="font-bold text-white bg-success"
-        >
-          {activePlan ? "Modifier le plan" : "Générer un plan"}
-        </Button>
+        {activePlan ? (
+          <Button
+            as={NextLink}
+            href={`/dashboard/meal-plans/${activePlan.id}`}
+            color="success"
+            variant="solid"
+            startContent={<ArrowRight size={16} />}
+            className="font-bold text-white bg-success"
+          >
+            Voir le plan
+          </Button>
+        ) : (
+          <Button
+            as={NextLink}
+            href="/meal-plan/generate"
+            color="success"
+            variant="solid"
+            startContent={<Sparkles size={16} />}
+            className="font-bold text-white bg-success"
+          >
+            Générer un plan
+          </Button>
+        )}
       </div>
 
       {/* Tabs */}
