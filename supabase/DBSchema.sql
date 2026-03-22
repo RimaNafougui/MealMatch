@@ -19,6 +19,26 @@ CREATE TABLE public.accounts (
   CONSTRAINT accounts_pkey PRIMARY KEY (id),
   CONSTRAINT accounts_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
+CREATE TABLE public.api_keys (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  key_hash text NOT NULL,
+  label text,
+  created_at timestamp with time zone DEFAULT now(),
+  last_used_at timestamp with time zone,
+  CONSTRAINT api_keys_pkey PRIMARY KEY (id),
+  CONSTRAINT api_keys_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.family_members (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  owner_id uuid NOT NULL,
+  name text NOT NULL,
+  dietary_restrictions ARRAY DEFAULT '{}'::text[],
+  allergies ARRAY DEFAULT '{}'::text[],
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT family_members_pkey PRIMARY KEY (id),
+  CONSTRAINT family_members_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES auth.users(id)
+);
 CREATE TABLE public.meal_plan_usage (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL,
@@ -46,6 +66,24 @@ CREATE TABLE public.meal_plans (
   CONSTRAINT meal_plans_pkey PRIMARY KEY (id),
   CONSTRAINT meal_plans_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
+CREATE TABLE public.nutritionist_messages (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  session_id uuid NOT NULL,
+  role text NOT NULL CHECK (role = ANY (ARRAY['user'::text, 'assistant'::text])),
+  content text NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT nutritionist_messages_pkey PRIMARY KEY (id),
+  CONSTRAINT nutritionist_messages_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.nutritionist_sessions(id)
+);
+CREATE TABLE public.nutritionist_sessions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  title text NOT NULL DEFAULT 'Nouvelle conversation'::text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT nutritionist_sessions_pkey PRIMARY KEY (id),
+  CONSTRAINT nutritionist_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
 CREATE TABLE public.profiles (
   id uuid NOT NULL,
   email text NOT NULL UNIQUE,
@@ -54,7 +92,6 @@ CREATE TABLE public.profiles (
   budget_max numeric,
   dietary_restrictions ARRAY DEFAULT '{}'::text[],
   allergies ARRAY DEFAULT '{}'::text[],
-  is_premium boolean DEFAULT false,
   premium_expires_at timestamp with time zone,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
@@ -118,6 +155,7 @@ CREATE TABLE public.recipes_catalog (
   updated_at timestamp with time zone DEFAULT now(),
   is_user_created boolean NOT NULL DEFAULT false,
   created_by uuid,
+  is_premium boolean DEFAULT false,
   CONSTRAINT recipes_catalog_pkey PRIMARY KEY (id),
   CONSTRAINT recipes_catalog_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id)
 );
