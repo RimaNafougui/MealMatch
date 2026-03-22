@@ -13,10 +13,15 @@ import {
   SavedMealPlan,
 } from "@/types/meal-plan";
 import { format, startOfWeek } from "date-fns";
+import { useUserPlan } from "@/hooks/useUserPlan";
 
 export default function GenerateMealPlanPage() {
   const { data: session } = useSession();
   const router = useRouter();
+  const { data: planData, isLoading: planLoading } = useUserPlan();
+  const userPlan = planData?.plan ?? "free";
+  const maxSlotRegens = userPlan === "free" ? 2 : Infinity;
+  const [slotRegenCount, setSlotRegenCount] = useState(0);
 
   const [config, setConfig] = useState<MealPlanConfig>({
     days_count: 5,
@@ -113,14 +118,8 @@ export default function GenerateMealPlanPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        if (data.error === "already_generated") {
-          toast.error("You've already generated a plan this week!");
-          setHasExistingPlan(true);
-          setExistingPlanDate(
-            data.generated_at
-              ? format(new Date(data.generated_at), "MMMM d 'at' h:mm a")
-              : "earlier this week",
-          );
+        if (data.error === "monthly_limit_reached") {
+          toast.error(data.message || "Limite mensuelle atteinte.");
           return;
         }
         throw new Error(data.error || "Failed to generate");
@@ -213,7 +212,7 @@ export default function GenerateMealPlanPage() {
         </p>
       </div>
 
-      {checkingPlan ? (
+      {checkingPlan || planLoading ? (
         <div className="flex items-center justify-center py-20 text-foreground/40">
           Loading...
         </div>
@@ -232,6 +231,7 @@ export default function GenerateMealPlanPage() {
                 isGenerating={isGenerating}
                 hasExistingPlan={hasExistingPlan}
                 existingPlanDate={existingPlanDate}
+                userPlan={userPlan}
               />
             </div>
           </div>
@@ -255,6 +255,10 @@ export default function GenerateMealPlanPage() {
                   onPlanChange={setGeneratedPlan}
                   onSave={handleSave}
                   isSaving={isSaving}
+                  userPlan={userPlan}
+                  slotRegenCount={slotRegenCount}
+                  maxSlotRegens={maxSlotRegens}
+                  onSlotRegenerated={() => setSlotRegenCount((c) => c + 1)}
                 />
               </>
             ) : (

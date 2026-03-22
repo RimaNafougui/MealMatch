@@ -64,7 +64,7 @@ export interface UserStats {
     image?: string;
     username?: string;
     created_at?: string;
-    plan?: "free" | "premium" | "pro" | null;
+    plan?: "free" | "student" | "premium" | "pro" | null;
   } | null;
 }
 

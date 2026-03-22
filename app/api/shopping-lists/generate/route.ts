@@ -158,7 +158,7 @@ export async function POST(req: NextRequest) {
     }
 
     const totalCost = organizedItems.reduce(
-      (sum, item) => sum + (item.price ?? 0) * (item.quantity ?? 1),
+      (sum, item) => sum + (("price" in item ? (item.price as number | null) : null) ?? 0) * (item.quantity ?? 1),
       0
     );
 

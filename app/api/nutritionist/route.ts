@@ -30,9 +30,22 @@ export async function POST(req: Request) {
       );
     }
 
-    const { message, history } = await req.json();
+    const { message, history, session_id } = await req.json();
     if (!message || typeof message !== "string") {
       return NextResponse.json({ error: "message is required" }, { status: 400 });
+    }
+
+    // Verify session ownership if session_id provided
+    if (session_id) {
+      const { data: chatSession } = await supabase
+        .from("nutritionist_sessions")
+        .select("id")
+        .eq("id", session_id)
+        .eq("user_id", session.user.id)
+        .single();
+      if (!chatSession) {
+        return NextResponse.json({ error: "Session not found" }, { status: 404 });
+      }
     }
 
     // Fetch recent meal plan for context
@@ -88,6 +101,29 @@ ${profileContext || "Non renseigné"}`;
     });
 
     const reply = completion.choices[0]?.message?.content ?? "";
+
+    // Persist messages to DB if a session is active
+    if (session_id) {
+      await supabase.from("nutritionist_messages").insert([
+        { session_id, role: "user", content: message },
+        { session_id, role: "assistant", content: reply },
+      ]);
+
+      // Auto-title session after first real user message (if still default)
+      const { data: sess } = await supabase
+        .from("nutritionist_sessions")
+        .select("title")
+        .eq("id", session_id)
+        .single();
+      if (sess?.title === "Nouvelle conversation") {
+        const autoTitle = message.length > 60 ? message.slice(0, 57) + "…" : message;
+        await supabase
+          .from("nutritionist_sessions")
+          .update({ title: autoTitle })
+          .eq("id", session_id);
+      }
+    }
+
     return NextResponse.json({ reply });
   } catch (error) {
     console.error("Nutritionist API error:", error);
