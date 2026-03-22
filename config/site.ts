@@ -52,7 +52,7 @@ export const siteConfig = {
     },
   ],
   links: {
-    github: "https://github.com/Mercuryy200/MealMatch",
+    github: "https://github.com/RimaNafougui/MealMatch",
     twitter: "https://twitter.com/hero_ui",
     docs: "https://heroui.com",
     discord: "https://discord.gg/9b6yyZKmH4",

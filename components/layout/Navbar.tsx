@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import dynamic from "next/dynamic";
 import {
   Navbar as HeroUINavbar,
   NavbarContent,
@@ -14,6 +13,7 @@ import {
 } from "@heroui/react";
 import { link as linkStyles } from "@heroui/theme";
 import NextLink from "next/link";
+import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import {
   Sparkles,
@@ -31,13 +31,9 @@ import {
 
 import { siteConfig } from "@/config/site";
 import { ThemeSwitch } from "@/components/theme-switch";
+import { ProfileDropdown } from "@/components/login/dropdown";
 import { Logo } from "@/components/logo";
 import { logout } from "@/lib/actions/auth";
-
-const ProfileDropdown = dynamic(
-  () => import("@/components/login/dropdown").then((m) => ({ default: m.ProfileDropdown })),
-  { ssr: false },
-);
 
 // ─── Nav item definitions ─────────────────────────────────────────────────────
 
@@ -54,7 +50,6 @@ const privateNavItems = [
     icon: <LayoutDashboard size={18} />,
   },
   { label: "Explorer", href: "/explore", icon: <Compass size={18} /> },
-  { label: "Profile", href: "/profile" },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -62,14 +57,19 @@ const privateNavItems = [
 export const AppNavbar = ({ user }: { user: any }) => {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const [scrolled, setScrolled] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
+  const pathname = usePathname();
 
   React.useEffect(() => {
+    setMounted(true);
     const onScroll = () => setScrolled(window.scrollY > 8);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   const navItems = user ? privateNavItems : publicNavItems;
+  // Hide navbar hamburger on dashboard pages — the sidebar handles navigation there
+  const isDashboard = pathname?.startsWith("/dashboard");
 
   return (
     <HeroUINavbar
@@ -126,8 +126,13 @@ export const AppNavbar = ({ user }: { user: any }) => {
         </NavbarItem>
 
         {user ? (
-          <NavbarItem>
-            <ProfileDropdown user={user} />
+          /* Avatar dropdown — hidden on mobile (hamburger menu covers those links) */
+          <NavbarItem className="hidden sm:flex">
+            {mounted ? (
+              <ProfileDropdown user={user} />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-default-200 border-2 border-success/30" />
+            )}
           </NavbarItem>
         ) : (
           <>

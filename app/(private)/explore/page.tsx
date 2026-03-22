@@ -339,10 +339,10 @@ export default function ExplorePage() {
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="max-w-7xl mx-auto flex flex-col gap-6 py-8 px-2">
+    <div className="max-w-7xl mx-auto flex flex-col gap-4 sm:gap-6 py-4 sm:py-8 px-4 sm:px-6">
       {/* ── Header ── */}
-      <div className="flex flex-col pt-4 gap-1">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
+      <div className="flex flex-col pt-1 sm:pt-4 gap-1">
+        <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
           <Leaf className="text-success" size={28} />
           Explorer les Recettes
         </h1>
@@ -808,13 +808,13 @@ export default function ExplorePage() {
 
       {/* ── Pagination ── */}
       {loading ? (
-        <div className="flex justify-center items-center gap-2 pt-4 pb-8">
+        <div className="flex justify-center items-center gap-2 pt-4 pb-6 sm:pb-8">
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-8 w-10 rounded-lg" />
           ))}
         </div>
       ) : !loading && recipes.length > 0 && pagination.totalPages > 1 && (
-        <div className="flex flex-wrap justify-center items-center gap-2 pt-4 pb-8">
+        <div className="flex flex-wrap justify-center items-center gap-1.5 sm:gap-2 pt-4 pb-6 sm:pb-8">
           <Button
             size="sm"
             variant="flat"

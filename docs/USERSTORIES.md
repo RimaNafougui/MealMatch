@@ -27,11 +27,13 @@
 #### Critères d'acceptation
 
 1. **Inscription complète**
+
    - L'utilisateur peut s'inscrire avec email et mot de passe
    - Le système envoie un email de confirmation
    - L'utilisateur peut se connecter après vérification
 
 2. **Onboarding - Restrictions alimentaires**
+
    - L'utilisateur sélectionne restrictions (Végétarien, Végan, Sans gluten, Sans lactose, Halal, Casher, Pescatarien)
    - Multiple selections possibles
    - L'utilisateur peut spécifier allergies textuelles
@@ -55,10 +57,12 @@
 #### Critères d'acceptation
 
 1. **Saisie du budget**
+
    - Budget min/max par semaine (20$ - 200$ USD)
    - Interface: dual-range slider
 
 2. **Validation**
+
    - budget_min < budget_max
    - Messages d'erreur clairs
 
@@ -80,11 +84,13 @@
 #### Critères d'acceptation
 
 1. **Génération avec Spoonacular**
+
    - Préférences: diet type, target calories, excluded ingredients
    - Plan pour 7 jours × 3 repas = 21 recettes
    - Généré en <5 secondes avec loading state
 
 2. **Respect contraintes**
+
    - Budget respecté (±10% tolérance)
    - Restrictions alimentaires respectées
    - Calories cibles atteintes (±150 cal/jour)
@@ -113,6 +119,7 @@
 1. **Affichage temps**
    - HeroUI Chip avec icône horloge + "15 min"
 2. **Filtrage**
+
    - HeroUI Switch "Recettes rapides" (<30 min)
    - Temps réel sans rechargement
 
@@ -135,11 +142,13 @@
 #### Critères d'acceptation
 
 1. **Génération automatique**
+
    - Via Spoonacular `/recipes/informationBulk`
    - Agrégation intelligente des ingrédients
    - Organisation par rayon (Produce, Meat, Dairy, Bakery, Pantry)
 
 2. **Interface interactive**
+
    - HeroUI Accordion par rayon (collapsible)
    - Checkboxes persistées dans Supabase
    - Barre progression (% cochés)
@@ -165,9 +174,11 @@
 #### Critères d'acceptation
 
 1. **Sur recipe cards**
+
    - HeroUI Badge "450 cal" visible
 
 2. **Page détail**
+
    - HeroUI Table: Calories, Protéines, Glucides, Lipides, Fibres, Sodium
    - Par portion
 
@@ -190,12 +201,14 @@
 #### Critères d'acceptation
 
 1. **Page Pricing**
+
    - Comparaison Free vs Premium (HeroUI Cards)
    - Free: $0, 2 meal plans/mois, 50 recettes, 1 shopping list
    - Premium: $4.99/mois ou $49.99/an, unlimited tout, macros, meal prep, PDF, support
    - Toggle Monthly/Yearly avec badge "Save 17%"
 
 2. **Checkout Stripe**
+
    - Bouton "Upgrade to Premium" (HeroUI Button color="warning")
    - Création Checkout Session (mode 'subscription')
    - Redirect Stripe hosted page
@@ -222,11 +235,13 @@
 #### Critères d'acceptation
 
 1. **Section Settings**
+
    - Si Free: Badge + bouton "Upgrade to Premium"
    - Si Premium: Badge status, date "Premium since", bouton "Manage Subscription"
    - Si canceled: Banner warning avec date expiration
 
 2. **Stripe Customer Portal**
+
    - Portal Session créée
    - Redirect Portal hosted page
    - Permet: view invoices, update payment, cancel, change billing
@@ -251,6 +266,7 @@
 #### Critères d'acceptation
 
 1. **Limitation meal plans**
+
    - Free: max 2 meal plans/mois
    - Table `meal_plan_usage` track count
    - 3ème attempt: HeroUI Modal paywall
@@ -258,6 +274,7 @@
    - Reset automatique 1er du mois
 
 2. **Paywall Modal**
+
    - HeroUI Modal avec Chip "Premium Feature" + Crown
    - Titre: "Unlock Unlimited Meal Plans"
    - Liste benefits avec checkmarks
@@ -498,8 +515,8 @@ Une user story est **"Done"** si:
 
 - **Scrum Master:** Rima Nafougui
 - **Developers:** Jimmy Chhan, Charly Smith Alcide, Julien Guibord
-- **Repository:** https://github.com/Mercuryy200/MealMatch
-- **GitHub Projects:** https://github.com/users/Mercuryy200/projects/7
+- **Repository:** https://github.com/RimaNafougui/MealMatch
+- **GitHub Projects:** https://github.com/users/RimaNafougui/projects/7
 
 ---
 

@@ -117,7 +117,7 @@ export default function Footer() {
 
           <div className="flex gap-4">
             <Link
-              href="https://github.com/Mercuryy200/MealMatch"
+              href="https://github.com/RimaNafougui/MealMatch"
               isExternal
               className="text-default-500 hover:text-foreground transition-colors"
             >

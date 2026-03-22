@@ -288,19 +288,15 @@ export function MealPlansDashboard({
   weekLabel,
 }: MealPlansDashboardProps) {
   return (
-    <div className="max-w-5xl mx-auto py-8 px-4 md:px-6 flex flex-col gap-6">
+    <div className="max-w-5xl mx-auto py-4 sm:py-8 px-0 sm:px-4 md:px-6 flex flex-col gap-6">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-success/10 flex items-center justify-center">
-            <CalendarDays size={22} className="text-success" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">
-              Plans de repas
-            </h1>
-            <p className="text-sm text-default-400">Semaine du {weekLabel}</p>
-          </div>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
+            <CalendarDays size={28} className="text-success" />
+            Plans de repas
+          </h1>
+          <p className="text-sm text-default-400 mt-1">Semaine du {weekLabel}</p>
         </div>
         {activePlan ? (
           <Button

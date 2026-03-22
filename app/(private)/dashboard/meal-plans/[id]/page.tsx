@@ -279,7 +279,7 @@ export default function MealPlanDetailPage() {
     new Date(plan.week_start_date) < new Date();
 
   return (
-    <div className="max-w-5xl mx-auto flex flex-col gap-6">
+    <div className="max-w-5xl mx-auto flex flex-col gap-4 sm:gap-6">
       <style>{`
         @media print {
           /* Hide all app chrome */
@@ -375,7 +375,7 @@ export default function MealPlanDetailPage() {
       </Button>
 
       {/* Header card */}
-      <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
+      <Card className="p-4 sm:p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
         <CardHeader className="p-0 mb-4">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 w-full">
             <div className="flex items-center gap-3">
@@ -494,7 +494,7 @@ export default function MealPlanDetailPage() {
       })()}
 
       {/* Actions */}
-      <div className="flex gap-3 flex-wrap pb-8 no-print" data-no-print>
+      <div className="flex flex-col sm:flex-row gap-3 flex-wrap pb-6 sm:pb-8 no-print" data-no-print>
         <Button
           as={Link}
           href="/meal-plan/generate"

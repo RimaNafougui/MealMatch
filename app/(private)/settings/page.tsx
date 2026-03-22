@@ -105,7 +105,7 @@ function formatLogDate(iso: string) {
 
 function SectionSkeleton() {
   return (
-    <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
+    <Card className="p-4 sm:p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
       <div className="flex flex-col gap-5">
         <Skeleton className="h-6 w-48 rounded-lg" />
         <Skeleton className="h-12 w-full rounded-xl" />
@@ -171,7 +171,7 @@ function SubscriptionSection({
   return (
     <div className="flex flex-col gap-4">
       {/* Current plan card */}
-      <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
+      <Card className="p-4 sm:p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
         <CardHeader className="pb-2 p-0 mb-5">
           <h2 className="font-bold text-xl">Mon abonnement</h2>
         </CardHeader>
@@ -267,7 +267,7 @@ function SubscriptionSection({
       </Card>
 
       {/* What's included */}
-      <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
+      <Card className="p-4 sm:p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
         <CardHeader className="pb-2 p-0 mb-4">
           <h3 className="font-semibold text-base">Ce qui est inclus</h3>
         </CardHeader>
@@ -777,12 +777,12 @@ export default function SettingsPage() {
   );
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-12 flex flex-col gap-8">
-      <h1 className="text-3xl font-bold">Paramètres</h1>
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 sm:py-8 flex flex-col gap-6 sm:gap-8">
+      <h1 className="text-2xl sm:text-3xl font-bold">Paramètres</h1>
 
-      <div className="flex flex-col lg:flex-row gap-6">
+      <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
         {/* Sidebar */}
-        <nav className="flex lg:flex-col gap-2 lg:w-48 flex-shrink-0 flex-wrap">
+        <nav className="flex lg:flex-col gap-1.5 lg:gap-2 lg:w-48 flex-shrink-0 flex-wrap overflow-x-auto pb-1 lg:pb-0">
           {sections.map((s) => (
             <button
               key={s.key}
@@ -815,7 +815,7 @@ export default function SettingsPage() {
               <SectionSkeleton />
             ) : (
               <div className="flex flex-col gap-4">
-                <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
+                <Card className="p-4 sm:p-4 sm:p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
                   <CardHeader className="pb-2 p-0 mb-6">
                     <h2 className="font-bold text-xl">
                       Informations du profil
@@ -872,7 +872,7 @@ export default function SettingsPage() {
                   </CardBody>
                 </Card>
 
-                <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
+                <Card className="p-4 sm:p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
                   <CardHeader className="pb-2 p-0 mb-6">
                     <h2 className="font-bold text-xl flex items-center gap-2">
                       <KeyRound className="w-5 h-5 text-default-400" />
@@ -926,7 +926,7 @@ export default function SettingsPage() {
             (loading ? (
               <SectionSkeleton />
             ) : (
-              <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
+              <Card className="p-4 sm:p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
                 <CardHeader className="pb-2 p-0 mb-6">
                   <h2 className="font-bold text-xl">
                     Préférences alimentaires
@@ -1047,7 +1047,7 @@ export default function SettingsPage() {
             ) : (
               <div className="flex flex-col gap-4">
                 {/* Body metrics card */}
-                <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
+                <Card className="p-4 sm:p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
                   <CardHeader className="pb-2 p-0 mb-6">
                     <h2 className="font-bold text-xl flex items-center gap-2">
                       <User className="w-5 h-5 text-default-400" />
@@ -1192,7 +1192,7 @@ export default function SettingsPage() {
                 </Card>
 
                 {/* Activity card */}
-                <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
+                <Card className="p-4 sm:p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
                   <CardHeader className="pb-2 p-0 mb-6">
                     <h2 className="font-bold text-xl flex items-center gap-2">
                       <Activity className="w-5 h-5 text-default-400" />
@@ -1278,7 +1278,7 @@ export default function SettingsPage() {
                 </Card>
 
                 {/* Goals card */}
-                <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
+                <Card className="p-4 sm:p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
                   <CardHeader className="pb-2 p-0 mb-6">
                     <h2 className="font-bold text-xl flex items-center gap-2">
                       <Target className="w-5 h-5 text-default-400" />
@@ -1372,7 +1372,7 @@ export default function SettingsPage() {
                 </Card>
 
                 {/* Macro targets card */}
-                <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
+                <Card className="p-4 sm:p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
                   <CardHeader className="pb-2 p-0 mb-6">
                     <h2 className="font-bold text-xl flex items-center gap-2">
                       <span>🥩</span>
@@ -1575,7 +1575,7 @@ export default function SettingsPage() {
           {/* ── Progression ── */}
           {activeSection === "progression" && (
             <div className="flex flex-col gap-4">
-              <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
+              <Card className="p-4 sm:p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
                 <CardHeader className="pb-2 p-0 mb-4">
                   <div className="flex items-center justify-between w-full">
                     <h2 className="font-bold text-xl flex items-center gap-2">
@@ -1721,7 +1721,7 @@ export default function SettingsPage() {
 
               {/* Goal progress card */}
               {weightLogs.length > 0 && goalWeightRaw && weightGoal && (
-                <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
+                <Card className="p-4 sm:p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
                   <CardHeader className="pb-2 p-0 mb-4">
                     <h2 className="font-bold text-xl flex items-center gap-2">
                       <Target className="w-5 h-5 text-default-400" />
@@ -1793,7 +1793,7 @@ export default function SettingsPage() {
             (loading ? (
               <SectionSkeleton />
             ) : (
-              <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
+              <Card className="p-4 sm:p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
                 <CardHeader className="pb-2 p-0 mb-6">
                   <h2 className="font-bold text-xl">
                     Préférences de notification
@@ -1886,7 +1886,7 @@ export default function SettingsPage() {
           {/* ── Privacy ── */}
           {activeSection === "privacy" && (
             <div className="flex flex-col gap-4">
-              <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
+              <Card className="p-4 sm:p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
                 <CardHeader className="pb-2 p-0 mb-4">
                   <h2 className="font-bold text-xl">
                     Confidentialité et données

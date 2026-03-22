@@ -186,11 +186,11 @@ export default function ProfilePage() {
     ? new Date().getFullYear() - nutrition.birth_year : null;
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-12 flex flex-col gap-6">
-      <h1 className="text-3xl font-bold">Mon Profil</h1>
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 sm:py-8 flex flex-col gap-4 sm:gap-6">
+      <h1 className="text-2xl sm:text-3xl font-bold">Mon Profil</h1>
 
       {/* ── Identity card ── */}
-      <Card className="p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
+      <Card className="p-4 sm:p-6 border border-divider/50 bg-white/70 dark:bg-black/40">
         <CardBody className="flex flex-col sm:flex-row items-center sm:items-start gap-6 p-0">
           {loading ? (
             <Skeleton className="w-24 h-24 rounded-full flex-shrink-0" />
@@ -252,7 +252,7 @@ export default function ProfilePage() {
       </Card>
 
       {/* ── Stats row ── */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         {loading ? [0, 1, 2].map((i) => (
           <Card key={i} className="p-4 border border-divider/50 bg-white/50 dark:bg-black/20 text-center">
             <CardBody className="items-center gap-2 p-2">
@@ -311,7 +311,7 @@ export default function ProfilePage() {
                     </Button>
                   </div>
                 ) : (
-                <div className="w-full">
+                <div className="w-full overflow-x-auto">
                   <MiniSparkline logs={weightLogs} color={chartColor} />
                 </div>
                 )}

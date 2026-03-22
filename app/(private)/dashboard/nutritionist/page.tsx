@@ -13,6 +13,7 @@ import {
   Trash2,
   Plus,
   MessageSquare,
+  PanelLeftOpen,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useUserPlan } from "@/hooks/useUserPlan";
@@ -70,6 +71,7 @@ function NutritionistChat() {
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -118,6 +120,7 @@ function NutritionistChat() {
   const selectSession = (sessionId: string) => {
     setActiveSessionId(sessionId);
     loadSessionMessages(sessionId);
+    setMobileSidebarOpen(false);
   };
 
   const createNewSession = async () => {
@@ -236,11 +239,27 @@ function NutritionistChat() {
 
   return (
     <div
-      className="flex gap-0 border border-divider/50 rounded-2xl overflow-hidden bg-white/70 dark:bg-black/40"
-      style={{ height: "70vh" }}
+      className="flex gap-0 border border-divider/50 rounded-2xl overflow-hidden bg-white/70 dark:bg-black/40 relative"
+      style={{ height: "min(70vh, 600px)", minHeight: 360 }}
     >
+      {/* Mobile sidebar overlay */}
+      {mobileSidebarOpen && (
+        <div
+          className="absolute inset-0 bg-black/40 z-10 md:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <div className="w-56 shrink-0 border-r border-divider/50 flex flex-col bg-default-50/50 dark:bg-default-100/5">
+      <div
+        className={`
+          absolute md:static inset-y-0 left-0 z-20
+          w-56 shrink-0 border-r border-divider/50 flex flex-col bg-default-50 dark:bg-default-100/5
+          transform transition-transform duration-200
+          ${mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          md:translate-x-0
+        `}
+      >
         <div className="p-3 border-b border-divider/50">
           <Button
             size="sm"
@@ -295,7 +314,15 @@ function NutritionistChat() {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
         <div className="p-3 border-b border-divider/50 flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+          {/* Mobile sessions toggle */}
+          <button
+            className="md:hidden p-1 rounded-lg hover:bg-default-100 transition-colors text-default-400 flex-shrink-0"
+            onClick={() => setMobileSidebarOpen((o) => !o)}
+            aria-label="Conversations"
+          >
+            <PanelLeftOpen size={16} />
+          </button>
+          <div className="w-2 h-2 rounded-full bg-success animate-pulse flex-shrink-0" />
           <span className="text-sm text-default-500 truncate">
             {activeSession
               ? activeSession.title
@@ -374,9 +401,9 @@ export default function NutritionistPage() {
   const userPlan: string = planData?.plan ?? "free";
 
   return (
-    <div className="max-w-4xl mx-auto flex flex-col gap-6">
+    <div className="max-w-4xl mx-auto flex flex-col gap-4 sm:gap-6">
       <div>
-        <h1 className="text-3xl font-bold flex items-center gap-3">
+        <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
           <BrainCircuit size={28} className="text-success" />
           Nutritionniste
         </h1>

@@ -294,32 +294,23 @@ export default function GenerateMealPlanPage() {
 
       {/* Page header */}
       <div className="flex flex-col gap-2 mb-8">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-primary/10">
-            <ChefHat size={24} className="text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">
-              Generate Meal Plan
-            </h1>
-            <p className="text-sm text-foreground/50">
-              Week of {weekStart} – {weekEnd}
-            </p>
-          </div>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
+            <Sparkles size={28} className="text-primary" />
+            Générer un plan de repas
+          </h1>
           <Chip
             color="primary"
             variant="flat"
             size="sm"
-            className="ml-auto"
-            startContent={<Sparkles size={12} />}
+            startContent={<ChefHat size={12} />}
           >
-            AI-Powered
+            IA
           </Chip>
         </div>
-        <p className="text-foreground/60 text-sm max-w-xl mt-1">
-          Your personalized meal plan is generated based on your dietary
-          restrictions, budget, and favourite recipes. You can edit any meal
-          before saving.
+        <p className="text-default-400 text-sm mt-1">
+          Semaine du {weekStart} – {weekEnd} · Votre plan est personnalisé selon
+          vos restrictions alimentaires, votre budget et vos recettes favorites.
         </p>
 
         {/* Usage counter for free users */}

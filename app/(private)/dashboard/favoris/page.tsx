@@ -28,7 +28,10 @@ export default function FavoritesPage() {
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Mes Favoris</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
+          <Heart size={28} className="text-danger" />
+          Mes Favoris
+        </h1>
         <p className="text-default-500 mt-1 text-sm">
           Les recettes que vous avez ajoutées à vos favoris.
         </p>
