@@ -1380,6 +1380,31 @@ export default function SettingsPage() {
                     </h2>
                   </CardHeader>
                   <CardBody className="p-0 flex flex-col gap-5">
+                    {/* Presets */}
+                    <div className="flex flex-col gap-2">
+                      <p className="text-xs font-semibold text-default-500 uppercase tracking-wide">Présets</p>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          { label: "Équilibré", p: 30, c: 40, f: 30 },
+                          { label: "High Protein", p: 40, c: 30, f: 30 },
+                          { label: "Low Carb", p: 30, c: 20, f: 50 },
+                        ].map((preset) => {
+                          const active = proteinPct === preset.p && carbsPct === preset.c && fatPct === preset.f;
+                          return (
+                            <button
+                              key={preset.label}
+                              type="button"
+                              onClick={() => { setProteinPct(preset.p); setCarbsPct(preset.c); setFatPct(preset.f); }}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${active ? "bg-primary/10 border-primary/40 text-primary" : "border-divider text-default-500 hover:border-default-400"}`}
+                            >
+                              {preset.label}
+                              <span className="ml-1 opacity-60 font-normal">{preset.p}/{preset.c}/{preset.f}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
                     {/* Total warning */}
                     {proteinPct + carbsPct + fatPct !== 100 && (
                       <div className="px-3 py-2 rounded-xl bg-warning/10 border border-warning/30">

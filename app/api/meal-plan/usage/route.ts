@@ -21,8 +21,16 @@ export async function GET() {
     const userPlan = profile?.plan ?? "free";
     const limits = getLimits(userPlan);
 
-    if (userPlan !== "free") {
-      return NextResponse.json({ count: 0, limit: null, plan: userPlan });
+    const isPremium = userPlan !== "free";
+
+    if (isPremium) {
+      return NextResponse.json({
+        count: 0,
+        limit: null,
+        remaining: null,
+        isPremium: true,
+        plan: userPlan,
+      });
     }
 
     const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
@@ -32,9 +40,14 @@ export async function GET() {
       .eq("user_id", session.user.id)
       .gte("generated_at", monthStart + "T00:00:00Z");
 
+    const usageCount = count ?? 0;
+    const limit = limits.mealPlansPerMonth as number;
+
     return NextResponse.json({
-      count: count ?? 0,
-      limit: limits.mealPlansPerMonth,
+      count: usageCount,
+      limit,
+      remaining: Math.max(0, limit - usageCount),
+      isPremium: false,
       plan: userPlan,
     });
   } catch (err) {

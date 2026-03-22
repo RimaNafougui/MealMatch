@@ -14,12 +14,14 @@ import { Sparkles, Lock, ChefHat } from "lucide-react";
 interface MealPlanPaywallModalProps {
   isOpen: boolean;
   onClose: () => void;
+  count: number;
   limit: number;
 }
 
 export function MealPlanPaywallModal({
   isOpen,
   onClose,
+  count,
   limit,
 }: MealPlanPaywallModalProps) {
   return (
@@ -33,7 +35,7 @@ export function MealPlanPaywallModal({
         </ModalHeader>
         <ModalBody className="text-center text-sm text-default-500 pb-0">
           <p>
-            Vous avez utilisé vos <strong className="text-foreground">{limit}/{limit} meal plans</strong> gratuits ce mois-ci.
+            Vous avez utilisé <strong className="text-foreground">{count}/{limit} meal plans</strong> gratuits ce mois-ci.
           </p>
           <p className="mt-1">
             Le compteur se remet à zéro le 1er du mois, ou passez à un plan payant pour des générations illimitées.

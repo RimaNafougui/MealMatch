@@ -20,6 +20,8 @@ import {
   ChevronDown,
   ChevronUp,
   Trash2,
+  Pencil,
+  X,
 } from "lucide-react";
 import { kgToLbs } from "@/utils/nutrition";
 
@@ -371,11 +373,13 @@ export default function ProgressDashboard() {
   const deleteWeightLogMutation = useDeleteWeightLog();
 
   const [weekMacros, setWeekMacros] = useState<MealPlanMacros[]>([]);
+  const [macroView, setMacroView] = useState<"daily" | "weekly">("daily");
 
   // Weight entry form
   const [entryValue, setEntryValue] = useState("");
   const [entryNote, setEntryNote] = useState("");
   const [entryUnit, setEntryUnit] = useState<"kg" | "lbs">("kg");
+  const [entryDate, setEntryDate] = useState(new Date().toISOString().split("T")[0]);
   const [showHistory, setShowHistory] = useState(false);
 
   const unit = (nutrition?.weight_unit as "kg" | "lbs") ?? "kg";
@@ -417,7 +421,10 @@ export default function ProgressDashboard() {
   // Log today's weight
   async function handleLogWeight() {
     if (!entryValue) return;
-    const body: Record<string, unknown> = { note: entryNote || null };
+    const body: Record<string, unknown> = {
+      note: entryNote || null,
+      logged_at: entryDate,
+    };
     if (entryUnit === "lbs") body.weight_lbs = Number(entryValue);
     else                      body.weight_kg  = Number(entryValue);
 
@@ -425,8 +432,20 @@ export default function ProgressDashboard() {
       onSuccess: () => {
         setEntryValue("");
         setEntryNote("");
+        setEntryDate(new Date().toISOString().split("T")[0]);
       },
     });
+  }
+
+  function startEditLog(log: WeightLog) {
+    const val = entryUnit === "lbs"
+      ? kgToLbs(log.weight_kg).toFixed(1)
+      : log.weight_kg.toFixed(1);
+    setEntryValue(val);
+    setEntryDate(log.logged_at);
+    setEntryNote("");
+    // Scroll to form
+    document.getElementById("weight-entry-form")?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   function handleDeleteLog(id: string) {
@@ -527,103 +546,140 @@ export default function ProgressDashboard() {
             />
           )}
 
-          {/* Log today's weight */}
-          {!hasTodayLog && (
-            <>
-              <Divider className="bg-divider/40" />
-              <div className="flex flex-col gap-3">
-                <p className="text-xs font-semibold text-default-500">Enregistrer votre poids d&apos;aujourd&apos;hui</p>
+          {/* Log / edit weight */}
+          <Divider className="bg-divider/40" />
+          <div className="flex flex-col gap-3" id="weight-entry-form">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-default-500">
+                {entryDate === new Date().toISOString().split("T")[0]
+                  ? "Enregistrer votre poids d'aujourd'hui"
+                  : `Modifier le poids du ${new Date(entryDate + "T12:00:00").toLocaleDateString("fr-CA", { day: "numeric", month: "short" })}`}
+              </p>
+              {entryDate !== new Date().toISOString().split("T")[0] && (
+                <button
+                  type="button"
+                  onClick={() => { setEntryDate(new Date().toISOString().split("T")[0]); setEntryValue(""); }}
+                  className="flex items-center gap-1 text-xs text-default-400 hover:text-foreground"
+                >
+                  <X size={12} /> Annuler
+                </button>
+              )}
+            </div>
 
-                {/* Unit toggle */}
-                <div className="flex items-center justify-center">
-                  <div className="flex rounded-xl overflow-hidden border border-divider bg-default-100 p-0.5 gap-0.5">
-                    {(["kg", "lbs"] as const).map((u) => (
-                      <button
-                        key={u}
-                        type="button"
-                        onClick={() => {
-                          if (u === entryUnit) return;
-                          // Convert the current value when switching
-                          if (entryValue) {
-                            const num = parseFloat(entryValue);
-                            if (!isNaN(num)) {
-                              setEntryValue(
-                                u === "lbs"
-                                  ? kgToLbs(num).toFixed(1)
-                                  : (num / 2.20462).toFixed(1)
-                              );
-                            }
-                          }
-                          setEntryUnit(u);
-                        }}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                          entryUnit === u
-                            ? "bg-white dark:bg-black shadow text-foreground"
-                            : "text-default-400 hover:text-foreground"
-                        }`}
-                      >
-                        {u}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+            {/* Date picker */}
+            <Input
+              type="date"
+              size="sm"
+              variant="flat"
+              label="Date"
+              value={entryDate}
+              max={new Date().toISOString().split("T")[0]}
+              onChange={(e) => {
+                setEntryDate(e.target.value);
+                // Pre-fill from existing log if available
+                const existing = logs.find((l) => l.logged_at === e.target.value);
+                if (existing) {
+                  setEntryValue(entryUnit === "lbs"
+                    ? kgToLbs(existing.weight_kg).toFixed(1)
+                    : existing.weight_kg.toFixed(1));
+                } else {
+                  setEntryValue("");
+                }
+              }}
+            />
 
-                {/* Slider widget */}
-                <div className="flex flex-col items-center gap-1 px-1">
-                  <div className="text-3xl font-bold tabular-nums">
-                    {entryValue
-                      ? `${parseFloat(entryValue).toFixed(1)} ${entryUnit}`
-                      : <span className="text-default-300">{entryUnit === "kg" ? "70.0" : "154.0"} {entryUnit}</span>
-                    }
-                  </div>
-                  <Slider
-                    aria-label="Poids"
-                    minValue={sliderMin}
-                    maxValue={sliderMax}
-                    step={sliderStep}
-                    value={sliderVal}
-                    onChange={(v) => setEntryValue(Number(v).toFixed(1))}
-                    color="success"
-                    size="lg"
-                    className="w-full"
-                    showTooltip
-                    tooltipProps={{ content: `${sliderVal.toFixed(1)} ${entryUnit}` }}
-                  />
-                  <div className="flex justify-between w-full text-[10px] text-default-400 -mt-1">
-                    <span>{sliderMin} {entryUnit}</span>
-                    <span>{sliderMax} {entryUnit}</span>
-                  </div>
-                </div>
-
-                {/* Note + Save */}
-                <div className="flex gap-2 items-center">
-                  <Input
-                    placeholder="Note (optionnel)"
-                    size="sm"
-                    value={entryNote}
-                    onValueChange={setEntryNote}
-                    className="flex-1"
-                    variant="flat"
-                  />
-                  <Button
-                    size="sm"
-                    color="success"
-                    onPress={handleLogWeight}
-                    isLoading={logWeightMutation.isPending}
-                    isDisabled={!entryValue}
-                    startContent={!logWeightMutation.isPending && <Scale size={14} />}
-                    className="font-semibold"
+            {/* Unit toggle */}
+            <div className="flex items-center justify-center">
+              <div className="flex rounded-xl overflow-hidden border border-divider bg-default-100 p-0.5 gap-0.5">
+                {(["kg", "lbs"] as const).map((u) => (
+                  <button
+                    key={u}
+                    type="button"
+                    onClick={() => {
+                      if (u === entryUnit) return;
+                      if (entryValue) {
+                        const num = parseFloat(entryValue);
+                        if (!isNaN(num)) {
+                          setEntryValue(u === "lbs" ? kgToLbs(num).toFixed(1) : (num / 2.20462).toFixed(1));
+                        }
+                      }
+                      setEntryUnit(u);
+                    }}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      entryUnit === u
+                        ? "bg-white dark:bg-black shadow text-foreground"
+                        : "text-default-400 hover:text-foreground"
+                    }`}
                   >
-                    Enregistrer
-                  </Button>
-                </div>
+                    {u}
+                  </button>
+                ))}
               </div>
-            </>
-          )}
+            </div>
 
-          {hasTodayLog && (
-            <p className="text-xs text-success font-medium text-center">✓ Poids enregistré aujourd&apos;hui</p>
-          )}
+            {/* Input + Slider in sync */}
+            <div className="flex flex-col gap-2 px-1">
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  size="sm"
+                  variant="bordered"
+                  step={entryUnit === "kg" ? 0.1 : 0.5}
+                  min={sliderMin}
+                  max={sliderMax}
+                  value={entryValue}
+                  placeholder={entryUnit === "kg" ? "70.0" : "154.0"}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setEntryValue(v);
+                  }}
+                  endContent={<span className="text-default-400 text-xs">{entryUnit}</span>}
+                  classNames={{ input: "text-lg font-bold tabular-nums" }}
+                  className="w-28 shrink-0"
+                />
+                <Slider
+                  aria-label="Poids"
+                  minValue={sliderMin}
+                  maxValue={sliderMax}
+                  step={sliderStep}
+                  value={sliderVal}
+                  onChange={(v) => setEntryValue(Number(v).toFixed(1))}
+                  color="success"
+                  size="md"
+                  className="flex-1"
+                  showTooltip
+                  tooltipProps={{ content: `${sliderVal.toFixed(1)} ${entryUnit}` }}
+                />
+              </div>
+              <div className="flex justify-between w-full text-[10px] text-default-400 px-0.5">
+                <span>{sliderMin} {entryUnit}</span>
+                <span>{sliderMax} {entryUnit}</span>
+              </div>
+            </div>
+
+            {/* Note + Save */}
+            <div className="flex gap-2 items-center">
+              <Input
+                placeholder="Note (optionnel)"
+                size="sm"
+                value={entryNote}
+                onValueChange={setEntryNote}
+                className="flex-1"
+                variant="flat"
+              />
+              <Button
+                size="sm"
+                color="success"
+                onPress={handleLogWeight}
+                isLoading={logWeightMutation.isPending}
+                isDisabled={!entryValue}
+                startContent={!logWeightMutation.isPending && <Scale size={14} />}
+                className="font-semibold"
+              >
+                {logs.find((l) => l.logged_at === entryDate) ? "Mettre à jour" : "Enregistrer"}
+              </Button>
+            </div>
+          </div>
 
           {/* History toggle */}
           {logs.length > 0 && (
@@ -639,17 +695,28 @@ export default function ProgressDashboard() {
               {showHistory && (
                 <div className="flex flex-col gap-0.5 max-h-48 overflow-y-auto pr-1">
                   {[...logs].reverse().map((log) => (
-                    <div key={log.id} className="flex items-center justify-between py-1.5 border-b border-divider/40 last:border-0">
-                      <span className="text-xs text-default-400">{formatDate(log.logged_at)}</span>
+                    <div key={log.id} className="flex items-center gap-2 py-1.5 border-b border-divider/40 last:border-0">
+                      <span className="text-xs text-default-400 w-16 shrink-0">{formatDate(log.logged_at)}</span>
                       <span className="text-xs font-semibold">{displayWeight(log.weight_kg, unit)}</span>
-                      {log.note && <span className="text-xs text-default-400 italic truncate max-w-24">{log.note}</span>}
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteLog(log.id)}
-                        className="p-1 rounded hover:bg-danger/10 text-default-300 hover:text-danger transition-colors"
-                      >
-                        <Trash2 size={12} />
-                      </button>
+                      {log.note && <span className="text-xs text-default-400 italic truncate flex-1">{log.note}</span>}
+                      <div className="flex gap-1 ml-auto shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => startEditLog(log)}
+                          className="p-1 rounded hover:bg-primary/10 text-default-300 hover:text-primary transition-colors"
+                          title="Modifier"
+                        >
+                          <Pencil size={12} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteLog(log.id)}
+                          className="p-1 rounded hover:bg-danger/10 text-default-300 hover:text-danger transition-colors"
+                          title="Supprimer"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -666,16 +733,26 @@ export default function ProgressDashboard() {
           <div className="flex items-center gap-2 w-full">
             <Flame size={16} className="text-danger" />
             <h3 className="font-bold text-sm">Macros & apport calorique</h3>
-            {dailyCal && (
-              <Chip size="sm" variant="flat" color="danger" className="ml-auto text-xs">
-                Cible : {dailyCal.toLocaleString()} kcal
-              </Chip>
+            {/* Daily / Weekly toggle */}
+            {weekMacros.length > 0 && (
+              <div className="ml-auto flex rounded-lg overflow-hidden border border-divider bg-default-100 p-0.5 gap-0.5">
+                {(["daily", "weekly"] as const).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setMacroView(v)}
+                    className={`px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all ${macroView === v ? "bg-white dark:bg-black shadow text-foreground" : "text-default-400 hover:text-foreground"}`}
+                  >
+                    {v === "daily" ? "Aujourd'hui" : "Semaine"}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
         </CardHeader>
         <CardBody className="px-5 pt-3 pb-5 flex flex-col gap-4">
 
-          {/* Macro ring + targets */}
+          {/* Macro ring + split targets */}
           <div className="flex items-center gap-5">
             <MacroRing proteinPct={proteinPct} carbsPct={carbsPct} fatPct={fatPct} size={84} />
             <div className="flex flex-col gap-1.5 flex-1">
@@ -697,8 +774,85 @@ export default function ProgressDashboard() {
             </div>
           </div>
 
-          {/* Week bar chart — calories per day from meal plan */}
-          {weekMacros.length > 0 && (
+          {/* ── DAILY VIEW: consumed vs goal bars ───────────────── */}
+          {macroView === "daily" && macroGramsTarget && todayMacros && (
+            <>
+              <Divider className="bg-divider/40" />
+              <div className="flex flex-col gap-3">
+                <p className="text-xs font-semibold text-default-500">Consommé aujourd'hui</p>
+                {(
+                  [
+                    { label: "Protéines", consumed: todayMacros.protein, goal: macroGramsTarget.protein, colorClass: "bg-danger" },
+                    { label: "Glucides",  consumed: todayMacros.carbs,   goal: macroGramsTarget.carbs,   colorClass: "bg-warning" },
+                    { label: "Lipides",   consumed: todayMacros.fat,     goal: macroGramsTarget.fat,     colorClass: "bg-primary" },
+                  ] as const
+                ).map(({ label, consumed, goal, colorClass }) => {
+                  const diff = consumed - goal;
+                  const absDiff = Math.abs(diff);
+                  const barColor = absDiff <= 10 ? "bg-success" : absDiff <= 25 ? "bg-warning" : "bg-danger";
+                  const pct = Math.min((consumed / goal) * 100, 100);
+                  return (
+                    <div key={label} className="flex flex-col gap-1">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-default-500">{label}</span>
+                        <span className="font-semibold tabular-nums">
+                          {consumed}g
+                          <span className="text-default-400 font-normal"> / {goal}g</span>
+                        </span>
+                      </div>
+                      <div className="h-2 rounded-full bg-default-100 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Calorie row */}
+                {dailyCal && (
+                  <div className="flex justify-between text-xs pt-1 border-t border-divider/40">
+                    <span className="text-default-500 flex items-center gap-1"><Flame size={11} className="text-danger" /> Calories</span>
+                    <span className="font-semibold tabular-nums">
+                      {todayMacros.calories} kcal
+                      <span className="text-default-400 font-normal"> / {dailyCal} kcal</span>
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Tip card */}
+              {(() => {
+                const tips: string[] = [];
+                const pDiff = macroGramsTarget.protein - todayMacros.protein;
+                const cDiff = macroGramsTarget.carbs   - todayMacros.carbs;
+                const fDiff = macroGramsTarget.fat     - todayMacros.fat;
+                if (pDiff > 10) tips.push(`+${pDiff}g de protéines`);
+                if (cDiff > 10) tips.push(`+${cDiff}g de glucides`);
+                if (fDiff > 10) tips.push(`+${fDiff}g de lipides`);
+                if (tips.length === 0) return null;
+                return (
+                  <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/5 border border-primary/20 text-xs">
+                    <Target size={14} className="text-primary shrink-0 mt-0.5" />
+                    <span className="text-default-600">
+                      Il vous manque encore <strong>{tips.join(", ")}</strong> pour atteindre vos objectifs du jour.
+                    </span>
+                  </div>
+                );
+              })()}
+            </>
+          )}
+
+          {/* ── DAILY VIEW: no plan ──────────────────────────────── */}
+          {macroView === "daily" && macroGramsTarget && !todayMacros && (
+            <p className="text-xs text-default-400 text-center py-1">
+              Générez un plan de repas pour suivre votre apport du jour.
+            </p>
+          )}
+
+          {/* ── WEEKLY VIEW: calorie bar chart ───────────────────── */}
+          {macroView === "weekly" && weekMacros.length > 0 && (
             <>
               <Divider className="bg-divider/40" />
               <div className="flex flex-col gap-1.5">
@@ -722,23 +876,24 @@ export default function ProgressDashboard() {
                     );
                   })}
                 </div>
-                {/* Today detail */}
-                {todayMacros && (
-                  <div className="flex gap-2 pt-1 flex-wrap">
-                    <Chip size="sm" variant="flat" color="default" className="text-[10px]">
-                      {todayMacros.calories} kcal
-                    </Chip>
-                    <Chip size="sm" variant="flat" color="danger" className="text-[10px]">
-                      P {todayMacros.protein}g
-                    </Chip>
-                    <Chip size="sm" variant="flat" color="warning" className="text-[10px]">
-                      G {todayMacros.carbs}g
-                    </Chip>
-                    <Chip size="sm" variant="flat" color="primary" className="text-[10px]">
-                      L {todayMacros.fat}g
-                    </Chip>
-                  </div>
-                )}
+                {/* Weekly averages */}
+                {weekMacros.length > 0 && (() => {
+                  const avg = weekMacros.reduce((a, m) => ({
+                    calories: a.calories + m.calories,
+                    protein: a.protein + m.protein,
+                    carbs: a.carbs + m.carbs,
+                    fat: a.fat + m.fat,
+                  }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
+                  const n = weekMacros.length;
+                  return (
+                    <div className="flex gap-2 pt-1 flex-wrap">
+                      <Chip size="sm" variant="flat" color="default" className="text-[10px]">~{Math.round(avg.calories / n)} kcal/j</Chip>
+                      <Chip size="sm" variant="flat" color="danger" className="text-[10px]">P ~{Math.round(avg.protein / n)}g</Chip>
+                      <Chip size="sm" variant="flat" color="warning" className="text-[10px]">G ~{Math.round(avg.carbs / n)}g</Chip>
+                      <Chip size="sm" variant="flat" color="primary" className="text-[10px]">L ~{Math.round(avg.fat / n)}g</Chip>
+                    </div>
+                  );
+                })()}
               </div>
             </>
           )}

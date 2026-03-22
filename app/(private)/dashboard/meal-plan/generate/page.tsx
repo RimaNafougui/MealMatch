@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { GenerateConfig } from "@/components/meal-plan/GenerateConfig";
 import { MealPlanGrid } from "@/components/meal-plan/MealPlanGrid";
 import { MealPlanPaywallModal } from "@/components/meal-plan/MealPlanPaywallModal";
+import { UsageIndicator } from "@/components/meal-plan/UsageIndicator";
 import { useUserPlan } from "@/hooks/useUserPlan";
 import {
   MealPlanConfig,
@@ -287,6 +288,7 @@ export default function GenerateMealPlanPage() {
       <MealPlanPaywallModal
         isOpen={showPaywall}
         onClose={() => setShowPaywall(false)}
+        count={monthlyCount ?? 0}
         limit={monthlyLimit ?? 2}
       />
 
@@ -322,18 +324,11 @@ export default function GenerateMealPlanPage() {
 
         {/* Usage counter for free users */}
         {showUsageBar && (
-          <div className="mt-2 max-w-xs">
-            <div className="flex items-center justify-between text-xs text-foreground/50 mb-1">
-              <span>{monthlyCount}/{monthlyLimit} meal plans used this month</span>
-              {monthlyCount! >= monthlyLimit! && (
-                <span className="text-danger font-medium">Limite atteinte</span>
-              )}
-            </div>
-            <Progress
-              size="sm"
-              value={(monthlyCount! / monthlyLimit!) * 100}
-              color={monthlyCount! >= monthlyLimit! ? "danger" : monthlyCount! >= monthlyLimit! - 1 ? "warning" : "primary"}
-              className="max-w-xs"
+          <div className="mt-2">
+            <UsageIndicator
+              count={monthlyCount!}
+              limit={monthlyLimit!}
+              isPremium={false}
             />
           </div>
         )}
