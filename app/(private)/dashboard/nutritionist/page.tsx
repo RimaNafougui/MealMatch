@@ -5,7 +5,15 @@ import { Card, CardBody } from "@heroui/card";
 import { Button } from "@heroui/button";
 import { Divider } from "@heroui/divider";
 import { Skeleton } from "@heroui/skeleton";
-import { BrainCircuit, Send, User, Bot, Trash2, Plus, MessageSquare } from "lucide-react";
+import {
+  BrainCircuit,
+  Send,
+  User,
+  Bot,
+  Trash2,
+  Plus,
+  MessageSquare,
+} from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useUserPlan } from "@/hooks/useUserPlan";
 import { PlanGate } from "@/components/ui/PlanGate";
@@ -62,15 +70,21 @@ function NutritionistChat() {
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [creatingSession, setCreatingSession] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   // Load sessions on mount
   useEffect(() => {
     loadSessions();
   }, []);
 
+  // Scroll to bottom only when a new message is added (not on initial welcome message)
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messages.length <= 1) return;
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
   }, [messages]);
 
   const loadSessions = async () => {
@@ -149,7 +163,9 @@ function NutritionistChat() {
     if (!sessionId) {
       setCreatingSession(true);
       try {
-        const res = await fetch("/api/nutritionist/sessions", { method: "POST" });
+        const res = await fetch("/api/nutritionist/sessions", {
+          method: "POST",
+        });
         if (!res.ok) throw new Error();
         const data = await res.json();
         sessionId = data.session.id;
@@ -219,7 +235,10 @@ function NutritionistChat() {
   const activeSession = sessions.find((s) => s.id === activeSessionId);
 
   return (
-    <div className="flex gap-0 border border-divider/50 rounded-2xl overflow-hidden bg-white/70 dark:bg-black/40" style={{ height: "70vh" }}>
+    <div
+      className="flex gap-0 border border-divider/50 rounded-2xl overflow-hidden bg-white/70 dark:bg-black/40"
+      style={{ height: "70vh" }}
+    >
       {/* Sidebar */}
       <div className="w-56 shrink-0 border-r border-divider/50 flex flex-col bg-default-50/50 dark:bg-default-100/5">
         <div className="p-3 border-b border-divider/50">
@@ -278,12 +297,17 @@ function NutritionistChat() {
         <div className="p-3 border-b border-divider/50 flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
           <span className="text-sm text-default-500 truncate">
-            {activeSession ? activeSession.title : "Nutritionniste IA — en ligne"}
+            {activeSession
+              ? activeSession.title
+              : "Nutritionniste IA — en ligne"}
           </span>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+        <div
+          ref={messagesContainerRef}
+          className="flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+        >
           {loadingMessages ? (
             <div className="flex flex-col gap-3">
               {[1, 2].map((i) => (
@@ -314,7 +338,7 @@ function NutritionistChat() {
               </div>
             </div>
           )}
-          <div ref={bottomRef} />
+          <div ref={messagesEndRef} />
         </div>
 
         <Divider />
@@ -324,9 +348,7 @@ function NutritionistChat() {
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) =>
-              e.key === "Enter" && !e.shiftKey && sendMessage()
-            }
+            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
             placeholder="Posez votre question sur la nutrition ou l'exercice…"
             disabled={loading || loadingMessages}
             className="flex-1 px-3 py-2 text-sm rounded-xl bg-default-100 dark:bg-default-100/10 border border-divider/40 outline-none focus:border-primary/40 transition-colors placeholder:text-default-400"
@@ -356,7 +378,7 @@ export default function NutritionistPage() {
       <div>
         <h1 className="text-3xl font-bold flex items-center gap-3">
           <BrainCircuit size={28} className="text-success" />
-          Nutritionniste IA
+          Nutritionniste
         </h1>
         <p className="text-default-400 text-sm mt-1">
           Posez vos questions sur la nutrition et l&apos;activité physique —

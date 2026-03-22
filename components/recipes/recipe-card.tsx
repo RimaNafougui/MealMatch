@@ -12,6 +12,7 @@ import {
   Skeleton,
 } from "@heroui/react";
 import { Heart, Clock, Users, DollarSign, Flame } from "lucide-react";
+import { isMealPrepFriendlyRecipe } from "@/utils/meal-prep";
 
 
 export function RecipeCardSkeleton() {
@@ -59,9 +60,10 @@ export function RecipeCard({
   const servings = recipe.servings || 4;
   const calories = recipe.calories || 0;
   const pricePerServing = recipe.price_per_serving || 0;
+  const mealPrepFriendly = isMealPrepFriendlyRecipe({ prep_time: recipe.prep_time, servings: recipe.servings });
 
   return (
-    <Card isHoverable className="w-full group">
+    <Card isHoverable className="w-full group transition-shadow duration-200 hover:shadow-lg">
       <div
         className="cursor-pointer"
         onClick={() => router.push(`/explore/${recipe.id}`)}
@@ -71,7 +73,7 @@ export function RecipeCard({
             src={imageUrl}
             alt={recipe.title}
             radius="none"
-            className="aspect-video object-cover w-full group-hover:scale-105 transition-transform duration-300"
+            className="aspect-video object-cover w-full group-hover:scale-[1.03] transition-transform duration-200"
           />
         </CardHeader>
 
@@ -79,6 +81,11 @@ export function RecipeCard({
           <h3 className="font-semibold text-base line-clamp-2 min-h-[3rem]">
             {recipe.title}
           </h3>
+          {mealPrepFriendly && (
+            <Chip size="sm" color="secondary" variant="flat" className="text-[11px]">
+              Meal Prep Friendly
+            </Chip>
+          )}
           <div className="flex items-center gap-2 flex-wrap">
             {prepTime > 0 && <Chip size="sm" variant="flat" startContent={<Clock size={14} />}>{prepTime} min</Chip>}
             <Chip size="sm" variant="flat" startContent={<Users size={14} />}>{servings} portions</Chip>

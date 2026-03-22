@@ -67,6 +67,7 @@ export interface ShoppingListItem {
   aisle?: string;
   category?: string;
   emoji?: string;
+  custom?: boolean;
 }
 
 export interface ShoppingList {

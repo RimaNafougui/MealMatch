@@ -12,6 +12,7 @@ import {
   Tabs,
   Tab,
   Slider,
+  Skeleton,
 } from "@heroui/react";
 import {
   Search,
@@ -26,13 +27,19 @@ import {
   Flame,
   DollarSign,
   Users,
+  Lock,
+  Sparkles,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
+import NextLink from "next/link";
 import {
   RecipeCard,
   RecipeCardSkeleton,
 } from "@/components/recipes/recipe-card";
 import { useFavoriteToggle } from "@/hooks/useFavoritesToggle";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useUserPlan } from "@/hooks/useUserPlan";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -155,11 +162,39 @@ function FilterBadge({
   );
 }
 
+// ─── Blurred paywall card ──────────────────────────────────────────────────────
+
+function BlurredRecipeCard() {
+  return (
+    <div className="relative rounded-xl overflow-hidden border border-divider/50">
+      <div className="blur-sm pointer-events-none select-none">
+        <div className="aspect-[4/3] bg-gradient-to-br from-default-100 to-default-200" />
+        <div className="p-3 flex flex-col gap-2">
+          <div className="h-4 w-3/4 bg-default-200 rounded" />
+          <div className="h-3 w-1/2 bg-default-100 rounded" />
+          <div className="flex gap-2 mt-1">
+            <div className="h-5 w-12 bg-default-100 rounded-full" />
+            <div className="h-5 w-16 bg-default-100 rounded-full" />
+          </div>
+        </div>
+      </div>
+      <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/60 backdrop-blur-[1px]">
+        <div className="p-2 rounded-full bg-default-100 mb-2">
+          <Lock size={18} className="text-default-500" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main component ────────────────────────────────────────────────────────────
 
 export default function ExplorePage() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
+  const { data: planData } = useUserPlan();
+  const isFree = (planData?.plan ?? "free") === "free";
 
   // Meal type tab
   const [mealType, setMealType] = useState<string>("all");
@@ -191,6 +226,7 @@ export default function ExplorePage() {
 
   const fetchRecipes = useCallback(async () => {
     setLoading(true);
+    setFetchError(false);
     try {
       const params = new URLSearchParams();
 
@@ -217,10 +253,10 @@ export default function ExplorePage() {
         setRecipes(data.recipes);
         setPagination(data.pagination);
       } else {
-        console.error("Failed to fetch recipes:", data.error);
+        setFetchError(true);
       }
-    } catch (err) {
-      console.error("Error fetching recipes:", err);
+    } catch {
+      setFetchError(true);
     } finally {
       setLoading(false);
     }
@@ -303,18 +339,20 @@ export default function ExplorePage() {
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="max-w-7xl mx-auto flex flex-col gap-6">
+    <div className="max-w-7xl mx-auto flex flex-col gap-6 py-8 px-2">
       {/* ── Header ── */}
-      <div className="flex flex-col pt-10 gap-1">
+      <div className="flex flex-col pt-4 gap-1">
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <Leaf className="text-success" size={28} />
           Explorer les Recettes
         </h1>
-        <p className="text-default-500 text-sm">
-          {loading
-            ? "Chargement…"
-            : `${pagination.total} recette${pagination.total > 1 ? "s" : ""} disponibles`}
-        </p>
+        {loading ? (
+          <Skeleton className="h-4 w-44 rounded-lg mt-1" />
+        ) : (
+          <p className="text-default-500 text-sm">
+            {`${pagination.total} recette${pagination.total > 1 ? "s" : ""} disponibles`}
+          </p>
+        )}
       </div>
 
       {/* ── Meal type tabs + search row ── */}
@@ -666,6 +704,31 @@ export default function ExplorePage() {
             <RecipeCardSkeleton key={i} />
           ))}
         </div>
+      ) : fetchError ? (
+        <Card>
+          <CardBody className="text-center py-16 flex flex-col items-center gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-warning/10 flex items-center justify-center">
+              <AlertTriangle size={28} className="text-warning" />
+            </div>
+            <div>
+              <p className="font-semibold text-default-700">
+                Impossible de charger les recettes
+              </p>
+              <p className="text-sm text-default-500 mt-1">
+                Une erreur est survenue. Vérifiez votre connexion et réessayez.
+              </p>
+            </div>
+            <Button
+              color="warning"
+              variant="flat"
+              size="sm"
+              startContent={<RefreshCw size={14} />}
+              onPress={fetchRecipes}
+            >
+              Réessayer
+            </Button>
+          </CardBody>
+        </Card>
       ) : recipes.length === 0 ? (
         <Card>
           <CardBody className="text-center py-16 flex flex-col items-center gap-4">
@@ -694,21 +757,64 @@ export default function ExplorePage() {
           </CardBody>
         </Card>
       ) : (
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {recipes.map((recipe) => (
-            <RecipeItem
-              key={recipe.id}
-              recipe={recipe}
-              isFav={favoriteIds.includes(recipe.id)}
-              onToggle={() => {}}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {recipes.map((recipe, index) => (
+              <div
+                key={recipe.id}
+                className="animate-fadeInUp"
+                style={{ animationDelay: `${Math.min(index, 11) * 40}ms` }}
+              >
+                <RecipeItem
+                  recipe={recipe}
+                  isFav={favoriteIds.includes(recipe.id)}
+                  onToggle={() => {}}
+                />
+              </div>
+            ))}
+            {/* Blurred paywall cards for free users on the last page */}
+            {isFree && pagination.page === pagination.totalPages &&
+              Array.from({ length: 4 }).map((_, i) => (
+                <BlurredRecipeCard key={`blurred-${i}`} />
+              ))}
+          </div>
+
+          {/* Upgrade CTA for free users on the last page */}
+          {isFree && pagination.page === pagination.totalPages && (
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <div className="p-3 rounded-full bg-primary/10">
+                <Lock size={22} className="text-primary" />
+              </div>
+              <div>
+                <p className="font-semibold text-base">Plus de 50 recettes disponibles</p>
+                <p className="text-default-400 text-sm mt-0.5">
+                  Passez à un plan payant pour accéder à toutes les recettes.
+                </p>
+              </div>
+              <Button
+                as={NextLink}
+                href="/pricing"
+                color="primary"
+                variant="flat"
+                startContent={<Sparkles size={16} />}
+                className="font-semibold"
+              >
+                Voir les plans
+              </Button>
+            </div>
+          )}
+        </>
       )}
 
       {/* ── Pagination ── */}
-      {!loading && recipes.length > 0 && pagination.totalPages > 1 && (
-        <div className="flex flex-wrap justify-center items-center gap-2 pt-4 pb-4">
+      {loading ? (
+        <div className="flex justify-center items-center gap-2 pt-4 pb-8">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-8 w-10 rounded-lg" />
+          ))}
+        </div>
+      ) : !loading && recipes.length > 0 && pagination.totalPages > 1 && (
+        <div className="flex flex-wrap justify-center items-center gap-2 pt-4 pb-8">
           <Button
             size="sm"
             variant="flat"

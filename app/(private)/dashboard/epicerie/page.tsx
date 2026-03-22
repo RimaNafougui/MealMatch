@@ -8,6 +8,8 @@ import { Chip } from "@heroui/chip";
 import { Skeleton } from "@heroui/skeleton";
 import { Divider } from "@heroui/divider";
 import { Checkbox } from "@heroui/checkbox";
+import { Input } from "@heroui/input";
+import { Select, SelectItem } from "@heroui/select";
 import { Link } from "@heroui/link";
 import { toast } from "sonner";
 import {
@@ -24,6 +26,9 @@ import {
   List,
   LayoutList,
   Loader2,
+  Plus,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import type { ShoppingList, ShoppingListItem } from "@/types";
 import type { SavedMealPlan } from "@/types/meal-plan";
@@ -41,7 +46,7 @@ const AISLE_SORT_ORDER: Record<string, number> = {
   "Huiles, Sauces & Condiments": 7,
   "Épices & Assaisonnements": 8,
   "Produits Surgelés": 9,
-  "Boissons": 10,
+  Boissons: 10,
   "Collations & Noix": 11,
   Autres: 99,
 };
@@ -134,13 +139,16 @@ function ItemRow({
   index,
   listId,
   onToggle,
+  onDelete,
 }: {
   item: ShoppingListItem;
   index: number;
   listId: string;
   onToggle: (index: number, checked: boolean) => void;
+  onDelete?: (index: number) => void;
 }) {
   const [pending, setPending] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   async function handleToggle(checked: boolean) {
     setPending(true);
@@ -159,9 +167,26 @@ function ItemRow({
     }
   }
 
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/shopping-lists/${listId}/items`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemIndex: index }),
+      });
+      if (!res.ok) throw new Error();
+      onDelete?.(index);
+    } catch {
+      toast.error("Impossible de supprimer l'article");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
     <div
-      className={`flex items-center gap-3 py-2.5 px-1 rounded-lg transition-colors ${
+      className={`flex items-center gap-3 py-2.5 px-1 rounded-lg transition-opacity duration-300 ${
         item.checked ? "opacity-50" : ""
       }`}
     >
@@ -173,7 +198,7 @@ function ItemRow({
         size="sm"
       />
       <span
-        className={`flex-1 text-sm font-medium ${
+        className={`flex-1 text-sm font-medium transition-all duration-300 ${
           item.checked ? "line-through text-default-400" : ""
         }`}
       >
@@ -188,10 +213,33 @@ function ItemRow({
           <span className="text-default-400 ml-1">{item.unit}</span>
         )}
       </span>
+      {item.custom && (
+        <Chip
+          size="sm"
+          color="secondary"
+          variant="flat"
+          className="h-5 text-xs flex-shrink-0"
+        >
+          Custom
+        </Chip>
+      )}
       {item.price != null && item.price > 0 && (
         <span className="text-xs text-success font-semibold flex-shrink-0">
           {(item.price * item.quantity).toFixed(2)} $
         </span>
+      )}
+      {item.custom && (
+        <Button
+          isIconOnly
+          size="sm"
+          color="danger"
+          variant="light"
+          isLoading={deleting}
+          onPress={handleDelete}
+          className="flex-shrink-0 h-7 w-7 min-w-7"
+        >
+          {!deleting && <Trash2 size={13} />}
+        </Button>
       )}
     </div>
   );
@@ -201,12 +249,14 @@ function AisleSection({
   group,
   listId,
   onToggle,
+  onDelete,
 }: {
   group: AisleGroup;
   listId: string;
   onToggle: (index: number, checked: boolean) => void;
+  onDelete: (index: number) => void;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const uncheckedCount = group.items.filter(({ item }) => !item.checked).length;
   const allDone = uncheckedCount === 0;
 
@@ -229,7 +279,9 @@ function AisleSection({
             {allDone ? "✓" : uncheckedCount}
           </Chip>
         </div>
-        <span className="text-default-400 text-xs ml-2">{collapsed ? "▶" : "▼"}</span>
+        <span className="text-default-400 text-xs ml-2">
+          {collapsed ? "▶" : "▼"}
+        </span>
       </button>
       {!collapsed && (
         <div className="px-4 py-2 flex flex-col gap-0 bg-white/50 dark:bg-black/20">
@@ -240,6 +292,7 @@ function AisleSection({
               index={index}
               listId={listId}
               onToggle={onToggle}
+              onDelete={onDelete}
             />
           ))}
         </div>
@@ -256,10 +309,18 @@ export default function EpiceriePage() {
 
   const [lists, setLists] = useState<ShoppingList[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [activeList, setActiveList] = useState<ShoppingList | null>(null);
-  const [currentMealPlan, setCurrentMealPlan] = useState<SavedMealPlan | null>(null);
+  const [currentMealPlan, setCurrentMealPlan] = useState<SavedMealPlan | null>(
+    null,
+  );
   const [generating, setGenerating] = useState(false);
   const [viewMode, setViewMode] = useState<"aisle" | "flat">("aisle");
+
+  // Custom item state
+  const [customItemName, setCustomItemName] = useState("");
+  const [customItemAisle, setCustomItemAisle] = useState("Autres");
+  const [addingItem, setAddingItem] = useState(false);
 
   // Nearby stores state
   const [stores, setStores] = useState<NearbyStore[]>([]);
@@ -270,6 +331,7 @@ export default function EpiceriePage() {
 
   const fetchLists = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       const url = mealPlanId
         ? `/api/shopping-lists?mealPlanId=${mealPlanId}`
@@ -288,6 +350,7 @@ export default function EpiceriePage() {
       }
     } catch {
       toast.error("Impossible de charger la liste d'épicerie");
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -323,7 +386,10 @@ export default function EpiceriePage() {
       }
       const data = await res.json();
       setActiveList(data);
-      setLists((prev) => [data, ...prev.filter((l) => l.meal_plan_id !== planId)]);
+      setLists((prev) => [
+        data,
+        ...prev.filter((l) => l.meal_plan_id !== planId),
+      ]);
       toast.success("Liste d'épicerie générée !");
     } catch (err: any) {
       toast.error(err.message ?? "Impossible de générer la liste");
@@ -334,7 +400,9 @@ export default function EpiceriePage() {
 
   function handleGetLocation() {
     if (!navigator.geolocation) {
-      toast.error("La géolocalisation n'est pas supportée par votre navigateur");
+      toast.error(
+        "La géolocalisation n'est pas supportée par votre navigateur",
+      );
       return;
     }
     setStoreLoading(true);
@@ -345,7 +413,7 @@ export default function EpiceriePage() {
         setIsCAD(latitude > 41 && longitude < -52);
         try {
           const res = await fetch(
-            `/api/stores/nearby?lat=${latitude}&lng=${longitude}`
+            `/api/stores/nearby?lat=${latitude}&lng=${longitude}`,
           );
           if (!res.ok) throw new Error();
           const { stores: data } = await res.json();
@@ -360,19 +428,61 @@ export default function EpiceriePage() {
       () => {
         setLocationDenied(true);
         setStoreLoading(false);
-      }
+      },
     );
   }
 
   function handleItemToggle(itemIndex: number, checked: boolean) {
     if (!activeList) return;
     const updatedItems = activeList.items.map((item, i) =>
-      i === itemIndex ? { ...item, checked } : item
+      i === itemIndex ? { ...item, checked } : item,
     );
     const isCompleted = updatedItems.every((i) => i.checked);
-    const updated = { ...activeList, items: updatedItems, is_completed: isCompleted };
+    const updated = {
+      ...activeList,
+      items: updatedItems,
+      is_completed: isCompleted,
+    };
     setActiveList(updated);
     setLists((prev) => prev.map((l) => (l.id === activeList.id ? updated : l)));
+  }
+
+  function handleItemDelete(itemIndex: number) {
+    if (!activeList) return;
+    const updatedItems = activeList.items.filter((_, i) => i !== itemIndex);
+    const updated = { ...activeList, items: updatedItems };
+    setActiveList(updated);
+    setLists((prev) => prev.map((l) => (l.id === activeList.id ? updated : l)));
+  }
+
+  async function handleAddCustomItem() {
+    if (!activeList) return;
+    const name = customItemName.trim();
+    if (!name) return;
+    if (name.length > 100) {
+      toast.error("Le nom doit faire 100 caractères maximum");
+      return;
+    }
+    setAddingItem(true);
+    try {
+      const res = await fetch(`/api/shopping-lists/${activeList.id}/items`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemName: name, aisle: customItemAisle }),
+      });
+      if (!res.ok) throw new Error();
+      const updated: ShoppingList = await res.json();
+      setActiveList(updated);
+      setLists((prev) =>
+        prev.map((l) => (l.id === activeList.id ? updated : l)),
+      );
+      setCustomItemName("");
+      toast.success("Article ajouté !");
+    } catch {
+      toast.error("Impossible d'ajouter l'article");
+    } finally {
+      setAddingItem(false);
+    }
   }
 
   const checkedCount = activeList?.items.filter((i) => i.checked).length ?? 0;
@@ -393,20 +503,24 @@ export default function EpiceriePage() {
   }, [activeList]);
 
   // Flat view split
-  const unchecked = activeList?.items
-    .map((item, index) => ({ item, index }))
-    .filter(({ item }) => !item.checked) ?? [];
-  const checked = activeList?.items
-    .map((item, index) => ({ item, index }))
-    .filter(({ item }) => item.checked) ?? [];
+  const unchecked =
+    activeList?.items
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => !item.checked) ?? [];
+  const checked =
+    activeList?.items
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => item.checked) ?? [];
 
   return (
-    <div className="flex flex-col gap-6 max-w-4xl">
+    <div className="flex flex-col gap-6 max-w-4xl mx-auto w-full">
       {/* ── Header ─────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">Liste d&apos;épicerie</h1>
-          <p className="text-default-500 mt-1 text-sm">Gérez votre liste de courses.</p>
+          <p className="text-default-500 mt-1 text-sm">
+            Gérez votre liste de courses.
+          </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
@@ -453,14 +567,29 @@ export default function EpiceriePage() {
       {/* ── Stats chips ─────────────────────────────────────────────── */}
       {activeList && !loading && (
         <div className="flex flex-wrap gap-2">
-          <Chip size="sm" variant="flat" color="default" startContent={<Package size={12} />}>
+          <Chip
+            size="sm"
+            variant="flat"
+            color="default"
+            startContent={<Package size={12} />}
+          >
             {totalCount} article{totalCount > 1 ? "s" : ""}
           </Chip>
-          <Chip size="sm" variant="flat" color="success" startContent={<CheckCircle2 size={12} />}>
+          <Chip
+            size="sm"
+            variant="flat"
+            color="success"
+            startContent={<CheckCircle2 size={12} />}
+          >
             {checkedCount} / {totalCount} cochés
           </Chip>
           {totalCost > 0 && (
-            <Chip size="sm" variant="flat" color="default" startContent={<DollarSign size={12} />}>
+            <Chip
+              size="sm"
+              variant="flat"
+              color="default"
+              startContent={<DollarSign size={12} />}
+            >
               {Number(totalCost).toFixed(2)} {currencySymbol}
             </Chip>
           )}
@@ -474,6 +603,30 @@ export default function EpiceriePage() {
 
       {loading ? (
         <SkeletonList />
+      ) : loadError ? (
+        <Card className="border border-warning/30">
+          <CardBody className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-warning/10 flex items-center justify-center">
+              <AlertTriangle size={28} className="text-warning" />
+            </div>
+            <div>
+              <p className="font-semibold text-base">
+                Impossible de charger la liste
+              </p>
+              <p className="text-default-400 text-sm mt-1">
+                Vérifiez votre connexion et réessayez.
+              </p>
+            </div>
+            <Button
+              color="warning"
+              variant="flat"
+              startContent={<RefreshCw size={14} />}
+              onPress={fetchLists}
+            >
+              Réessayer
+            </Button>
+          </CardBody>
+        </Card>
       ) : (
         <>
           {/* ── Generate-from-meal-plan banner ─────────────────────── */}
@@ -485,9 +638,12 @@ export default function EpiceriePage() {
                     <Sparkles size={18} className="text-success" />
                   </div>
                   <div>
-                    <p className="font-semibold text-sm">Plan de repas disponible</p>
+                    <p className="font-semibold text-sm">
+                      Plan de repas disponible
+                    </p>
                     <p className="text-default-400 text-xs mt-0.5">
-                      Générez votre liste de courses depuis votre plan de repas de la semaine.
+                      Générez votre liste de courses depuis votre plan de repas
+                      de la semaine.
                     </p>
                   </div>
                 </div>
@@ -496,8 +652,12 @@ export default function EpiceriePage() {
                   variant="flat"
                   size="sm"
                   isLoading={generating}
-                  startContent={!generating ? <Sparkles size={14} /> : undefined}
-                  onPress={() => currentMealPlan && handleGenerate(currentMealPlan.id)}
+                  startContent={
+                    !generating ? <Sparkles size={14} /> : undefined
+                  }
+                  onPress={() =>
+                    currentMealPlan && handleGenerate(currentMealPlan.id)
+                  }
                   className="font-semibold flex-shrink-0"
                 >
                   Générer depuis mon plan
@@ -513,9 +673,12 @@ export default function EpiceriePage() {
                 <CardBody className="flex flex-col items-center gap-4">
                   <ShoppingCart size={48} className="text-default-300" />
                   <div>
-                    <p className="font-semibold text-lg">Aucune liste d&apos;épicerie</p>
+                    <p className="font-semibold text-lg">
+                      Aucune liste d&apos;épicerie
+                    </p>
                     <p className="text-default-400 text-sm mt-1">
-                      Générez un plan de repas pour créer automatiquement votre liste de courses.
+                      Générez un plan de repas pour créer automatiquement votre
+                      liste de courses.
                     </p>
                   </div>
                   <Button
@@ -557,7 +720,9 @@ export default function EpiceriePage() {
                   <div className="w-full h-1.5 bg-default-100 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-success rounded-full transition-all duration-500"
-                      style={{ width: `${Math.round((checkedCount / totalCount) * 100)}%` }}
+                      style={{
+                        width: `${Math.round((checkedCount / totalCount) * 100)}%`,
+                      }}
                     />
                   </div>
                   <p className="text-xs text-default-400 mt-1 text-right">
@@ -574,19 +739,68 @@ export default function EpiceriePage() {
                   </div>
                   <div>
                     <h2 className="font-bold text-lg">
-                      {activeList.is_completed ? "Liste complétée !" : "Liste de courses"}
+                      {activeList.is_completed
+                        ? "Liste complétée !"
+                        : "Liste de courses"}
                     </h2>
                     <p className="text-default-400 text-xs">
-                      {checkedCount} / {totalCount} article{totalCount > 1 ? "s" : ""} cochés
+                      {checkedCount} / {totalCount} article
+                      {totalCount > 1 ? "s" : ""} cochés
                     </p>
                   </div>
                 </CardHeader>
                 <Divider />
                 <CardBody className="px-6 py-4">
+                  {/* ─── Add custom item ─── */}
+                  <div className="flex gap-2 mb-4">
+                    <Input
+                      placeholder="Ajouter un article (ex : café, essuie-tout…)"
+                      value={customItemName}
+                      onValueChange={setCustomItemName}
+                      onKeyDown={(e) =>
+                        e.key === "Enter" && handleAddCustomItem()
+                      }
+                      maxLength={100}
+                      size="sm"
+                      classNames={{ inputWrapper: "bg-default-50" }}
+                      endContent={
+                        <Button
+                          isIconOnly
+                          size="sm"
+                          color="primary"
+                          variant="flat"
+                          isLoading={addingItem}
+                          onPress={handleAddCustomItem}
+                          className="h-7 w-7 min-w-7"
+                        >
+                          {!addingItem && <Plus size={14} />}
+                        </Button>
+                      }
+                    />
+                    <Select
+                      size="sm"
+                      selectedKeys={new Set([customItemAisle])}
+                      onSelectionChange={(keys) =>
+                        setCustomItemAisle(Array.from(keys)[0] as string)
+                      }
+                      className="w-48 flex-shrink-0"
+                      aria-label="Rayon"
+                    >
+                      {Object.keys(AISLE_SORT_ORDER).map((aisle) => (
+                        <SelectItem key={aisle} textValue={aisle}>
+                          {AISLE_EMOJI[aisle] ?? "🛒"} {aisle}
+                        </SelectItem>
+                      ))}
+                    </Select>
+                  </div>
+                  <Divider className="mb-4" />
+
                   {totalCount === 0 ? (
                     <div className="flex flex-col items-center py-8 gap-2 text-center">
                       <Package size={32} className="text-default-300" />
-                      <p className="text-default-400 text-sm">Cette liste est vide.</p>
+                      <p className="text-default-400 text-sm">
+                        Cette liste est vide.
+                      </p>
                     </div>
                   ) : viewMode === "aisle" ? (
                     /* ─── Aisle view ─── */
@@ -597,6 +811,7 @@ export default function EpiceriePage() {
                           group={group}
                           listId={activeList.id}
                           onToggle={handleItemToggle}
+                          onDelete={handleItemDelete}
                         />
                       ))}
                     </div>
@@ -612,6 +827,7 @@ export default function EpiceriePage() {
                               index={index}
                               listId={activeList.id}
                               onToggle={handleItemToggle}
+                              onDelete={handleItemDelete}
                             />
                           ))}
                         </div>
@@ -630,6 +846,7 @@ export default function EpiceriePage() {
                                 index={index}
                                 listId={activeList.id}
                                 onToggle={handleItemToggle}
+                                onDelete={handleItemDelete}
                               />
                             ))}
                           </div>
@@ -647,7 +864,9 @@ export default function EpiceriePage() {
                     <Store size={18} className="text-primary" />
                   </div>
                   <div>
-                    <h2 className="font-bold text-base">Épiceries à proximité</h2>
+                    <h2 className="font-bold text-base">
+                      Épiceries à proximité
+                    </h2>
                     <p className="text-default-400 text-xs">
                       Trouvez les épiceries proches de vous
                     </p>
@@ -667,22 +886,25 @@ export default function EpiceriePage() {
                         Activer la géolocalisation
                       </Button>
                       <p className="text-default-400 text-xs max-w-xs">
-                        Votre position est utilisée uniquement pour trouver les épiceries proches
-                        et n&apos;est pas enregistrée.
+                        Votre position est utilisée uniquement pour trouver les
+                        épiceries proches et n&apos;est pas enregistrée.
                       </p>
                     </div>
                   )}
 
                   {locationDenied && (
                     <p className="text-default-400 text-sm text-center py-4">
-                      Activez la géolocalisation dans votre navigateur pour voir les épiceries à
-                      proximité.
+                      Activez la géolocalisation dans votre navigateur pour voir
+                      les épiceries à proximité.
                     </p>
                   )}
 
                   {storeLoading && (
                     <div className="flex items-center justify-center gap-2 py-6">
-                      <Loader2 size={20} className="animate-spin text-primary" />
+                      <Loader2
+                        size={20}
+                        className="animate-spin text-primary"
+                      />
                       <p className="text-default-400 text-sm">
                         Recherche d&apos;épiceries&hellip;
                       </p>
@@ -707,7 +929,9 @@ export default function EpiceriePage() {
                               <Store size={14} className="text-primary" />
                             </div>
                             <div className="min-w-0">
-                              <p className="font-semibold text-sm truncate">{store.name}</p>
+                              <p className="font-semibold text-sm truncate">
+                                {store.name}
+                              </p>
                               <div className="flex items-center gap-2 mt-0.5">
                                 <Chip
                                   size="sm"

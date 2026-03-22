@@ -22,6 +22,8 @@ import {
   Plus,
   ChefHat,
   Pencil,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -191,6 +193,35 @@ function EmptyState({
   );
 }
 
+// ─── Error state ──────────────────────────────────────────────────────────────
+
+function FetchError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+      <Card className="p-8 border border-warning/30 bg-warning/5 max-w-sm w-full">
+        <CardBody className="flex flex-col items-center gap-4">
+          <AlertTriangle size={48} className="text-warning" />
+          <div>
+            <p className="font-semibold text-lg">Erreur de chargement</p>
+            <p className="text-default-400 text-sm mt-1">
+              Impossible de charger les recettes. Vérifiez votre connexion.
+            </p>
+          </div>
+          <Button
+            color="warning"
+            variant="flat"
+            startContent={<RefreshCw size={16} />}
+            onPress={onRetry}
+            className="font-semibold"
+          >
+            Réessayer
+          </Button>
+        </CardBody>
+      </Card>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function RecettesPage() {
@@ -198,9 +229,11 @@ export default function RecettesPage() {
 
   const [savedRecipes, setSavedRecipes] = useState<SavedRecipe[]>([]);
   const [savedLoading, setSavedLoading] = useState(true);
+  const [savedError, setSavedError] = useState(false);
 
   const [userRecipes, setUserRecipes] = useState<UserRecipe[]>([]);
   const [userLoading, setUserLoading] = useState(true);
+  const [userError, setUserError] = useState(false);
   const [hasFetchedUser, setHasFetchedUser] = useState(false);
 
   const [search, setSearch] = useState("");
@@ -217,13 +250,14 @@ export default function RecettesPage() {
 
   const fetchSaved = useCallback(async () => {
     setSavedLoading(true);
+    setSavedError(false);
     try {
       const res = await fetch("/api/saved-recipes");
       if (!res.ok) throw new Error();
       const { recipes: data } = await res.json();
       setSavedRecipes(data ?? []);
     } catch {
-      toast.error("Impossible de charger vos recettes sauvegardées");
+      setSavedError(true);
     } finally {
       setSavedLoading(false);
     }
@@ -231,13 +265,14 @@ export default function RecettesPage() {
 
   const fetchUserRecipes = useCallback(async () => {
     setUserLoading(true);
+    setUserError(false);
     try {
       const res = await fetch("/api/recipes/user");
       if (!res.ok) throw new Error();
       const { recipes: data } = await res.json();
       setUserRecipes(data ?? []);
     } catch {
-      toast.error("Impossible de charger vos recettes");
+      setUserError(true);
     } finally {
       setUserLoading(false);
       setHasFetchedUser(true);
@@ -384,6 +419,8 @@ export default function RecettesPage() {
                   <RecipeSkeletonCard key={i} />
                 ))}
               </div>
+            ) : savedError ? (
+              <FetchError onRetry={fetchSaved} />
             ) : filteredSaved.length === 0 && search ? (
               <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
                 <Search size={40} className="text-default-300" />
@@ -466,6 +503,8 @@ export default function RecettesPage() {
                   <RecipeSkeletonCard key={i} />
                 ))}
               </div>
+            ) : userError ? (
+              <FetchError onRetry={fetchUserRecipes} />
             ) : filteredUser.length === 0 && search ? (
               <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
                 <Search size={40} className="text-default-300" />

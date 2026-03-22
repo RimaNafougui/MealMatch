@@ -2,7 +2,15 @@
 
 import { Button } from "@heroui/react";
 import { Chip } from "@heroui/chip";
-import { Home, Utensils, Calendar, ShoppingCart, Heart, Brain, Users } from "lucide-react";
+import {
+  Home,
+  Utensils,
+  Calendar,
+  ShoppingCart,
+  Heart,
+  BrainCircuit,
+  Users,
+} from "lucide-react";
 import NextLink from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -18,18 +26,26 @@ const navLinks = [
 ];
 
 const premiumLinks = [
-  { label: "Nutritionniste IA", href: "/dashboard/nutritionist", icon: Brain },
+  {
+    label: "Nutritionniste",
+    href: "/dashboard/nutritionist",
+    icon: BrainCircuit,
+  },
   { label: "Famille", href: "/dashboard/family", icon: Users },
 ];
 
 interface DashboardSidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  desktopCollapsed?: boolean;
+  onToggleDesktop?: () => void;
 }
 
 export default function DashboardSidebar({
   isOpen,
   onClose,
+  desktopCollapsed = false,
+  onToggleDesktop,
 }: DashboardSidebarProps) {
   const pathname = usePathname();
   const { data: planData } = useUserPlan();
@@ -58,6 +74,7 @@ export default function DashboardSidebar({
           transform transition-transform duration-200 ease-in-out
           ${isOpen ? "translate-x-0" : "-translate-x-full"}
           lg:static lg:translate-x-0 lg:z-auto
+          ${desktopCollapsed ? "lg:w-0 lg:overflow-hidden lg:border-none" : "lg:w-64"}
         `}
       >
         <div className="flex flex-col h-full">
@@ -104,7 +121,12 @@ export default function DashboardSidebar({
                   startContent={<Icon size={18} />}
                   endContent={
                     !isPremium ? (
-                      <Chip size="sm" color="warning" variant="flat" className="text-[10px] h-4 ml-auto">
+                      <Chip
+                        size="sm"
+                        color="warning"
+                        variant="flat"
+                        className="text-[10px] h-4 ml-auto"
+                      >
                         Premium
                       </Chip>
                     ) : null

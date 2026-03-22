@@ -5,6 +5,7 @@ import { Clock, Flame, DollarSign, Star, Calendar } from "lucide-react";
 import NextLink from "next/link";
 import { SavedMealPlan, GeneratedDay, GeneratedMeal } from "@/types/meal-plan";
 import { format, parseISO } from "date-fns";
+import { fr } from "date-fns/locale";
 import { MealDetailModal } from "./MealDetailModal";
 
 interface MealPlanCalendarProps {
@@ -12,13 +13,32 @@ interface MealPlanCalendarProps {
 }
 
 const DAY_LABELS: Record<string, string> = {
-  monday: "Monday",
-  tuesday: "Tuesday",
-  wednesday: "Wednesday",
-  thursday: "Thursday",
-  friday: "Friday",
-  saturday: "Saturday",
-  sunday: "Sunday",
+  monday: "Lundi",
+  tuesday: "Mardi",
+  wednesday: "Mercredi",
+  thursday: "Jeudi",
+  friday: "Vendredi",
+  saturday: "Samedi",
+  sunday: "Dimanche",
+  // Capitalised variants (AI sometimes uses title case)
+  Monday: "Lundi",
+  Tuesday: "Mardi",
+  Wednesday: "Mercredi",
+  Thursday: "Jeudi",
+  Friday: "Vendredi",
+  Saturday: "Samedi",
+  Sunday: "Dimanche",
+};
+
+const SLOT_LABELS: Record<string, string> = {
+  breakfast: "Petit-déjeuner",
+  lunch: "Déjeuner",
+  dinner: "Dîner",
+  snack: "Collation",
+  "meal 1": "Repas 1",
+  "meal 2": "Repas 2",
+  "meal 3": "Repas 3",
+  "meal 4": "Repas 4",
 };
 
 const SLOT_COLORS: Record<string, string> = {
@@ -43,18 +63,18 @@ export function MealPlanCalendar({ plan }: MealPlanCalendarProps) {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-xl font-bold">This Week&apos;s Plan</h2>
+          <h2 className="text-xl font-bold">Plan de la semaine</h2>
           <p className="text-sm text-foreground/50 mt-0.5">
-            {format(parseISO(plan.week_start_date), "MMM d")} –{" "}
-            {format(parseISO(plan.week_end_date), "MMM d, yyyy")}
+            {format(parseISO(plan.week_start_date), "d MMM", { locale: fr })} –{" "}
+            {format(parseISO(plan.week_end_date), "d MMM yyyy", { locale: fr })}
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <Chip size="sm" variant="flat" color="success">
-            ${plan.total_cost?.toFixed(2)} est. total
+            {plan.total_cost?.toFixed(2)} $ est.
           </Chip>
           <Chip size="sm" variant="flat" color="warning">
-            ~{plan.total_calories} cal/day
+            ~{plan.total_calories} cal/jour
           </Chip>
           <Button
             as={NextLink}
@@ -63,7 +83,7 @@ export function MealPlanCalendar({ plan }: MealPlanCalendarProps) {
             variant="bordered"
             startContent={<Calendar size={14} />}
           >
-            Edit Plan
+            Modifier le plan
           </Button>
         </div>
       </div>
@@ -73,8 +93,8 @@ export function MealPlanCalendar({ plan }: MealPlanCalendarProps) {
         {days.map((day) => (
           <Card key={day.day} className="border border-divider">
             <CardHeader className="pb-0 pt-4 px-5">
-              <h3 className="font-bold text-base capitalize">
-                {DAY_LABELS[day.day] || day.day}
+              <h3 className="font-bold text-base">
+                {DAY_LABELS[day.day] ?? DAY_LABELS[day.day.toLowerCase()] ?? day.day}
               </h3>
             </CardHeader>
             <CardBody className="pt-3 px-5 pb-5">
@@ -92,7 +112,7 @@ export function MealPlanCalendar({ plan }: MealPlanCalendarProps) {
                         ${SLOT_COLORS[meal.slot.toLowerCase()] || "bg-default-100 text-default-600"}
                       `}
                     >
-                      {meal.slot}
+                      {SLOT_LABELS[meal.slot.toLowerCase()] ?? meal.slot}
                     </span>
 
                     {/* Title */}

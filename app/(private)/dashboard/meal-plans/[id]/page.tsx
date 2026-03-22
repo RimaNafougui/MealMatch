@@ -22,27 +22,50 @@ import {
   Printer,
   Download,
   Lock,
+  Package,
 } from "lucide-react";
 import type { SavedMealPlan, GeneratedMeal, GeneratedDay } from "@/types/meal-plan";
 import { useUserPlan } from "@/hooks/useUserPlan";
 import { getLimits } from "@/utils/plan-limits";
+import { isMealPrepFriendly } from "@/utils/meal-prep";
 
 const MEAL_LABELS: Record<string, string> = {
   breakfast: "Petit-déjeuner",
   lunch: "Déjeuner",
   dinner: "Dîner",
+  snack: "Collation",
   "meal 1": "Repas 1",
   "meal 2": "Repas 2",
+  "meal 3": "Repas 3",
+  "meal 4": "Repas 4",
+};
+
+const DIETARY_TAG_LABELS: Record<string, string> = {
+  vegetarian: "Végétarien",
+  vegan: "Végan",
+  "gluten free": "Sans gluten",
+  "dairy free": "Sans lactose",
+  ketogenic: "Cétogène",
+  paleo: "Paléo",
+  pescetarian: "Pescétarien",
+  "lacto ovo vegetarian": "Lacto-ovo végé.",
+  primal: "Primal",
+  "low fodmap": "Low FODMAP",
+  whole30: "Whole30",
+  "egg free": "Sans œuf",
+  "nut free": "Sans noix",
+  "soy free": "Sans soja",
+  "wheat free": "Sans blé",
 };
 
 const DAY_LABELS: Record<string, string> = {
-  Monday: "Lundi",
-  Tuesday: "Mardi",
-  Wednesday: "Mercredi",
-  Thursday: "Jeudi",
-  Friday: "Vendredi",
-  Saturday: "Samedi",
-  Sunday: "Dimanche",
+  Monday: "Lundi", monday: "Lundi",
+  Tuesday: "Mardi", tuesday: "Mardi",
+  Wednesday: "Mercredi", wednesday: "Mercredi",
+  Thursday: "Jeudi", thursday: "Jeudi",
+  Friday: "Vendredi", friday: "Vendredi",
+  Saturday: "Samedi", saturday: "Samedi",
+  Sunday: "Dimanche", sunday: "Dimanche",
 };
 
 function MealCard({ meal }: { meal: GeneratedMeal }) {
@@ -81,7 +104,7 @@ function MealCard({ meal }: { meal: GeneratedMeal }) {
         <div className="flex gap-1 flex-wrap mt-1">
           {meal.dietary_tags.slice(0, 3).map((tag) => (
             <Chip key={tag} size="sm" variant="flat" className="text-[10px] h-4">
-              {tag}
+              {DIETARY_TAG_LABELS[tag.toLowerCase()] ?? tag}
             </Chip>
           ))}
         </div>
@@ -424,6 +447,51 @@ export default function MealPlanDetailPage() {
           <p className="text-default-500">Aucun repas trouvé dans ce plan.</p>
         </div>
       )}
+
+      {/* Meal Prep Suggestions */}
+      {(() => {
+        const prepMeals = days.flatMap((d) =>
+          d.meals
+            .filter(isMealPrepFriendly)
+            .map((m) => ({ ...m, day: d.day }))
+        );
+        if (prepMeals.length === 0) return null;
+        const totalPrepTime = prepMeals.reduce((s, m) => s + (m.prep_time_minutes || 0), 0);
+        return (
+          <Card className="border border-secondary/30 bg-secondary/5 no-print" data-no-print>
+            <CardHeader className="px-5 pt-5 pb-2 flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-secondary/10">
+                <Package size={18} className="text-secondary" />
+              </div>
+              <div>
+                <h2 className="font-bold text-base">Suggestions Meal Prep</h2>
+                <p className="text-default-400 text-xs">
+                  {prepMeals.length} repas à préparer dimanche
+                  {totalPrepTime > 0 && ` · ~${totalPrepTime} min au total`}
+                </p>
+              </div>
+              <Chip size="sm" color="secondary" variant="flat" className="ml-auto text-xs">
+                Préparez dimanche
+              </Chip>
+            </CardHeader>
+            <Divider />
+            <CardBody className="px-5 py-4 flex flex-col gap-2">
+              {prepMeals.map((meal, i) => (
+                <div key={i} className="flex items-center gap-3 py-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-secondary flex-shrink-0" />
+                  <span className="text-sm font-medium flex-1 line-clamp-1">{meal.title}</span>
+                  <span className="text-xs text-default-400 flex-shrink-0">{DAY_LABELS[meal.day] ?? meal.day}</span>
+                  {meal.prep_time_minutes > 0 && (
+                    <span className="flex items-center gap-1 text-xs text-default-400 flex-shrink-0">
+                      <Clock size={11} /> {meal.prep_time_minutes} min
+                    </span>
+                  )}
+                </div>
+              ))}
+            </CardBody>
+          </Card>
+        );
+      })()}
 
       {/* Actions */}
       <div className="flex gap-3 flex-wrap pb-8 no-print" data-no-print>

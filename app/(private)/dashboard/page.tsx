@@ -16,8 +16,8 @@ import {
   CalendarDays,
   ArrowRight,
   ChefHat,
-  Brain,
   Users,
+  BrainCircuit,
 } from "lucide-react";
 import ProgressDashboard from "@/components/dashboard/ProgressDashboard";
 import { useStats } from "@/hooks/useUserData";
@@ -120,10 +120,10 @@ export default function DashboardPage() {
     ...(isPremium
       ? [
           {
-            label: "Nutritionniste IA",
+            label: "Nutritionniste",
             description: "Conseils nutrition personnalisés",
             href: "/dashboard/nutritionist",
-            icon: <Brain size={20} className="text-primary" />,
+            icon: <BrainCircuit size={20} className="text-primary" />,
             bg: "bg-primary/10",
             badge: "Premium",
             badgeColor: "warning" as const,
@@ -148,7 +148,10 @@ export default function DashboardPage() {
     pro: "Pro",
   };
 
-  const planColorMap: Record<string, "default" | "success" | "warning" | "primary" | "secondary" | "danger"> = {
+  const planColorMap: Record<
+    string,
+    "default" | "success" | "warning" | "primary" | "secondary" | "danger"
+  > = {
     free: "default",
     student: "success",
     premium: "warning",
@@ -251,7 +254,12 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-2">
                     <p className="font-semibold text-sm">{link.label}</p>
                     {link.badge && (
-                      <Chip color={link.badgeColor} size="sm" variant="flat" className="text-[10px] h-4">
+                      <Chip
+                        color={link.badgeColor}
+                        size="sm"
+                        variant="flat"
+                        className="text-[10px] h-4"
+                      >
                         {link.badge}
                       </Chip>
                     )}
@@ -260,7 +268,10 @@ export default function DashboardPage() {
                     {link.description}
                   </p>
                 </div>
-                <ArrowRight size={14} className="text-default-300 flex-shrink-0" />
+                <ArrowRight
+                  size={14}
+                  className="text-default-300 flex-shrink-0"
+                />
               </CardBody>
             </Card>
           ))}
@@ -277,7 +288,8 @@ export default function DashboardPage() {
             <div className="flex-1 text-center sm:text-left">
               <p className="font-semibold">Pas encore de plan de repas</p>
               <p className="text-default-400 text-sm">
-                Générez votre premier plan de repas personnalisé par IA en moins d&apos;une minute.
+                Générez votre premier plan de repas personnalisé par IA en moins
+                d&apos;une minute.
               </p>
             </div>
             <Button

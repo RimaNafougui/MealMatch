@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
@@ -66,8 +66,8 @@ function MealPlanGridSkeleton({ days, meals }: { days: number; meals: number }) 
 
           {/* Meal rows */}
           {Array.from({ length: meals }).map((_, row) => (
-            <>
-              <div key={`label-${row}`} className="flex items-center pr-3">
+            <React.Fragment key={`row-${row}`}>
+              <div className="flex items-center pr-3">
                 <Skeleton className="h-3 w-16 rounded" />
               </div>
               {Array.from({ length: days }).map((_, col) => (
@@ -86,7 +86,7 @@ function MealPlanGridSkeleton({ days, meals }: { days: number; meals: number }) 
                   </CardBody>
                 </Card>
               ))}
-            </>
+            </React.Fragment>
           ))}
         </div>
       </div>

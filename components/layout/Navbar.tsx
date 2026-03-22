@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import dynamic from "next/dynamic";
 import {
   Navbar as HeroUINavbar,
   NavbarContent,
@@ -30,9 +31,13 @@ import {
 
 import { siteConfig } from "@/config/site";
 import { ThemeSwitch } from "@/components/theme-switch";
-import { ProfileDropdown } from "@/components/login/dropdown";
 import { Logo } from "@/components/logo";
 import { logout } from "@/lib/actions/auth";
+
+const ProfileDropdown = dynamic(
+  () => import("@/components/login/dropdown").then((m) => ({ default: m.ProfileDropdown })),
+  { ssr: false },
+);
 
 // ─── Nav item definitions ─────────────────────────────────────────────────────
 
@@ -56,6 +61,13 @@ const privateNavItems = [
 
 export const AppNavbar = ({ user }: { user: any }) => {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const [scrolled, setScrolled] = React.useState(false);
+
+  React.useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const navItems = user ? privateNavItems : publicNavItems;
 
@@ -66,7 +78,7 @@ export const AppNavbar = ({ user }: { user: any }) => {
       maxWidth="xl"
       position="sticky"
       classNames={{
-        base: "backdrop-blur-md bg-background/80 border-b border-divider/50",
+        base: `backdrop-blur-md bg-background/80 border-b border-divider/50 transition-shadow duration-300 ${scrolled ? "shadow-md" : "shadow-none"}`,
         wrapper: "px-4 sm:px-6",
       }}
     >
