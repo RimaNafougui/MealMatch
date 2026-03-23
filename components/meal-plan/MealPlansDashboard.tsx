@@ -322,7 +322,7 @@ export function MealPlansDashboard({
         ) : (
           <Button
             as={NextLink}
-            href="/generate"
+            href="/meal-plan/generate"
             color="success"
             variant="solid"
             startContent={<Sparkles size={16} />}
@@ -399,7 +399,7 @@ export function MealPlansDashboard({
                   <div className="flex flex-col gap-2">
                     <Button
                       as={NextLink}
-                      href="/generate"
+                      href="/meal-plan/generate"
                       color="success"
                       className="w-full font-bold text-white"
                       startContent={<Sparkles size={15} />}
