@@ -1,5 +1,5 @@
 "use client";
-import { useState, Fragment } from "react";
+import { useState, Fragment, useEffect } from "react";
 import { Card, CardBody, Chip, Button } from "@heroui/react";
 import {
   Clock,
@@ -8,11 +8,11 @@ import {
   Star,
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
 } from "lucide-react";
 import {
   addDays,
   addMonths,
-  subMonths,
   format,
   parseISO,
   startOfMonth,
@@ -21,11 +21,21 @@ import {
   getDay,
   getDate,
   isSameDay,
+  isWithinInterval,
 } from "date-fns";
 import { fr } from "date-fns/locale";
 import NextLink from "next/link";
+import { useRouter } from "next/navigation";
 import { SavedMealPlan, GeneratedDay, GeneratedMeal } from "@/types/meal-plan";
 import { MealDetailModal } from "./MealDetailModal";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface OtherPlan {
+  id: string;
+  week_start_date: string;
+  week_end_date: string;
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -118,7 +128,7 @@ function WeekView({
         {allSlots.map((slot) => (
           <Fragment key={slot}>
             <div className="flex items-center pr-2">
-              <span className="text-xs font-bold uppercase tracking-widest text-default-400">
+              <span className="text-xs font-bold uppercase p-2 tracking-widest text-default-400">
                 {SLOT_LABELS[slot] ?? slot}
               </span>
             </div>
@@ -149,22 +159,38 @@ function MonthView({
   days,
   getDayDate,
   onMealClick,
+  currentPlanId,
 }: {
   days: GeneratedDay[];
   getDayDate: (name: string) => Date;
   onMealClick: (meal: GeneratedMeal) => void;
+  currentPlanId: string;
 }) {
+  const router = useRouter();
   const [monthOffset, setMonthOffset] = useState(0);
   const [selectedDay, setSelectedDay] = useState<GeneratedDay | null>(null);
+  const [otherPlans, setOtherPlans] = useState<OtherPlan[]>([]);
 
-  // Reference: plan week start is the anchor
+  // Fetch all plans so we can show them on the calendar
+  useEffect(() => {
+    fetch("/api/meal-plan/history")
+      .then((r) => r.json())
+      .then((data) => {
+        setOtherPlans(
+          (data.plans ?? []).filter((p: OtherPlan) => p.id !== currentPlanId),
+        );
+      })
+      .catch(() => {});
+  }, [currentPlanId]);
+
+  // Build the visible month
   const weekStart = getDayDate("monday");
-  const viewMonth = monthOffset === 0 ? weekStart : addMonths(weekStart, monthOffset);
+  const viewMonth = addMonths(weekStart, monthOffset);
   const monthStart = startOfMonth(viewMonth);
   const monthEnd = endOfMonth(viewMonth);
   const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-  // Pad start (0=Monday)
+  // Pad to Monday-start grid
   const firstDow = (getDay(monthStart) + 6) % 7;
   const cells: (Date | null)[] = [...Array(firstDow).fill(null), ...monthDays];
   while (cells.length % 7 !== 0) cells.push(null);
@@ -173,17 +199,33 @@ function MonthView({
     return days.find((d) => isSameDay(getDayDate(d.day), date)) ?? null;
   }
 
+  function getOtherPlanForDate(date: Date): OtherPlan | null {
+    return (
+      otherPlans.find((p) =>
+        isWithinInterval(date, {
+          start: parseISO(p.week_start_date),
+          end: parseISO(p.week_end_date),
+        }),
+      ) ?? null
+    );
+  }
+
+  const navigate = (offset: number) => {
+    setMonthOffset((m) => m + offset);
+    setSelectedDay(null);
+  };
+
   return (
     <div className="flex flex-col gap-4">
       {/* Month nav */}
       <div className="flex items-center justify-between">
-        <Button isIconOnly variant="flat" size="sm" onPress={() => { setMonthOffset((m) => m - 1); setSelectedDay(null); }}>
+        <Button isIconOnly variant="flat" size="sm" onPress={() => navigate(-1)}>
           <ChevronLeft size={16} />
         </Button>
         <p className="font-bold text-sm capitalize">
           {format(viewMonth, "MMMM yyyy", { locale: fr })}
         </p>
-        <Button isIconOnly variant="flat" size="sm" onPress={() => { setMonthOffset((m) => m + 1); setSelectedDay(null); }}>
+        <Button isIconOnly variant="flat" size="sm" onPress={() => navigate(1)}>
           <ChevronRight size={16} />
         </Button>
       </div>
@@ -199,26 +241,54 @@ function MonthView({
       <div className="grid grid-cols-7 gap-1">
         {cells.map((date, i) => {
           if (!date) return <div key={`empty-${i}`} className="aspect-square" />;
+
           const planDay = getMealsForDate(date);
+          const otherPlan = !planDay ? getOtherPlanForDate(date) : null;
           const isSelected = selectedDay?.day === planDay?.day && planDay != null;
+
+          const handleClick = () => {
+            if (planDay) setSelectedDay(isSelected ? null : planDay);
+            else if (otherPlan) router.push(`/dashboard/meal-plans/${otherPlan.id}`);
+          };
+
           return (
             <button
               key={date.toISOString()}
-              onClick={() => setSelectedDay(planDay ? (isSelected ? null : planDay) : null)}
-              disabled={!planDay}
+              onClick={handleClick}
+              disabled={!planDay && !otherPlan}
+              title={
+                otherPlan
+                  ? `Autre plan — ${format(parseISO(otherPlan.week_start_date), "d MMM", { locale: fr })} → ${format(parseISO(otherPlan.week_end_date), "d MMM", { locale: fr })}`
+                  : undefined
+              }
               className={[
                 "aspect-square rounded-xl flex flex-col items-center justify-center gap-0.5 text-sm font-medium transition-all",
                 planDay
                   ? "bg-success/15 hover:bg-success/25 text-success font-bold cursor-pointer"
-                  : "text-default-400 cursor-default",
+                  : otherPlan
+                    ? "bg-primary/10 hover:bg-primary/20 text-primary font-semibold cursor-pointer"
+                    : "text-default-400 cursor-default",
                 isSelected ? "ring-2 ring-success bg-success/25" : "",
               ].join(" ")}
             >
               <span>{getDate(date)}</span>
               {planDay && <span className="w-1 h-1 rounded-full bg-success" />}
+              {otherPlan && <span className="w-1 h-1 rounded-full bg-primary" />}
             </button>
           );
         })}
+      </div>
+
+      {/* Legend */}
+      <div className="flex gap-4 text-[11px] text-default-400 px-1">
+        <span className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-success/60 shrink-0" />
+          Ce plan
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-primary/60 shrink-0" />
+          Autre plan (cliquer pour voir)
+        </span>
       </div>
 
       {/* Selected day detail */}
@@ -226,7 +296,8 @@ function MonthView({
         <Card className="border border-success/30 bg-success/5">
           <CardBody className="p-4 flex flex-col gap-3">
             <p className="font-bold text-sm">
-              {DAY_LABELS[selectedDay.day]} — {format(getDayDate(selectedDay.day), "d MMMM", { locale: fr })}
+              {DAY_LABELS[selectedDay.day]} —{" "}
+              {format(getDayDate(selectedDay.day), "d MMMM", { locale: fr })}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {selectedDay.meals.map((meal) => (
@@ -293,6 +364,7 @@ export function MealPlanCalendar({ plan }: MealPlanCalendarProps) {
             href="/dashboard/meal-plan/generate"
             size="sm"
             variant="bordered"
+            startContent={<ExternalLink size={13} />}
           >
             Modifier le plan
           </Button>
@@ -303,7 +375,12 @@ export function MealPlanCalendar({ plan }: MealPlanCalendarProps) {
       {view === "week" ? (
         <WeekView days={days} getDayDate={getDayDate} onMealClick={setDetailMeal} />
       ) : (
-        <MonthView days={days} getDayDate={getDayDate} onMealClick={setDetailMeal} />
+        <MonthView
+          days={days}
+          getDayDate={getDayDate}
+          onMealClick={setDetailMeal}
+          currentPlanId={plan.id}
+        />
       )}
 
       <MealDetailModal meal={detailMeal} isOpen={!!detailMeal} onClose={() => setDetailMeal(null)} />

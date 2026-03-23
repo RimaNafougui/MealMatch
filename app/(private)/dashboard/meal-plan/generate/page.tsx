@@ -4,13 +4,14 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
-  Divider,
   Chip,
   Progress,
   Spinner,
   Skeleton,
   Card,
   CardBody,
+  Tabs,
+  Tab,
 } from "@heroui/react";
 import { Sparkles, ChefHat, AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@heroui/button";
@@ -25,7 +26,7 @@ import {
   GeneratedMealPlan,
   SavedMealPlan,
 } from "@/types/meal-plan";
-import { format, startOfWeek } from "date-fns";
+import { format, addDays } from "date-fns";
 
 // Skeleton grid shown while generating
 function MealPlanGridSkeleton({
@@ -123,11 +124,15 @@ export default function GenerateMealPlanPage() {
   const maxSlotRegens = userPlan === "free" ? 2 : Infinity;
   const [slotRegenCount, setSlotRegenCount] = useState(0);
 
+  const todayStr = format(new Date(), "yyyy-MM-dd");
   const [config, setConfig] = useState<MealPlanConfig>({
-    days_count: 5,
+    days_count: 7,
     meals_per_day: 3,
+    start_date: todayStr,
+    end_date: format(addDays(new Date(), 6), "yyyy-MM-dd"),
   });
 
+  const [activeTab, setActiveTab] = useState<"config" | "plan">("config");
   const [isGenerating, setIsGenerating] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const stepIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -217,6 +222,7 @@ export default function GenerateMealPlanPage() {
               meals_per_day: (plan.meals_per_day as 1 | 2 | 3) || 3,
             });
             setPlanReady(true);
+            setActiveTab("plan");
           }
         }
       } catch {
@@ -255,7 +261,11 @@ export default function GenerateMealPlanPage() {
       const res = await fetch("/api/meal-plan/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config),
+        body: JSON.stringify({
+          ...config,
+          start_date: config.start_date,
+          end_date: config.end_date,
+        }),
       });
 
       const data = await res.json();
@@ -313,18 +323,6 @@ export default function GenerateMealPlanPage() {
     }
   };
 
-  const weekStart = format(
-    startOfWeek(new Date(), { weekStartsOn: 1 }),
-    "MMM d",
-  );
-  const weekEnd = format(
-    new Date(
-      startOfWeek(new Date(), { weekStartsOn: 1 }).getTime() +
-        6 * 24 * 60 * 60 * 1000,
-    ),
-    "MMM d, yyyy",
-  );
-
   const showUsageBar =
     userPlan === "free" &&
     !planLoading &&
@@ -357,10 +355,6 @@ export default function GenerateMealPlanPage() {
             IA
           </Chip>
         </div>
-        <p className="text-default-400 text-sm mt-1">
-          Semaine du {weekStart} – {weekEnd} · Votre plan est personnalisé selon
-          vos restrictions alimentaires, votre budget et vos recettes favorites.
-        </p>
 
         {/* Usage counter for free users */}
         {showUsageBar && (
@@ -380,190 +374,212 @@ export default function GenerateMealPlanPage() {
             color="success"
             size="sm"
             className="mt-3"
-            aria-label="Generating meal plan..."
+            aria-label="Generating…"
           />
         )}
       </div>
 
       {checkingPlan || planLoading ? (
         /* Initial load skeleton */
-        <div className="flex flex-col xl:flex-row gap-8">
-          <div className="xl:w-80 shrink-0 flex flex-col gap-6">
-            <Skeleton className="h-4 w-28 rounded" />
-            <Card className="border border-divider bg-content1">
-              <CardBody className="gap-4 p-5">
-                <Skeleton className="h-4 w-36 rounded-lg" />
-                <div className="flex gap-3">
-                  <Skeleton className="flex-1 h-16 rounded-xl" />
-                  <Skeleton className="flex-1 h-16 rounded-xl" />
-                </div>
-              </CardBody>
-            </Card>
-            <Card className="border border-divider bg-content1">
-              <CardBody className="gap-4 p-5">
+        <div className="flex flex-col gap-4 max-w-lg">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="border border-divider bg-content1">
+              <CardBody className="gap-3 p-5">
                 <Skeleton className="h-4 w-32 rounded-lg" />
                 <div className="flex gap-3">
-                  <Skeleton className="flex-1 h-16 rounded-xl" />
-                  <Skeleton className="flex-1 h-16 rounded-xl" />
-                  <Skeleton className="flex-1 h-16 rounded-xl" />
+                  <Skeleton className="flex-1 h-12 rounded-xl" />
+                  <Skeleton className="flex-1 h-12 rounded-xl" />
+                  <Skeleton className="flex-1 h-12 rounded-xl" />
                 </div>
               </CardBody>
             </Card>
-            <Skeleton className="h-14 w-full rounded-xl" />
-          </div>
-          <Divider orientation="vertical" className="hidden xl:block" />
-          <div className="flex-1 min-w-0 flex items-center justify-center py-24">
-            <div className="flex flex-col items-center gap-3">
-              <Spinner size="lg" color="success" />
-              <p className="text-foreground/40 text-sm">
-                Chargement de votre plan...
-              </p>
-            </div>
-          </div>
+          ))}
+          <Skeleton className="h-14 w-full rounded-xl" />
         </div>
       ) : (
-        <div className="flex flex-col xl:flex-row gap-8">
-          {/* Left: Config */}
-          <div className="xl:w-80 shrink-0">
-            <div className="xl:sticky xl:top-24">
-              <h2 className="text-sm font-bold uppercase tracking-widest text-foreground/50 mb-4">
-                Configuration
-              </h2>
+        <Tabs
+          selectedKey={activeTab}
+          onSelectionChange={(key) => setActiveTab(key as "config" | "plan")}
+          color="primary"
+          variant="underlined"
+          classNames={{
+            tabList: "gap-6 border-b border-divider pb-0 w-full",
+            tab: "h-10 px-0 font-semibold",
+            cursor: "bg-primary",
+            tabContent: "group-data-[selected=true]:text-primary",
+          }}
+        >
+          {/* ── Tab 1: Configuration ── */}
+          <Tab
+            key="config"
+            title={
+              <div className="flex items-center gap-2">
+                <ChefHat size={15} />
+                <span>Configuration</span>
+              </div>
+            }
+          >
+            <div className="pt-6">
               <GenerateConfig
                 initialConfig={config}
                 onConfigChange={handleConfigChange}
-                onGenerate={handleGenerate}
+                onGenerate={() => {
+                  handleGenerate();
+                  setActiveTab("plan");
+                }}
                 isGenerating={isGenerating}
                 hasExistingPlan={hasExistingPlan}
                 existingPlanDate={existingPlanDate}
                 userPlan={userPlan}
               />
             </div>
-          </div>
+          </Tab>
 
-          <Divider orientation="vertical" className="hidden xl:block" />
-
-          {/* Right: Plan grid */}
-          <div className="flex-1 min-w-0 relative" id="meal-plan-grid">
-            {/* Full-screen overlay during generation */}
-            {isGenerating && (
-              <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 backdrop-blur-md bg-background/80">
-                <div className="flex flex-col items-center gap-5 p-8 rounded-3xl bg-content1 border border-divider shadow-2xl max-w-sm w-full mx-4">
-                  <Spinner size="lg" color="success" />
-                  <div className="text-center" style={{ minHeight: "2.5rem" }}>
-                    <AnimatePresence mode="wait">
-                      <motion.p
-                        key={stepIndex}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -8 }}
-                        transition={{ duration: 0.35 }}
-                        className="font-bold text-lg text-foreground"
-                      >
-                        {GENERATION_STEPS[stepIndex]}
-                      </motion.p>
-                    </AnimatePresence>
-                    <p className="text-sm text-foreground/50 mt-2">
-                      {config.days_count * config.meals_per_day} repas
-                      personnalisés en cours…
-                    </p>
-                  </div>
-                  <div className="w-full bg-default-100 rounded-full h-1.5 overflow-hidden">
-                    <motion.div
-                      className="h-full bg-success rounded-full"
-                      initial={{ width: "5%" }}
-                      animate={{
-                        width: `${Math.min(((stepIndex + 1) / GENERATION_STEPS.length) * 100, 95)}%`,
-                      }}
-                      transition={{ duration: 1.5, ease: "easeOut" }}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Error state */}
-            {error && !isGenerating && (
-              <Card className="border border-danger/30 bg-danger/5 mb-6">
-                <CardBody className="flex flex-row items-center gap-4 p-4">
-                  <div className="p-2 rounded-xl bg-danger/10 shrink-0">
-                    <AlertTriangle size={20} className="text-danger" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-sm text-danger">
-                      Échec de la génération
-                    </p>
-                    <p className="text-xs text-foreground/50 mt-0.5">{error}</p>
-                  </div>
-                  <Button
+          {/* ── Tab 2: Plan proposé ── */}
+          <Tab
+            key="plan"
+            title={
+              <div className="flex items-center gap-2">
+                <Sparkles size={15} />
+                <span>Plan proposé</span>
+                {generatedPlan && (
+                  <Chip
                     size="sm"
+                    color="success"
                     variant="flat"
-                    color="danger"
-                    startContent={<RefreshCw size={14} />}
-                    onPress={handleGenerate}
+                    className="text-[10px] h-4 px-1"
                   >
-                    Réessayer
-                  </Button>
-                </CardBody>
-              </Card>
-            )}
-
-            {/* Skeleton grid while generating (when no existing plan yet) */}
-            {isGenerating && !generatedPlan && (
-              <MealPlanGridSkeleton
-                days={config.days_count}
-                meals={config.meals_per_day}
-              />
-            )}
-
-            {/* Generated plan with fade-in */}
-            {generatedPlan && !isGenerating && (
-              <div
-                className={`transition-opacity duration-500 ${
-                  planReady ? "opacity-100" : "opacity-0"
-                }`}
-              >
-                <h2 className="text-sm font-bold uppercase tracking-widest text-foreground/50 mb-4">
-                  Votre plan de repas
-                  <span className="ml-2 text-foreground/30 font-normal normal-case tracking-normal">
-                    — survolez un repas pour le modifier
-                  </span>
-                </h2>
-                <MealPlanGrid
-                  plan={generatedPlan}
-                  planId={savedPlanId!}
-                  mealLabels={mealLabels}
-                  onPlanChange={setGeneratedPlan}
-                  onSave={handleSave}
-                  isSaving={isSaving}
-                  userPlan={userPlan}
-                  slotRegenCount={slotRegenCount}
-                  maxSlotRegens={maxSlotRegens}
-                  onSlotRegenerated={() => setSlotRegenCount((c) => c + 1)}
-                />
+                    Prêt
+                  </Chip>
+                )}
               </div>
-            )}
-
-            {/* Empty state */}
-            {!generatedPlan && !isGenerating && !error && (
-              <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
-                <div className="p-6 rounded-2xl bg-content2 border border-dashed border-divider">
-                  <Sparkles
-                    size={40}
-                    className="text-foreground/20 mx-auto mb-3"
-                  />
-                  <p className="text-foreground/40 text-sm max-w-xs">
-                    Configurez vos préférences et cliquez sur{" "}
-                    <span className="font-semibold text-foreground/60">
-                      Générer un plan
-                    </span>{" "}
-                    pour commencer.
-                  </p>
+            }
+          >
+            <div className="pt-6" id="meal-plan-grid">
+              {/* Full-screen overlay during generation */}
+              {isGenerating && (
+                <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 backdrop-blur-md bg-background/80">
+                  <div className="flex flex-col items-center gap-5 p-8 rounded-3xl bg-content1 border border-divider shadow-2xl max-w-sm w-full mx-4">
+                    <Spinner size="lg" color="success" />
+                    <div
+                      className="text-center"
+                      style={{ minHeight: "2.5rem" }}
+                    >
+                      <AnimatePresence mode="wait">
+                        <motion.p
+                          key={stepIndex}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -8 }}
+                          transition={{ duration: 0.35 }}
+                          className="font-bold text-lg text-foreground"
+                        >
+                          {GENERATION_STEPS[stepIndex]}
+                        </motion.p>
+                      </AnimatePresence>
+                      <p className="text-sm text-foreground/50 mt-2">
+                        {config.days_count * config.meals_per_day} repas
+                        personnalisés en cours…
+                      </p>
+                    </div>
+                    <div className="w-full bg-default-100 rounded-full h-1.5 overflow-hidden">
+                      <motion.div
+                        className="h-full bg-success rounded-full"
+                        initial={{ width: "5%" }}
+                        animate={{
+                          width: `${Math.min(((stepIndex + 1) / GENERATION_STEPS.length) * 100, 95)}%`,
+                        }}
+                        transition={{ duration: 1.5, ease: "easeOut" }}
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        </div>
+              )}
+
+              {/* Error state */}
+              {error && !isGenerating && (
+                <Card className="border border-danger/30 bg-danger/5 mb-6 max-w-lg">
+                  <CardBody className="flex flex-row items-center gap-4 p-4">
+                    <div className="p-2 rounded-xl bg-danger/10 shrink-0">
+                      <AlertTriangle size={20} className="text-danger" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm text-danger">
+                        Échec de la génération
+                      </p>
+                      <p className="text-xs text-foreground/50 mt-0.5">
+                        {error}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="flat"
+                      color="danger"
+                      startContent={<RefreshCw size={14} />}
+                      onPress={handleGenerate}
+                    >
+                      Réessayer
+                    </Button>
+                  </CardBody>
+                </Card>
+              )}
+
+              {/* Skeleton while generating */}
+              {isGenerating && !generatedPlan && (
+                <MealPlanGridSkeleton
+                  days={config.days_count}
+                  meals={config.meals_per_day}
+                />
+              )}
+
+              {/* Generated plan */}
+              {generatedPlan && !isGenerating && (
+                <div
+                  className={`transition-opacity duration-500 ${planReady ? "opacity-100" : "opacity-0"}`}
+                >
+                  <p className="text-xs text-foreground/30 mb-4">
+                    Survolez un repas pour le modifier ou le remplacer
+                    individuellement.
+                  </p>
+                  <MealPlanGrid
+                    plan={generatedPlan}
+                    planId={savedPlanId!}
+                    mealLabels={mealLabels}
+                    onPlanChange={setGeneratedPlan}
+                    onSave={handleSave}
+                    isSaving={isSaving}
+                    userPlan={userPlan}
+                    slotRegenCount={slotRegenCount}
+                    maxSlotRegens={maxSlotRegens}
+                    onSlotRegenerated={() => setSlotRegenCount((c) => c + 1)}
+                  />
+                </div>
+              )}
+
+              {/* Empty state */}
+              {!generatedPlan && !isGenerating && !error && (
+                <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
+                  <div className="p-8 rounded-2xl bg-content2 border border-dashed border-divider/60">
+                    <Sparkles
+                      size={40}
+                      className="text-foreground/20 mx-auto mb-3"
+                    />
+                    <p className="text-foreground/40 text-sm max-w-xs">
+                      Configurez vos préférences dans l'onglet{" "}
+                      <button
+                        className="font-semibold text-foreground/60 underline underline-offset-2"
+                        onClick={() => setActiveTab("config")}
+                      >
+                        Configuration
+                      </button>{" "}
+                      et cliquez sur Générer pour commencer.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Tab>
+        </Tabs>
       )}
     </div>
   );

@@ -38,8 +38,15 @@ export interface GeneratedMealPlan {
 }
 
 export interface MealPlanConfig {
-  days_count: 5 | 7;
+  days_count: number;
   meals_per_day: 1 | 2 | 3;
+  start_date?: string; // yyyy-MM-dd
+  end_date?: string;   // yyyy-MM-dd
+  // Per-generation personalization overrides
+  max_prep_time?: number | null;   // minutes: 20 | 45 | null (no limit)
+  cuisine_types?: string[];        // e.g. ["italian", "asian"]
+  allow_repetitions?: boolean;     // meal-prep mode
+  avoid_ingredients?: string[];    // one-off ingredient exclusions
 }
 
 export interface SavedMealPlan {

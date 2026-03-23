@@ -4,32 +4,26 @@ import { getSupabaseServer } from "@/utils/supabase-server";
 import OpenAI from "openai";
 import { z } from "zod";
 import { GeneratedMealPlan, MealPlanConfig } from "@/types/meal-plan";
-import { startOfWeek, startOfMonth, format, addDays } from "date-fns";
+import { startOfWeek, startOfMonth, format, addDays, parseISO, differenceInDays } from "date-fns";
 import { mealPlanRateLimit } from "@/utils/rate-limit";
 import { cacheDel, cacheDelPattern, CacheKey } from "@/utils/redis";
 import { getLimits } from "@/utils/plan-limits";
 
 const generateSchema = z.object({
-  days_count: z.number().int().min(1).max(28).default(5),
+  days_count: z.number().int().min(1).max(28).default(7),
   meals_per_day: z.number().int().min(1).max(6).default(3),
   meal_labels: z.array(z.string()).optional(),
-  week_start: z.string().optional(),
+  start_date: z.string().optional(),           // yyyy-MM-dd
+  end_date: z.string().optional(),             // yyyy-MM-dd
+  max_prep_time: z.number().nullable().optional(),  // minutes, null = no limit
+  cuisine_types: z.array(z.string()).optional(),
+  allow_repetitions: z.boolean().optional(),
+  avoid_ingredients: z.array(z.string()).optional(),
 });
 
 export const maxDuration = 60; // Vercel: allow up to 60s for AI generation
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 55_000, maxRetries: 1 });
-
-const WEEKDAYS_5 = ["monday", "tuesday", "wednesday", "thursday", "friday"];
-const WEEKDAYS_7 = [
-  "monday",
-  "tuesday",
-  "wednesday",
-  "thursday",
-  "friday",
-  "saturday",
-  "sunday",
-];
 
 function getMealLabels(count: number): string[] {
   if (count === 1) return ["meal"];
@@ -37,8 +31,11 @@ function getMealLabels(count: number): string[] {
   return ["breakfast", "lunch", "dinner"];
 }
 
-function getWeekStart(date: Date): Date {
-  return startOfWeek(date, { weekStartsOn: 1 }); // Monday
+/** Returns day names like ["monday","tuesday",...] for a given date range */
+function getDayNamesForRange(start: Date, daysCount: number): string[] {
+  return Array.from({ length: daysCount }, (_, i) =>
+    format(addDays(start, i), "EEEE").toLowerCase(),
+  );
 }
 
 export async function POST(req: Request) {
@@ -68,10 +65,30 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: "Configuration invalide", details: parsed.error.flatten() }, { status: 400 });
     }
-    const { days_count, meals_per_day, meal_labels, week_start } = parsed.data;
+    const { days_count, meals_per_day, meal_labels, start_date, end_date,
+            max_prep_time, cuisine_types, allow_repetitions, avoid_ingredients } = parsed.data;
+
+    // --- Resolve date range ---
+    let planStart: Date;
+    let actualDaysCount: number;
+
+    if (start_date && end_date) {
+      planStart = parseISO(start_date);
+      const planEnd = parseISO(end_date);
+      actualDaysCount = Math.max(1, Math.min(28, differenceInDays(planEnd, planStart) + 1));
+    } else {
+      planStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+      actualDaysCount = days_count;
+    }
+
+    const weekStartStr = format(planStart, "yyyy-MM-dd");
+    const weekEnd = format(addDays(planStart, actualDaysCount - 1), "yyyy-MM-dd");
+
     const config: MealPlanConfig = {
-      days_count: days_count as MealPlanConfig["days_count"],
+      days_count: actualDaysCount,
       meals_per_day: meals_per_day as MealPlanConfig["meals_per_day"],
+      start_date: weekStartStr,
+      end_date: weekEnd,
     };
 
     // --- Fetch user profile (includes plan) ---
@@ -85,14 +102,6 @@ export async function POST(req: Request) {
 
     const userPlan = profile?.plan ?? "free";
     const limits = getLimits(userPlan);
-
-    // --- Check generation limit ---
-    const weekStart = getWeekStart(new Date());
-    const weekStartStr = format(weekStart, "yyyy-MM-dd");
-    const weekEnd = format(
-      config.days_count === 7 ? addDays(weekStart, 6) : addDays(weekStart, 4),
-      "yyyy-MM-dd",
-    );
 
     // Check if a usage record already exists this week (to avoid duplicate inserts)
     const { data: existingUsage } = await supabase
@@ -224,7 +233,7 @@ export async function POST(req: Request) {
     const allAvailableRecipes = [...catalogPool, ...userPool];
     const totalNeeded = config.days_count * config.meals_per_day;
 
-    const days = config.days_count === 7 ? WEEKDAYS_7 : WEEKDAYS_5;
+    const days = getDayNamesForRange(planStart, actualDaysCount);
     const mealLabels = getMealLabels(config.meals_per_day);
     const budgetRange =
       profile?.budget_min && profile?.budget_max
@@ -270,8 +279,29 @@ Tout le contenu (titres, descriptions, instructions) doit être en FRANÇAIS.`;
 Ces valeurs nutritionnelles DOIVENT être reflétées dans les champs calories, protein, carbs, fat de chaque repas.`
       : "";
 
+    // Per-generation constraint blocks
+    const prepTimeBlock = max_prep_time != null
+      ? `\n⏱️ TEMPS DE PRÉPARATION MAX : ${max_prep_time} minutes par repas. Exclure tout repas dépassant cette durée.`
+      : "";
+
+    const cuisineBlock = cuisine_types && cuisine_types.length > 0
+      ? `\n🌍 TYPES DE CUISINE SOUHAITÉS : ${cuisine_types.join(", ")}. Privilégier ces cuisines pour ce plan.`
+      : "";
+
+    const avoidBlock = avoid_ingredients && avoid_ingredients.length > 0
+      ? `\n🚫 INGRÉDIENTS À ÉVITER CETTE SEMAINE (en plus des allergies) : ${avoid_ingredients.join(", ")}. Ne pas les utiliser dans aucun repas.`
+      : "";
+
+    const repetitionBlock = allow_repetitions
+      ? `\n♻️ MODE MEAL PREP : La répétition de repas identiques sur plusieurs jours est autorisée et encouragée pour faciliter la préparation en lot (batch cooking).`
+      : `\n✅ VARIÉTÉ : Chaque repas doit être différent — ne jamais répéter le même titre dans le plan.`;
+
     const userPrompt = `Génère un plan de repas de ${config.days_count} jours (${days.join(", ")}) avec ${config.meals_per_day} repas par jour (${mealLabels.join(", ")}).
 ${allergyBlock}
+${prepTimeBlock}
+${avoidBlock}
+${cuisineBlock}
+${repetitionBlock}
 ${nutritionBlock}
 
 Profil de l'utilisateur :
@@ -291,8 +321,8 @@ RÈGLES IMPORTANTES (dans l'ordre de priorité) :
 2. Respecter les restrictions alimentaires : ${restrictions !== "none" ? `les recettes doivent être compatibles avec : ${restrictions}` : "aucune restriction"}
 3. 🎯 NUTRITION : Chaque repas DOIT être proche des cibles caloriques et en macronutriments définies. Vérifie les valeurs nutritionnelles et ajuste si besoin.
 4. Rester dans le budget hebdomadaire
-5. Varier les cuisines et ingrédients — ne jamais répéter le même repas dans le plan
-6. Préférer des recettes accessibles : ingrédients simples, moins de 45 min de préparation
+5. ${allow_repetitions ? "Mode meal prep : répétitions autorisées" : "Varier les cuisines et ingrédients — ne jamais répéter le même repas dans le plan"}
+6. ${max_prep_time != null ? `Chaque repas doit être préparable en moins de ${max_prep_time} min` : "Préférer des recettes accessibles : ingrédients simples, moins de 45 min de préparation"}
 7. Intégrer les recettes favorites là où elles s'adaptent naturellement
 8. PRIORITÉ : utiliser les recettes du catalogue ou de l'utilisateur autant que possible
 9. Si aucune recette disponible ne convient, génère une recette originale (source "ai") avec :
