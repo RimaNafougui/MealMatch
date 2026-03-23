@@ -96,7 +96,7 @@ app/
         ├── recettes/page.tsx     # User recipes (saved + personal)
         ├── meal-plans/page.tsx   # Meal plan history
         ├── meal-plans/[id]/page.tsx  # Meal plan detail with calendar
-        ├── meal-plan/generate/page.tsx  # AI generation wizard
+        ├── generate/page.tsx  # AI generation wizard
         ├── epicerie/page.tsx     # Shopping lists
         ├── favoris/page.tsx      # Favorite recipes
         ├── nutritionist/page.tsx # AI nutritionist chat (premium)
@@ -150,13 +150,13 @@ components/
 
 ### Rendering Strategy
 
-| Route | Strategy | Reason |
-|---|---|---|
-| Public pages (landing, pricing) | Server Components | SEO, fast initial load |
-| Dashboard pages | Client Components | Interactive, user-specific data |
-| API routes | Node.js runtime | DB access, secrets |
-| Meal plan detail | Client Component | Complex interactions |
-| Explore page | Client Component | Filters, pagination |
+| Route                           | Strategy          | Reason                          |
+| ------------------------------- | ----------------- | ------------------------------- |
+| Public pages (landing, pricing) | Server Components | SEO, fast initial load          |
+| Dashboard pages                 | Client Components | Interactive, user-specific data |
+| API routes                      | Node.js runtime   | DB access, secrets              |
+| Meal plan detail                | Client Component  | Complex interactions            |
+| Explore page                    | Client Component  | Filters, pagination             |
 
 ---
 
@@ -191,21 +191,22 @@ Next.js API Route Handler
 
 ### Key Utilities
 
-| Utility | Location | Purpose |
-|---|---|---|
-| `getSupabaseServer()` | `utils/supabase-server.ts` | Server-side Supabase client (service role) |
-| `auth()` | `auth.ts` | Get current NextAuth session server-side |
-| `withCache(key, ttl, fn)` | `utils/redis.ts` | Redis cache wrapper |
-| `cacheDel(key)` | `utils/redis.ts` | Invalidate a cache key |
-| `getLimits(plan)` | `utils/plan-limits.ts` | Get feature limits for a plan |
-| `hasAccess(userPlan, req)` | `utils/plan-limits.ts` | Check plan access |
-| `mealPlanRateLimit()` | `utils/rate-limit.ts` | Per-user rate limiting |
+| Utility                    | Location                   | Purpose                                    |
+| -------------------------- | -------------------------- | ------------------------------------------ |
+| `getSupabaseServer()`      | `utils/supabase-server.ts` | Server-side Supabase client (service role) |
+| `auth()`                   | `auth.ts`                  | Get current NextAuth session server-side   |
+| `withCache(key, ttl, fn)`  | `utils/redis.ts`           | Redis cache wrapper                        |
+| `cacheDel(key)`            | `utils/redis.ts`           | Invalidate a cache key                     |
+| `getLimits(plan)`          | `utils/plan-limits.ts`     | Get feature limits for a plan              |
+| `hasAccess(userPlan, req)` | `utils/plan-limits.ts`     | Check plan access                          |
+| `mealPlanRateLimit()`      | `utils/rate-limit.ts`      | Per-user rate limiting                     |
 
 ---
 
 ## External Services
 
 ### Spoonacular API
+
 - **Purpose:** Recipe catalog data (titles, images, nutrition, ingredients, instructions)
 - **Usage:** Used during recipe seeding (`scripts/seed:recipes`) and on-demand lookups
 - **Caching:** Responses cached in Redis to minimize API quota usage
@@ -213,6 +214,7 @@ Next.js API Route Handler
 - **Key endpoints:** `complexSearch`, `findByNutrients`, `findByIngredients`
 
 ### OpenAI (GPT-4o-mini)
+
 - **Purpose:** AI meal plan generation + AI nutritionist chat
 - **Model:** `gpt-4o-mini` (fast and cost-efficient)
 - **Usage:**
@@ -221,12 +223,14 @@ Next.js API Route Handler
 - **Prompt engineering:** System prompts enforce JSON output format and topic restrictions
 
 ### Supabase
+
 - **Database:** PostgreSQL with 15 tables
 - **Auth:** Used indirectly via NextAuth (profiles table linked to auth.users)
 - **RLS:** Enabled but bypassed by service-role key in API routes
 - **Storage:** Not used (images hosted on Spoonacular CDN)
 
 ### Stripe
+
 - **Purpose:** Subscription billing (student, premium plans)
 - **Integration:**
   - **Checkout:** redirect to Stripe-hosted payment page
@@ -235,6 +239,7 @@ Next.js API Route Handler
 - **Plans mapped to price IDs** in `app/api/stripe/checkout/route.ts`
 
 ### Upstash Redis
+
 - **Purpose:** Server-side response caching
 - **Cached data:**
   - Recipe catalog responses (TTL: 1 hour)
@@ -327,6 +332,7 @@ sequenceDiagram
 ```
 
 **Session content:**
+
 ```typescript
 {
   user: {
@@ -400,15 +406,15 @@ The `SessionWatcher` component (in `providers.tsx`) monitors auth state changes 
 
 ## Caching Strategy
 
-| Data | Cache Layer | TTL | Invalidation |
-|---|---|---|---|
-| Recipe catalog results | Redis (server) | 1 hour | On recipe seed |
-| Current meal plan | Redis (server) | 15 min | On plan generate/delete |
-| User plan | Redis (server) | 5 min | On Stripe webhook |
-| Recipe list (filtered) | TanStack Query (client) | 5 min | On filter change |
-| Meal plan list | TanStack Query (client) | 5 min | On generate/delete |
-| Favorites | TanStack Query (client) | 5 min | On toggle |
-| User stats | TanStack Query (client) | 5 min | On data change |
+| Data                   | Cache Layer             | TTL    | Invalidation            |
+| ---------------------- | ----------------------- | ------ | ----------------------- |
+| Recipe catalog results | Redis (server)          | 1 hour | On recipe seed          |
+| Current meal plan      | Redis (server)          | 15 min | On plan generate/delete |
+| User plan              | Redis (server)          | 5 min  | On Stripe webhook       |
+| Recipe list (filtered) | TanStack Query (client) | 5 min  | On filter change        |
+| Meal plan list         | TanStack Query (client) | 5 min  | On generate/delete      |
+| Favorites              | TanStack Query (client) | 5 min  | On toggle               |
+| User stats             | TanStack Query (client) | 5 min  | On data change          |
 
 ---
 
@@ -427,13 +433,19 @@ utils/plan-limits.ts
 ```
 
 **Server-side enforcement (API routes):**
+
 ```typescript
-const { data: profile } = await supabase.from("profiles").select("plan").single();
+const { data: profile } = await supabase
+  .from("profiles")
+  .select("plan")
+  .single();
 const limits = getLimits(profile.plan);
-if (!limits.aiNutritionist) return NextResponse.json({ error: "premium_required" }, { status: 403 });
+if (!limits.aiNutritionist)
+  return NextResponse.json({ error: "premium_required" }, { status: 403 });
 ```
 
 **Client-side enforcement (UI):**
+
 ```tsx
 <PlanGate requiredPlan="premium" userPlan={userPlan}>
   <NutritionistChat />
@@ -445,14 +457,14 @@ if (!limits.aiNutritionist) return NextResponse.json({ error: "premium_required"
 
 ## Security
 
-| Concern | Mitigation |
-|---|---|
-| Auth | NextAuth.js JWT — sessions signed with `AUTH_SECRET` |
-| API authorization | Every protected route calls `auth()` and checks `user.id` |
-| Data isolation | Supabase ownership check (`eq("user_id", session.user.id)`) on every query |
-| Secrets | All API keys in environment variables, never exposed client-side |
-| Rate limiting | Upstash Redis-based rate limiting on signup and meal plan generation |
-| Stripe webhooks | Signature verification (`stripe.webhooks.constructEvent`) |
-| Input validation | Zod schemas on form inputs; API routes validate body before processing |
-| CSRF | Next.js App Router handles CSRF for API routes automatically |
-| Password hashing | bcrypt via Supabase Auth (credentials provider) |
+| Concern           | Mitigation                                                                 |
+| ----------------- | -------------------------------------------------------------------------- |
+| Auth              | NextAuth.js JWT — sessions signed with `AUTH_SECRET`                       |
+| API authorization | Every protected route calls `auth()` and checks `user.id`                  |
+| Data isolation    | Supabase ownership check (`eq("user_id", session.user.id)`) on every query |
+| Secrets           | All API keys in environment variables, never exposed client-side           |
+| Rate limiting     | Upstash Redis-based rate limiting on signup and meal plan generation       |
+| Stripe webhooks   | Signature verification (`stripe.webhooks.constructEvent`)                  |
+| Input validation  | Zod schemas on form inputs; API routes validate body before processing     |
+| CSRF              | Next.js App Router handles CSRF for API routes automatically               |
+| Password hashing  | bcrypt via Supabase Auth (credentials provider)                            |

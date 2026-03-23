@@ -23,7 +23,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Données invalides" }, { status: 400 });
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Données invalides" },
+        { status: 400 },
+      );
     }
     const { mealPlanId } = parsed.data;
 
@@ -46,31 +49,39 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (planError || !mealPlan) {
-      return NextResponse.json({ error: "Meal plan not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Meal plan not found" },
+        { status: 404 },
+      );
     }
 
     const generatedPlan = mealPlan.meals as GeneratedMealPlan;
     if (!generatedPlan?.days || !Array.isArray(generatedPlan.days)) {
-      return NextResponse.json({ error: "Invalid meal plan structure" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid meal plan structure" },
+        { status: 400 },
+      );
     }
 
     // Collect all meals across all days
-    const allMeals: GeneratedMeal[] = generatedPlan.days.flatMap((day) => day.meals ?? []);
+    const allMeals: GeneratedMeal[] = generatedPlan.days.flatMap(
+      (day) => day.meals ?? [],
+    );
 
     // Collect unique catalog and user recipe IDs
     const catalogIds = Array.from(
       new Set(
         allMeals
           .filter((m) => m.source === "catalog" && m.recipe_catalog_id)
-          .map((m) => m.recipe_catalog_id!)
-      )
+          .map((m) => m.recipe_catalog_id!),
+      ),
     );
     const userRecipeIds = Array.from(
       new Set(
         allMeals
           .filter((m) => m.source === "user_recipe" && m.user_recipe_id)
-          .map((m) => m.user_recipe_id!)
-      )
+          .map((m) => m.user_recipe_id!),
+      ),
     );
 
     // Batch-fetch ingredients from recipes_catalog and user_recipes in parallel
@@ -90,11 +101,23 @@ export async function POST(req: NextRequest) {
         : Promise.resolve({ data: [], error: null }),
     ]);
 
-    const catalogMap = new Map<string, Array<{ name: string; amount: number; unit: string }>>(
-      ((catalogResult.data as any[]) || []).map((r) => [r.id, r.ingredients || []])
+    const catalogMap = new Map<
+      string,
+      Array<{ name: string; amount: number; unit: string }>
+    >(
+      ((catalogResult.data as any[]) || []).map((r) => [
+        r.id,
+        r.ingredients || [],
+      ]),
     );
-    const userRecipeMap = new Map<string, Array<{ name: string; amount: number; unit: string }>>(
-      ((userRecipesResult.data as any[]) || []).map((r) => [r.id, r.ingredients || []])
+    const userRecipeMap = new Map<
+      string,
+      Array<{ name: string; amount: number; unit: string }>
+    >(
+      ((userRecipesResult.data as any[]) || []).map((r) => [
+        r.id,
+        r.ingredients || [],
+      ]),
     );
 
     // Build the flat list of raw ingredients from all meals
@@ -113,7 +136,9 @@ export async function POST(req: NextRequest) {
           }
         } else if (meal.ingredients_summary) {
           // Fallback: parse ingredients_summary if no structured data
-          rawIngredients.push(...parseIngredientsSummary(meal.ingredients_summary));
+          rawIngredients.push(
+            ...parseIngredientsSummary(meal.ingredients_summary),
+          );
         }
       } else if (meal.source === "user_recipe" && meal.user_recipe_id) {
         const ingredients = userRecipeMap.get(meal.user_recipe_id) ?? [];
@@ -126,18 +151,22 @@ export async function POST(req: NextRequest) {
             });
           }
         } else if (meal.ingredients_summary) {
-          rawIngredients.push(...parseIngredientsSummary(meal.ingredients_summary));
+          rawIngredients.push(
+            ...parseIngredientsSummary(meal.ingredients_summary),
+          );
         }
       } else if (meal.ingredients_summary) {
         // AI-generated or any source with summary only
-        rawIngredients.push(...parseIngredientsSummary(meal.ingredients_summary));
+        rawIngredients.push(
+          ...parseIngredientsSummary(meal.ingredients_summary),
+        );
       }
     }
 
     if (rawIngredients.length === 0) {
       return NextResponse.json(
         { error: "No ingredients found in this meal plan" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -145,13 +174,21 @@ export async function POST(req: NextRequest) {
     let organizedItems;
     if (userPlan === "free") {
       // Basic flat list: deduplicate by name only, no aisle grouping
-      const seen = new Map<string, { name: string; quantity: number; unit: string; category: string }>();
+      const seen = new Map<
+        string,
+        { name: string; quantity: number; unit: string; category: string }
+      >();
       for (const ing of rawIngredients) {
         const key = ing.name.toLowerCase().trim();
         if (seen.has(key)) {
           seen.get(key)!.quantity += ing.quantity ?? 1;
         } else {
-          seen.set(key, { name: ing.name, quantity: ing.quantity ?? 1, unit: ing.unit ?? "", category: "Divers" });
+          seen.set(key, {
+            name: ing.name,
+            quantity: ing.quantity ?? 1,
+            unit: ing.unit ?? "",
+            category: "Divers",
+          });
         }
       }
       organizedItems = Array.from(seen.values());
@@ -161,8 +198,11 @@ export async function POST(req: NextRequest) {
     }
 
     const totalCost = organizedItems.reduce(
-      (sum, item) => sum + (("price" in item ? (item.price as number | null) : null) ?? 0) * (item.quantity ?? 1),
-      0
+      (sum, item) =>
+        sum +
+        (("price" in item ? (item.price as number | null) : null) ?? 0) *
+          (item.quantity ?? 1),
+      0,
     );
 
     // Upsert: replace existing list for this meal plan, or create new
@@ -207,6 +247,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ...result, plan: userPlan });
   } catch (err) {
     console.error("POST /api/shopping-lists/generate error:", err);
-    return NextResponse.json({ error: "Failed to generate shopping list" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to generate shopping list" },
+      { status: 500 },
+    );
   }
 }

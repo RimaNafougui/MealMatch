@@ -11,6 +11,7 @@ import DashboardSidebar, {
   premiumLinks,
 } from "@/components/dashboard/DashboardSidebar";
 import { useUserPlan } from "@/hooks/useUserPlan";
+import { DashboardShortcutsHint } from "@/components/layout/DashboardShortcutsHint";
 
 export default function DashboardLayout({
   children,
@@ -91,6 +92,7 @@ export default function DashboardLayout({
           {children}
         </main>
       </div>
+      <DashboardShortcutsHint />
     </div>
   );
 }

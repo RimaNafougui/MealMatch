@@ -29,10 +29,12 @@ import {
   Plus,
   Trash2,
   AlertTriangle,
+  Clipboard,
 } from "lucide-react";
 import type { ShoppingList, ShoppingListItem } from "@/types";
 import type { SavedMealPlan } from "@/types/meal-plan";
 import { classifyIngredient } from "@/lib/shopping-list-utils";
+import { QuickAskModal } from "@/components/ai/QuickAskModal";
 
 // ─── Aisle sort order & emoji lookup (matches lib/shopping-list-utils.ts) ────
 
@@ -149,6 +151,7 @@ function ItemRow({
 }) {
   const [pending, setPending] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [quickAskOpen, setQuickAskOpen] = useState(false);
 
   async function handleToggle(checked: boolean) {
     setPending(true);
@@ -186,7 +189,7 @@ function ItemRow({
 
   return (
     <div
-      className={`flex items-center gap-3 py-2.5 px-1 rounded-lg transition-opacity duration-300 ${
+      className={`group/item flex items-center gap-3 py-2.5 px-1 rounded-lg transition-opacity duration-300 ${
         item.checked ? "opacity-50" : ""
       }`}
     >
@@ -241,6 +244,22 @@ function ItemRow({
           {!deleting && <Trash2 size={13} />}
         </Button>
       )}
+      <Button
+        isIconOnly
+        size="sm"
+        variant="light"
+        color="primary"
+        onPress={() => setQuickAskOpen(true)}
+        className="flex-shrink-0 h-7 w-7 min-w-7 opacity-0 group-hover/item:opacity-100 transition-opacity"
+        title="Demander un substitut à l'IA"
+      >
+        <Sparkles size={13} />
+      </Button>
+      <QuickAskModal
+        isOpen={quickAskOpen}
+        onClose={() => setQuickAskOpen(false)}
+        initialMessage={`Je n'ai pas ${item.name}, que puis-je substituer ?`}
+      />
     </div>
   );
 }
@@ -740,7 +759,7 @@ export default function EpiceriePage() {
                   <div className="p-2 rounded-xl bg-success/10">
                     <ShoppingCart size={18} className="text-success" />
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <h2 className="font-bold text-lg">
                       {activeList.is_completed
                         ? "Liste complétée !"
@@ -751,6 +770,38 @@ export default function EpiceriePage() {
                       {totalCount > 1 ? "s" : ""} cochés
                     </p>
                   </div>
+                  <Button
+                    size="sm"
+                    variant="flat"
+                    startContent={<Clipboard size={14} />}
+                    onPress={() => {
+                      // Deduplicate: group by name (case-insensitive), sum quantities
+                      const grouped = new Map<string, { name: string; quantity: number; unit: string }>();
+                      activeList.items
+                        .filter((i) => !i.checked)
+                        .forEach((i) => {
+                          const key = i.name.toLowerCase().trim();
+                          if (grouped.has(key)) {
+                            grouped.get(key)!.quantity += i.quantity;
+                          } else {
+                            grouped.set(key, { name: i.name, quantity: i.quantity, unit: i.unit ?? "" });
+                          }
+                        });
+                      const text = Array.from(grouped.values())
+                        .map((i) => {
+                          const qty = i.quantity > 1
+                            ? `${i.quantity}${i.unit ? ` ${i.unit}` : ""}`
+                            : i.unit || "";
+                          return `- ${qty ? qty + " " : ""}${i.name}`;
+                        })
+                        .join("\n");
+                      navigator.clipboard.writeText(text).then(() => {
+                        toast.success("Liste copiée !");
+                      });
+                    }}
+                  >
+                    Copier la liste
+                  </Button>
                 </CardHeader>
                 <Divider />
                 <CardBody className="px-6 py-4">

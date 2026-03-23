@@ -18,15 +18,29 @@ export function useFavoriteToggle(recipeId: string) {
         onSuccess: (_data, wasFavorite) => {
             queryClient.invalidateQueries({ queryKey: ["favorites"] });
             queryClient.invalidateQueries({ queryKey: ["recipes"] });
-            toast.success(
-                wasFavorite
-                    ? "Removed from favorites"
-                    : "Added to favorites"
-            );
+            if (wasFavorite) {
+                toast.success("Retiré des favoris", {
+                    action: {
+                        label: "Annuler",
+                        onClick: () => {
+                            fetch("/api/favorites", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ recipeId }),
+                            }).then(() => {
+                                queryClient.invalidateQueries({ queryKey: ["favorites"] });
+                                queryClient.invalidateQueries({ queryKey: ["recipes"] });
+                            });
+                        },
+                    },
+                });
+            } else {
+                toast.success("Ajouté aux favoris");
+            }
         },
 
         onError: () => {
-            toast.error("Something went wrong");
+            toast.error("Une erreur est survenue");
         },
     });
 }

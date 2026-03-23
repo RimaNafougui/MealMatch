@@ -29,11 +29,12 @@ Top navigation bar rendered on every page.
 <AppNavbar user={session?.user ?? null} />
 ```
 
-| Prop | Type | Description |
-|---|---|---|
+| Prop   | Type          | Description                                     |
+| ------ | ------------- | ----------------------------------------------- |
 | `user` | `any \| null` | Current session user; `null` = logged-out state |
 
 **Behaviour:**
+
 - **Logged out:** shows Connexion + Commencer buttons, public nav links (Accueil, Tarification, Nutrition)
 - **Logged in (mobile):** hamburger opens full-screen overlay menu with all nav links + profile links + logout
 - **Logged in (desktop):** shows Dashboard + Explorer links, avatar dropdown (hidden on mobile)
@@ -58,33 +59,35 @@ Left sidebar visible on desktop (`lg+`). Hidden on mobile (replaced by horizonta
 ```tsx
 <DashboardSidebar
   desktopCollapsed={false}
-  onToggleDesktop={() => setDesktopCollapsed(c => !c)}
+  onToggleDesktop={() => setDesktopCollapsed((c) => !c)}
 />
 ```
 
-| Prop | Type | Description |
-|---|---|---|
-| `desktopCollapsed` | `boolean` | Collapses sidebar to width 0 |
-| `onToggleDesktop` | `() => void` | Toggle collapse handler |
+| Prop               | Type         | Description                  |
+| ------------------ | ------------ | ---------------------------- |
+| `desktopCollapsed` | `boolean`    | Collapses sidebar to width 0 |
+| `onToggleDesktop`  | `() => void` | Toggle collapse handler      |
 
 **Exports:**
+
 ```typescript
 export const navLinks = [...]       // Base nav items
 export const premiumLinks = [...]   // Premium-only nav items
 ```
+
 These exports are consumed by the dashboard layout to render the mobile horizontal nav strip.
 
 **Nav links:**
 
-| Label | Route | Icon |
-|---|---|---|
-| Accueil | `/dashboard` | `Home` |
-| Recettes | `/dashboard/recettes` | `Utensils` |
-| Meal Plans | `/dashboard/meal-plans` | `Calendar` |
-| Epicerie | `/dashboard/epicerie` | `ShoppingCart` |
-| Favoris | `/dashboard/favoris` | `Heart` |
-| Nutritionniste *(Premium)* | `/dashboard/nutritionist` | `BrainCircuit` |
-| Famille *(Premium)* | `/dashboard/family` | `Users` |
+| Label                      | Route                     | Icon           |
+| -------------------------- | ------------------------- | -------------- |
+| Accueil                    | `/dashboard`              | `Home`         |
+| Recettes                   | `/dashboard/recettes`     | `Utensils`     |
+| Meal Plans                 | `/dashboard/meal-plans`   | `Calendar`     |
+| Epicerie                   | `/dashboard/epicerie`     | `ShoppingCart` |
+| Favoris                    | `/dashboard/favoris`      | `Heart`        |
+| Nutritionniste _(Premium)_ | `/dashboard/nutritionist` | `BrainCircuit` |
+| Famille _(Premium)_        | `/dashboard/family`       | `Users`        |
 
 ---
 
@@ -122,8 +125,8 @@ Full calendar view of a meal plan with day columns and meal rows.
 <MealPlanCalendar plan={mealPlan} />
 ```
 
-| Prop | Type | Description |
-|---|---|---|
+| Prop   | Type       | Description                             |
+| ------ | ---------- | --------------------------------------- |
 | `plan` | `MealPlan` | The meal plan object with `meals` JSONB |
 
 ---
@@ -148,13 +151,13 @@ Individual meal card within the calendar. Shows recipe image, title, calories, m
 />
 ```
 
-| Prop | Type | Description |
-|---|---|---|
-| `meal` | `MealData` | Recipe data for this slot |
-| `day` | `string` | Day of the week |
-| `mealType` | `string` | `breakfast` \| `lunch` \| `dinner` |
-| `onRegenerate` | `() => void` | Regenerate this meal slot |
-| `onViewDetail` | `() => void` | Open detail modal |
+| Prop           | Type         | Description                        |
+| -------------- | ------------ | ---------------------------------- |
+| `meal`         | `MealData`   | Recipe data for this slot          |
+| `day`          | `string`     | Day of the week                    |
+| `mealType`     | `string`     | `breakfast` \| `lunch` \| `dinner` |
+| `onRegenerate` | `() => void` | Regenerate this meal slot          |
+| `onViewDetail` | `() => void` | Open detail modal                  |
 
 ---
 
@@ -163,22 +166,18 @@ Individual meal card within the calendar. Shows recipe image, title, calories, m
 Drawer/modal showing full recipe details when clicking a meal slot.
 
 ```tsx
-<MealDetailModal
-  recipeId={selectedId}
-  isOpen={isOpen}
-  onClose={onClose}
-/>
+<MealDetailModal recipeId={selectedId} isOpen={isOpen} onClose={onClose} />
 ```
 
-| Prop | Type | Description |
-|---|---|---|
+| Prop       | Type             | Description       |
+| ---------- | ---------------- | ----------------- |
 | `recipeId` | `string \| null` | Recipe to display |
-| `isOpen` | `boolean` | Modal visibility |
-| `onClose` | `() => void` | Close handler |
+| `isOpen`   | `boolean`        | Modal visibility  |
+| `onClose`  | `() => void`     | Close handler     |
 
 ---
 
-### `components/meal-plan/GenerateConfig.tsx` — `<GenerateConfig>`
+### `components/generateConfig.tsx` — `<GenerateConfig>`
 
 Configuration panel for the meal plan generator: number of days and meals per day. 4-week planning is gated to premium.
 
@@ -214,11 +213,7 @@ Modal shown when a free user hits their monthly generation limit.
 Modal for cloning an existing plan to a future week.
 
 ```tsx
-<RepeatMealModal
-  plan={currentPlan}
-  isOpen={isOpen}
-  onClose={onClose}
-/>
+<RepeatMealModal plan={currentPlan} isOpen={isOpen} onClose={onClose} />
 ```
 
 ---
@@ -231,11 +226,11 @@ Progress bar showing how many meal plans the user has generated this month vs. t
 <UsageIndicator count={3} limit={5} plan="free" />
 ```
 
-| Prop | Type | Description |
-|---|---|---|
-| `count` | `number` | Plans generated this month |
+| Prop    | Type     | Description                   |
+| ------- | -------- | ----------------------------- |
+| `count` | `number` | Plans generated this month    |
 | `limit` | `number` | Monthly limit for user's plan |
-| `plan` | `string` | User's plan name |
+| `plan`  | `string` | User's plan name              |
 
 ---
 
@@ -262,11 +257,11 @@ Recipe card with image, title, macros, prep time, price, and favorite toggle.
 <RecipeCardSkeleton />
 ```
 
-| Prop | Type | Description |
-|---|---|---|
-| `recipe` | `Recipe` | Recipe data object |
-| `isFavorite` | `boolean` | Whether the user has favorited this recipe |
-| `onFavoriteToggle` | `() => void` | Toggle favorite handler |
+| Prop               | Type         | Description                                |
+| ------------------ | ------------ | ------------------------------------------ |
+| `recipe`           | `Recipe`     | Recipe data object                         |
+| `isFavorite`       | `boolean`    | Whether the user has favorited this recipe |
+| `onFavoriteToggle` | `() => void` | Toggle favorite handler                    |
 
 **Displayed fields:** image, title, meal_type badge, prep_time, calories, protein, price_per_serving, dietary_tags
 
@@ -280,17 +275,17 @@ Full-featured modal form for creating or editing a personal recipe.
 <AddRecipeModal
   isOpen={isOpen}
   onClose={onClose}
-  editingRecipe={null}      // null = create mode, Recipe = edit mode
+  editingRecipe={null} // null = create mode, Recipe = edit mode
   onSaved={handleSaved}
 />
 ```
 
-| Prop | Type | Description |
-|---|---|---|
-| `isOpen` | `boolean` | Modal visibility |
-| `onClose` | `() => void` | Close handler |
-| `editingRecipe` | `UserRecipe \| null` | Recipe to edit, or null for create |
-| `onSaved` | `(recipe: UserRecipe) => void` | Callback after save |
+| Prop            | Type                           | Description                        |
+| --------------- | ------------------------------ | ---------------------------------- |
+| `isOpen`        | `boolean`                      | Modal visibility                   |
+| `onClose`       | `() => void`                   | Close handler                      |
+| `editingRecipe` | `UserRecipe \| null`           | Recipe to edit, or null for create |
+| `onSaved`       | `(recipe: UserRecipe) => void` | Callback after save                |
 
 **Fields:** title, image_url, prep_time, servings, calories, protein, carbs, fat, price_per_serving, ingredients (textarea), instructions (textarea), dietary_tags (chips)
 
@@ -308,13 +303,14 @@ Wraps content that requires a specific plan. Renders children normally if access
 </PlanGate>
 ```
 
-| Prop | Type | Description |
-|---|---|---|
+| Prop           | Type                     | Description           |
+| -------------- | ------------------------ | --------------------- |
 | `requiredPlan` | `"student" \| "premium"` | Minimum plan required |
-| `userPlan` | `string` | User's current plan |
-| `children` | `React.ReactNode` | Content to gate |
+| `userPlan`     | `string`                 | User's current plan   |
+| `children`     | `React.ReactNode`        | Content to gate       |
 
 **When access is denied:**
+
 - Children are rendered but blurred (`blur-sm opacity-60 pointer-events-none`)
 - Overlay shows a lock icon, plan name, and "Passer à [Plan]" button linking to `/pricing`
 
@@ -347,8 +343,8 @@ Avatar button with dropdown menu showing profile links and sign-out.
 <ProfileDropdown user={session.user} />
 ```
 
-| Prop | Type | Description |
-|---|---|---|
+| Prop   | Type          | Description                              |
+| ------ | ------------- | ---------------------------------------- |
 | `user` | `SessionUser` | Session user object (name, email, image) |
 
 **Menu items:** Mon Profil, Paramètres, Déconnexion
@@ -364,6 +360,7 @@ Avatar button with dropdown menu showing profile links and sign-out.
 Multi-step wizard collecting user profile data after sign-up.
 
 **Steps:**
+
 1. Dietary restrictions & allergies
 2. Budget & cooking preferences
 3. Body metrics (weight, height, age, gender)
@@ -435,23 +432,23 @@ export const subtitle = tv({ ... });    // Subheading variants
 
 ## HeroUI Components Used
 
-| Component | Import | Used in |
-|---|---|---|
-| `Button` | `@heroui/button` | Throughout |
-| `Card`, `CardBody`, `CardHeader` | `@heroui/card` | Throughout |
-| `Input` | `@heroui/input` | Forms, search |
-| `Select`, `SelectItem` | `@heroui/select` | Filters, config |
-| `Tabs`, `Tab` | `@heroui/tabs` | Recettes page, settings |
-| `Modal`, `ModalContent`, etc. | `@heroui/modal` | Detail modals |
-| `Chip` | `@heroui/chip` | Badges, tags |
-| `Skeleton` | `@heroui/skeleton` | Loading states |
-| `Avatar` | `@heroui/avatar` | Profile dropdown |
-| `Divider` | `@heroui/divider` | Layout separators |
-| `Checkbox` | `@heroui/checkbox` | Shopping list items |
-| `Slider` | `@heroui/slider` | Calorie range filter |
-| `Link` | `@heroui/link` | Internal links |
-| `Navbar`, `NavbarContent`, etc. | `@heroui/react` | Top navigation |
-| `useDisclosure` | `@heroui/use-disclosure` | Modal state management |
+| Component                        | Import                   | Used in                 |
+| -------------------------------- | ------------------------ | ----------------------- |
+| `Button`                         | `@heroui/button`         | Throughout              |
+| `Card`, `CardBody`, `CardHeader` | `@heroui/card`           | Throughout              |
+| `Input`                          | `@heroui/input`          | Forms, search           |
+| `Select`, `SelectItem`           | `@heroui/select`         | Filters, config         |
+| `Tabs`, `Tab`                    | `@heroui/tabs`           | Recettes page, settings |
+| `Modal`, `ModalContent`, etc.    | `@heroui/modal`          | Detail modals           |
+| `Chip`                           | `@heroui/chip`           | Badges, tags            |
+| `Skeleton`                       | `@heroui/skeleton`       | Loading states          |
+| `Avatar`                         | `@heroui/avatar`         | Profile dropdown        |
+| `Divider`                        | `@heroui/divider`        | Layout separators       |
+| `Checkbox`                       | `@heroui/checkbox`       | Shopping list items     |
+| `Slider`                         | `@heroui/slider`         | Calorie range filter    |
+| `Link`                           | `@heroui/link`           | Internal links          |
+| `Navbar`, `NavbarContent`, etc.  | `@heroui/react`          | Top navigation          |
+| `useDisclosure`                  | `@heroui/use-disclosure` | Modal state management  |
 
 **Theme:** Configured in `tailwind.config.ts` with custom success (green) as the primary brand color.
 

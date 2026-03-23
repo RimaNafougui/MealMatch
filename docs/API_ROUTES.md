@@ -23,14 +23,17 @@ All routes live under `/app/api/`. Every protected route requires a valid NextAu
 ## Authentication
 
 ### `GET/POST /api/auth/[...nextauth]`
+
 NextAuth.js catch-all handler. Manages OAuth flows (Google, GitHub) and credentials sign-in/sign-out.
 
 ### `POST /api/auth/signup`
+
 Register a new user with email + password.
 
 - **Auth required:** No
 - **Rate limited:** Yes (per IP)
 - **Body:**
+
 ```json
 {
   "name": "string",
@@ -39,23 +42,29 @@ Register a new user with email + password.
   "password": "string"
 }
 ```
+
 - **Response `201`:**
+
 ```json
 { "message": "Compte créé avec succès" }
 ```
+
 - **Errors:** `400` (validation), `409` (email/username taken), `429` (rate limited)
 
 ### `GET /api/auth/check-credentials`
+
 Check if an email/username is already taken (used during signup form).
 
 - **Auth required:** No
 - **Query params:** `?email=` or `?username=`
 - **Response:**
+
 ```json
 { "available": true }
 ```
 
 ### `GET /api/users/check-username`
+
 Check username availability in real-time (debounced during signup).
 
 - **Auth required:** No
@@ -67,19 +76,23 @@ Check username availability in real-time (debounced during signup).
 ## User
 
 ### `GET /api/user/plan`
+
 Returns the authenticated user's current subscription plan.
 
 - **Auth required:** Yes
 - **Response:**
+
 ```json
 { "plan": "free" | "student" | "premium" }
 ```
 
 ### `GET /api/user/subscription`
+
 Returns full subscription details for the settings page.
 
 - **Auth required:** Yes
 - **Response:**
+
 ```json
 {
   "plan": "free" | "student" | "premium",
@@ -91,10 +104,12 @@ Returns full subscription details for the settings page.
 ```
 
 ### `GET /api/user/stats`
+
 Returns dashboard statistics for the current user.
 
 - **Auth required:** Yes
 - **Response:**
+
 ```json
 {
   "savedRecipes": 12,
@@ -105,16 +120,19 @@ Returns dashboard statistics for the current user.
 ```
 
 ### `GET /api/user/profile`
+
 Fetch full user profile data.
 
 - **Auth required:** Yes
 - **Response:** Full `profiles` row
 
 ### `GET /api/user/nutrition`
+
 Fetch user nutrition targets (TDEE, macros).
 
 - **Auth required:** Yes
 - **Response:**
+
 ```json
 {
   "tdee_kcal": 2100,
@@ -126,12 +144,14 @@ Fetch user nutrition targets (TDEE, macros).
 ```
 
 ### `GET /api/user/weight-logs`
+
 Fetch weight tracking history.
 
 - **Auth required:** Yes
 - **Response:** `{ "logs": WeightLog[] }`
 
 ### `PATCH /api/user/password`
+
 Update the user's password (credentials accounts only).
 
 - **Auth required:** Yes
@@ -139,11 +159,13 @@ Update the user's password (credentials accounts only).
 - **Response:** `{ "message": "Mot de passe mis à jour" }`
 
 ### `PATCH /api/user/preferences`
+
 Update notification and display preferences.
 
 - **Auth required:** Yes
 
 ### `PATCH /api/user/notifications`
+
 Update notification settings.
 
 - **Auth required:** Yes
@@ -153,26 +175,28 @@ Update notification settings.
 ## Recipes
 
 ### `GET /api/recipes/catalog`
+
 Paginated recipe catalog with filtering. Free users are capped at 50 recipes total; premium-only recipes are hidden from free/student users. Results are cached in Redis.
 
 - **Auth required:** Yes
 - **Query params:**
 
-| Param | Type | Description |
-|---|---|---|
-| `search` | string | Full-text search |
-| `meal_type` | string | `breakfast`, `lunch`, `dinner`, `snack` |
-| `dietary_tags` | string | Comma-separated: `vegan,gluten-free` |
-| `intolerances` | string | Comma-separated: `dairy,peanut` |
-| `max_prep_time` | number | Max preparation time (minutes) |
-| `min_calories` | number | Minimum calories per serving |
-| `max_calories` | number | Maximum calories per serving |
-| `max_price` | number | Max price per serving ($) |
-| `max_servings` | number | Max number of servings |
-| `page` | number | Page number (default: 1) |
-| `limit` | number | Results per page (default: 12, max: 50) |
+| Param           | Type   | Description                             |
+| --------------- | ------ | --------------------------------------- |
+| `search`        | string | Full-text search                        |
+| `meal_type`     | string | `breakfast`, `lunch`, `dinner`, `snack` |
+| `dietary_tags`  | string | Comma-separated: `vegan,gluten-free`    |
+| `intolerances`  | string | Comma-separated: `dairy,peanut`         |
+| `max_prep_time` | number | Max preparation time (minutes)          |
+| `min_calories`  | number | Minimum calories per serving            |
+| `max_calories`  | number | Maximum calories per serving            |
+| `max_price`     | number | Max price per serving ($)               |
+| `max_servings`  | number | Max number of servings                  |
+| `page`          | number | Page number (default: 1)                |
+| `limit`         | number | Results per page (default: 12, max: 50) |
 
 - **Response:**
+
 ```json
 {
   "recipes": [
@@ -185,7 +209,7 @@ Paginated recipe catalog with filtering. Free users are capped at 50 recipes tot
       "protein": 22,
       "carbs": 55,
       "fat": 18,
-      "price_per_serving": 3.50,
+      "price_per_serving": 3.5,
       "dietary_tags": ["gluten-free"],
       "meal_type": "dinner",
       "servings": 2
@@ -202,22 +226,26 @@ Paginated recipe catalog with filtering. Free users are capped at 50 recipes tot
 ```
 
 ### `GET /api/recipes/catalog/[id]`
+
 Fetch a single recipe by ID (includes ingredients and instructions).
 
 - **Auth required:** Yes
 - **Response:** Full recipe object with `ingredients` and `instructions` arrays
 
 ### `GET /api/recipes/user`
+
 Fetch all recipes created by the authenticated user.
 
 - **Auth required:** Yes
 - **Response:** `{ "recipes": UserRecipe[] }`
 
 ### `POST /api/recipes/user`
+
 Create a new personal recipe.
 
 - **Auth required:** Yes
 - **Body:**
+
 ```json
 {
   "title": "Ma recette",
@@ -228,21 +256,25 @@ Create a new personal recipe.
   "protein": 25,
   "carbs": 40,
   "fat": 15,
-  "price_per_serving": 4.00,
+  "price_per_serving": 4.0,
   "ingredients": ["200g pâtes", "2 œufs"],
   "instructions": ["Faire bouillir l'eau", "..."],
   "dietary_tags": ["vegetarian"]
 }
 ```
+
 - **Response `201`:** `{ "recipe": UserRecipe }`
 
 ### `GET /api/recipes/user/[id]`
+
 Fetch a single user-created recipe.
 
 ### `PATCH /api/recipes/user/[id]`
+
 Update a user-created recipe.
 
 ### `DELETE /api/recipes/user/[id]`
+
 Delete a user-created recipe.
 
 ---
@@ -250,11 +282,13 @@ Delete a user-created recipe.
 ## Meal Plans
 
 ### `POST /api/meal-plan/generate`
+
 Generate an AI-powered weekly meal plan. Enforces monthly generation limits (5 for free, unlimited for paid). Rate-limited per user.
 
 - **Auth required:** Yes
 - **Plan limit:** 5/month (free), unlimited (student/premium)
 - **Body:**
+
 ```json
 {
   "days": 7,
@@ -266,7 +300,9 @@ Generate an AI-powered weekly meal plan. Enforces monthly generation limits (5 f
   "weekOffset": 0
 }
 ```
+
 - **Response:**
+
 ```json
 {
   "mealPlan": {
@@ -282,27 +318,32 @@ Generate an AI-powered weekly meal plan. Enforces monthly generation limits (5 f
   "usage": { "count": 3, "limit": 5 }
 }
 ```
+
 - **Errors:** `429` (monthly limit reached), `402` (plan required)
 
 ### `GET /api/meal-plan/[id]`
+
 Fetch a single meal plan by ID (must belong to authenticated user).
 
 - **Auth required:** Yes
 - **Response:** `{ "plan": MealPlan }`
 
 ### `DELETE /api/meal-plan/[id]`
+
 Delete a meal plan.
 
 - **Auth required:** Yes
 - **Response:** `{ "success": true }`
 
 ### `GET /api/meal-plan/current`
+
 Fetch the active meal plan for the current week. Cached in Redis.
 
 - **Auth required:** Yes
 - **Response:** `{ "plan": MealPlan | null }`
 
 ### `POST /api/meal-plan/repeat`
+
 Clone an existing meal plan to a different week.
 
 - **Auth required:** Yes
@@ -311,10 +352,12 @@ Clone an existing meal plan to a different week.
 - **Errors:** `409` (plan already exists for target week)
 
 ### `GET /api/meal-plan/config`
+
 Fetch available meal plan configuration options (days, meals per day). 4-week planning requires premium.
 
 - **Auth required:** Yes
 - **Response:**
+
 ```json
 {
   "availableDays": [5, 7],
@@ -324,18 +367,21 @@ Fetch available meal plan configuration options (days, meals per day). 4-week pl
 ```
 
 ### `GET /api/meal-plan/history`
+
 Fetch all past meal plans for the user.
 
 - **Auth required:** Yes
 - **Response:** `{ "plans": MealPlan[] }`
 
 ### `GET /api/meal-plan/usage`
+
 Fetch the user's current month meal plan generation count.
 
 - **Auth required:** Yes
 - **Response:** `{ "count": 3, "limit": 5, "reset_date": "2025-02-01" }`
 
 ### `POST /api/meal-plan/regenerate-slot`
+
 Regenerate a single meal slot in an existing plan.
 
 - **Auth required:** Yes
@@ -347,6 +393,7 @@ Regenerate a single meal slot in an existing plan.
 ## Shopping Lists
 
 ### `GET /api/shopping-lists`
+
 Fetch all shopping lists for the user, or filter by meal plan.
 
 - **Auth required:** Yes
@@ -354,20 +401,29 @@ Fetch all shopping lists for the user, or filter by meal plan.
 - **Response:** `{ "lists": ShoppingList[] }` or single `ShoppingList` when filtered
 
 ### `POST /api/shopping-lists`
+
 Create a new shopping list manually.
 
 - **Auth required:** Yes
 - **Body:**
+
 ```json
 {
   "mealPlanId": "uuid",
   "items": [
-    { "name": "Pâtes", "quantity": 500, "unit": "g", "price": 1.50, "aisle": "Pâtes & riz" }
+    {
+      "name": "Pâtes",
+      "quantity": 500,
+      "unit": "g",
+      "price": 1.5,
+      "aisle": "Pâtes & riz"
+    }
   ]
 }
 ```
 
 ### `POST /api/shopping-lists/generate`
+
 Generate an intelligent shopping list from a meal plan. Free users get a flat list; student/premium users get an aisle-organized list with store suggestions.
 
 - **Auth required:** Yes
@@ -375,6 +431,7 @@ Generate an intelligent shopping list from a meal plan. Free users get a flat li
 - **Response:** `ShoppingList` with organized `items` array
 
 ### `POST /api/shopping-lists/[id]/items`
+
 Add a custom item to an existing shopping list.
 
 - **Auth required:** Yes
@@ -382,12 +439,14 @@ Add a custom item to an existing shopping list.
 - **Response:** Updated `ShoppingList`
 
 ### `DELETE /api/shopping-lists/[id]/items`
+
 Delete a custom item by index.
 
 - **Auth required:** Yes
 - **Body:** `{ "itemIndex": 0 }`
 
 ### `PATCH /api/shopping-lists/[id]/items`
+
 Toggle an item's checked state. Automatically marks the list as completed when all items are checked.
 
 - **Auth required:** Yes
@@ -399,12 +458,14 @@ Toggle an item's checked state. Automatically marks the list as completed when a
 ## Favorites
 
 ### `GET /api/favorites`
+
 Fetch the user's favorite recipes.
 
 - **Auth required:** Yes
 - **Response:** `Recipe[]`
 
 ### `POST /api/favorites`
+
 Add a recipe to favorites. Free users are limited to 10.
 
 - **Auth required:** Yes
@@ -412,6 +473,7 @@ Add a recipe to favorites. Free users are limited to 10.
 - **Errors:** `403` (limit reached for free plan)
 
 ### `DELETE /api/favorites`
+
 Remove a recipe from favorites.
 
 - **Auth required:** Yes
@@ -422,6 +484,7 @@ Remove a recipe from favorites.
 ## Nutritionist IA (Premium)
 
 ### `GET /api/nutritionist/sessions`
+
 List all chat sessions for the user.
 
 - **Auth required:** Yes
@@ -429,6 +492,7 @@ List all chat sessions for the user.
 - **Response:** `{ "sessions": ChatSession[] }`
 
 ### `POST /api/nutritionist/sessions`
+
 Create a new chat session (auto-titled after first message).
 
 - **Auth required:** Yes
@@ -436,23 +500,27 @@ Create a new chat session (auto-titled after first message).
 - **Response:** `{ "session": ChatSession }`
 
 ### `GET /api/nutritionist/sessions/[id]`
+
 Fetch a session with all its messages.
 
 - **Auth required:** Yes
 - **Response:** `{ "session": ChatSession, "messages": Message[] }`
 
 ### `DELETE /api/nutritionist/sessions/[id]`
+
 Delete a chat session and all its messages.
 
 - **Auth required:** Yes
 - **Response:** `{ "success": true }`
 
 ### `POST /api/nutritionist`
+
 Send a message to the AI nutritionist. Only responds to nutrition/fitness questions.
 
 - **Auth required:** Yes
 - **Plan required:** Premium
 - **Body:**
+
 ```json
 {
   "message": "Combien de protéines dois-je manger?",
@@ -463,7 +531,9 @@ Send a message to the AI nutritionist. Only responds to nutrition/fitness questi
   "session_id": "uuid"
 }
 ```
+
 - **Response:**
+
 ```json
 { "reply": "Pour votre profil, je recommande...", "session_id": "uuid" }
 ```
@@ -473,6 +543,7 @@ Send a message to the AI nutritionist. Only responds to nutrition/fitness questi
 ## Family (Premium)
 
 ### `GET /api/family`
+
 List all family members.
 
 - **Auth required:** Yes
@@ -480,11 +551,13 @@ List all family members.
 - **Response:** `FamilyMember[]` (max 4)
 
 ### `POST /api/family`
+
 Add a new family member.
 
 - **Auth required:** Yes
 - **Plan required:** Premium
 - **Body:**
+
 ```json
 {
   "name": "Sophie",
@@ -492,10 +565,12 @@ Add a new family member.
   "allergies": ["peanuts"]
 }
 ```
+
 - **Response `201`:** `FamilyMember`
 - **Errors:** `403` (max 4 members reached)
 
 ### `DELETE /api/family`
+
 Remove a family member.
 
 - **Auth required:** Yes
@@ -506,6 +581,7 @@ Remove a family member.
 ## Calendar (Premium)
 
 ### `GET /api/calendar/export`
+
 Export a meal plan as an `.ics` calendar file (importable into Google Calendar, Apple Calendar, etc.).
 
 - **Auth required:** Yes
@@ -518,6 +594,7 @@ Export a meal plan as an `.ics` calendar file (importable into Google Calendar, 
 ## Stripe & Billing
 
 ### `POST /api/stripe/checkout`
+
 Create a Stripe Checkout session for upgrading to a paid plan.
 
 - **Auth required:** Yes
@@ -525,6 +602,7 @@ Create a Stripe Checkout session for upgrading to a paid plan.
 - **Response:** `{ "url": "https://checkout.stripe.com/..." }`
 
 ### `POST /api/stripe/portal`
+
 Create a Stripe Customer Portal session (manage subscription, update payment method, cancel).
 
 - **Auth required:** Yes
@@ -532,6 +610,7 @@ Create a Stripe Customer Portal session (manage subscription, update payment met
 - **Response:** `{ "url": "https://billing.stripe.com/..." }`
 
 ### `POST /api/stripe/webhook`
+
 Stripe webhook handler. Verifies signature and processes subscription lifecycle events.
 
 - **Auth required:** No (Stripe signature verification)
@@ -542,6 +621,7 @@ Stripe webhook handler. Verifies signature and processes subscription lifecycle 
   - `checkout.session.completed` → links Stripe customer to user
 
 ### `POST /api/stripe/cancel-subscription`
+
 Cancel the user's active subscription immediately.
 
 - **Auth required:** Yes
@@ -551,10 +631,12 @@ Cancel the user's active subscription immediately.
 ## Profiles & Onboarding
 
 ### `POST /api/profiles/onboarding`
+
 Save the user's onboarding data (called after signup wizard).
 
 - **Auth required:** Yes
 - **Body:**
+
 ```json
 {
   "dietary_restrictions": ["vegetarian"],
@@ -568,21 +650,25 @@ Save the user's onboarding data (called after signup wizard).
   "gender": "female"
 }
 ```
+
 - **Response:** `{ "message": "Profil complété" }`
 
 ### `GET /api/profiles/onboarding-status`
+
 Check whether the user has completed onboarding (used to redirect new users).
 
 - **Auth required:** Yes
 - **Response:** `{ "completed": boolean }`
 
 ### `GET /api/saved-recipes`
+
 Fetch the user's saved recipes (different from favorites — includes personal notes and cook count).
 
 - **Auth required:** Yes
 - **Response:** `{ "recipes": SavedRecipe[] }`
 
 ### `GET /api/stores/nearby`
+
 Find nearby grocery stores (uses geolocation).
 
 - **Auth required:** Yes
@@ -598,13 +684,13 @@ All routes use consistent error responses:
 { "error": "Error message in French or English" }
 ```
 
-| HTTP Status | Meaning |
-|---|---|
-| `400` | Bad request / validation error |
-| `401` | Not authenticated |
-| `402` | Payment required (plan upgrade needed) |
-| `403` | Forbidden (plan limit or wrong ownership) |
-| `404` | Resource not found |
-| `409` | Conflict (duplicate resource) |
-| `429` | Rate limit exceeded |
-| `500` | Internal server error |
+| HTTP Status | Meaning                                   |
+| ----------- | ----------------------------------------- |
+| `400`       | Bad request / validation error            |
+| `401`       | Not authenticated                         |
+| `402`       | Payment required (plan upgrade needed)    |
+| `403`       | Forbidden (plan limit or wrong ownership) |
+| `404`       | Resource not found                        |
+| `409`       | Conflict (duplicate resource)             |
+| `429`       | Rate limit exceeded                       |
+| `500`       | Internal server error                     |

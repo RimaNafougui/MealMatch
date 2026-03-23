@@ -3,6 +3,7 @@ import { Metadata, Viewport } from "next";
 import clsx from "clsx";
 
 import { Providers } from "./providers";
+import { SplashProvider } from "@/contexts/SplashContext";
 
 import { siteConfig } from "@/config/site";
 import { fontSans } from "@/config/fonts";
@@ -41,8 +42,10 @@ export default function RootLayout({
         )}
       >
         <Providers themeProps={{ attribute: "class", defaultTheme: "dark" }}>
-          {children}
-          <Toaster position="top-right" richColors />
+          <SplashProvider>
+            {children}
+            <Toaster position="top-right" richColors />
+          </SplashProvider>
         </Providers>
       </body>
     </html>

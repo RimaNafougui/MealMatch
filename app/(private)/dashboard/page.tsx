@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Card, CardBody } from "@heroui/card";
 import { Button } from "@heroui/button";
 import { Chip } from "@heroui/chip";
@@ -18,10 +19,14 @@ import {
   ChefHat,
   Users,
   BrainCircuit,
+  Refrigerator,
+  Flame,
 } from "lucide-react";
 import ProgressDashboard from "@/components/dashboard/ProgressDashboard";
 import { useStats } from "@/hooks/useUserData";
 import { useUserPlan } from "@/hooks/useUserPlan";
+import { useSplash } from "@/contexts/SplashContext";
+import { useStreak } from "@/hooks/useStreak";
 
 function StatCard({
   label,
@@ -60,10 +65,20 @@ function StatCard({
 
 export default function DashboardPage() {
   const { data: session } = useSession();
-  const { data: stats, isLoading: loading } = useStats();
-  const { data: planData } = useUserPlan();
+  const { data: stats, isLoading: statsLoading } = useStats();
+  const { data: planData, isLoading: planLoading } = useUserPlan();
+  const { data: streakData } = useStreak();
+  const loading = statsLoading || planLoading;
+  const { hideSplash } = useSplash();
   const livePlan = planData?.plan ?? stats?.profile?.plan ?? "free";
   const isPremium = livePlan === "premium";
+
+  // Dismiss splash once all dashboard data is ready
+  useEffect(() => {
+    if (!statsLoading && !planLoading) {
+      hideSplash();
+    }
+  }, [statsLoading, planLoading, hideSplash]);
 
   const displayName =
     stats?.profile?.name || session?.user?.name || "Utilisateur";
@@ -116,6 +131,15 @@ export default function DashboardPage() {
       href: "/explore",
       icon: <BookOpen size={20} className="text-default-500" />,
       bg: "bg-default-100",
+    },
+    {
+      label: "Frigo IA",
+      description: "Repas depuis mes ingrédients",
+      href: "/dashboard/fridge",
+      icon: <Refrigerator size={20} className="text-primary" />,
+      bg: "bg-primary/10",
+      badge: "IA",
+      badgeColor: "primary" as const,
     },
     ...(isPremium
       ? [
@@ -231,16 +255,32 @@ export default function DashboardPage() {
               <Sparkles size={24} className="text-success" />
             </div>
             <div className="flex-1">
-              <p className="font-semibold text-success">Bienvenue sur MealMatch !</p>
+              <p className="font-semibold text-success">
+                Bienvenue sur MealMatch !
+              </p>
               <p className="text-sm text-default-500 mt-1">
-                Commence par générer ton premier plan de repas ou explore nos recettes.
+                Commence par générer ton premier plan de repas ou explore nos
+                recettes.
               </p>
             </div>
             <div className="flex gap-2 flex-wrap">
-              <Button as={Link} href="/dashboard/meal-plan/generate" size="sm" color="success" variant="flat" className="font-semibold">
+              <Button
+                as={Link}
+                href="/dashboard/meal-plan/generate"
+                size="sm"
+                color="success"
+                variant="flat"
+                className="font-semibold"
+              >
                 Générer un plan
               </Button>
-              <Button as={Link} href="/explore" size="sm" variant="flat" className="font-semibold">
+              <Button
+                as={Link}
+                href="/explore"
+                size="sm"
+                variant="flat"
+                className="font-semibold"
+              >
                 Explorer les recettes
               </Button>
             </div>

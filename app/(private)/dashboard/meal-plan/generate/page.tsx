@@ -1,5 +1,6 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
@@ -27,7 +28,13 @@ import {
 import { format, startOfWeek } from "date-fns";
 
 // Skeleton grid shown while generating
-function MealPlanGridSkeleton({ days, meals }: { days: number; meals: number }) {
+function MealPlanGridSkeleton({
+  days,
+  meals,
+}: {
+  days: number;
+  meals: number;
+}) {
   return (
     <div className="flex flex-col gap-6">
       {/* Summary bar skeleton */}
@@ -58,7 +65,10 @@ function MealPlanGridSkeleton({ days, meals }: { days: number; meals: number }) 
           {/* Header row */}
           <div />
           {Array.from({ length: days }).map((_, i) => (
-            <div key={i} className="text-center pb-1 flex flex-col items-center gap-1">
+            <div
+              key={i}
+              className="text-center pb-1 flex flex-col items-center gap-1"
+            >
               <Skeleton className="h-4 w-10 rounded" />
               <Skeleton className="h-3 w-20 rounded" />
             </div>
@@ -97,6 +107,14 @@ function MealPlanGridSkeleton({ days, meals }: { days: number; meals: number }) 
   );
 }
 
+const GENERATION_STEPS = [
+  "Analyse de vos préférences...",
+  "Recherche des recettes...",
+  "Équilibrage nutritionnel...",
+  "Organisation de la semaine...",
+  "Finalisation...",
+];
+
 export default function GenerateMealPlanPage() {
   const { data: session } = useSession();
   const router = useRouter();
@@ -111,12 +129,18 @@ export default function GenerateMealPlanPage() {
   });
 
   const [isGenerating, setIsGenerating] = useState(false);
+  const [stepIndex, setStepIndex] = useState(0);
+  const stepIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [generatedPlan, setGeneratedPlan] = useState<GeneratedMealPlan | null>(null);
+  const [generatedPlan, setGeneratedPlan] = useState<GeneratedMealPlan | null>(
+    null,
+  );
   const [mealLabels, setMealLabels] = useState<string[]>([]);
   const [savedPlanId, setSavedPlanId] = useState<string | null>(null);
   const [hasExistingPlan, setHasExistingPlan] = useState(false);
-  const [existingPlanDate, setExistingPlanDate] = useState<string | undefined>();
+  const [existingPlanDate, setExistingPlanDate] = useState<
+    string | undefined
+  >();
   const [checkingPlan, setCheckingPlan] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [planReady, setPlanReady] = useState(false);
@@ -205,6 +229,24 @@ export default function GenerateMealPlanPage() {
     else setCheckingPlan(false);
   }, [session]);
 
+  // Step cycling effect during generation
+  useEffect(() => {
+    if (isGenerating) {
+      setStepIndex(0);
+      stepIntervalRef.current = setInterval(() => {
+        setStepIndex((i) => (i + 1) % GENERATION_STEPS.length);
+      }, 1800);
+    } else {
+      if (stepIntervalRef.current) {
+        clearInterval(stepIntervalRef.current);
+        stepIntervalRef.current = null;
+      }
+    }
+    return () => {
+      if (stepIntervalRef.current) clearInterval(stepIntervalRef.current);
+    };
+  }, [isGenerating]);
+
   const handleGenerate = async () => {
     setIsGenerating(true);
     setError(null);
@@ -271,16 +313,23 @@ export default function GenerateMealPlanPage() {
     }
   };
 
-  const weekStart = format(startOfWeek(new Date(), { weekStartsOn: 1 }), "MMM d");
+  const weekStart = format(
+    startOfWeek(new Date(), { weekStartsOn: 1 }),
+    "MMM d",
+  );
   const weekEnd = format(
     new Date(
-      startOfWeek(new Date(), { weekStartsOn: 1 }).getTime() + 6 * 24 * 60 * 60 * 1000,
+      startOfWeek(new Date(), { weekStartsOn: 1 }).getTime() +
+        6 * 24 * 60 * 60 * 1000,
     ),
     "MMM d, yyyy",
   );
 
   const showUsageBar =
-    userPlan === "free" && !planLoading && monthlyCount !== null && monthlyLimit !== null;
+    userPlan === "free" &&
+    !planLoading &&
+    monthlyCount !== null &&
+    monthlyLimit !== null;
 
   return (
     <div className="max-w-7xl mx-auto py-8 px-4 md:px-6">
@@ -366,7 +415,9 @@ export default function GenerateMealPlanPage() {
           <div className="flex-1 min-w-0 flex items-center justify-center py-24">
             <div className="flex flex-col items-center gap-3">
               <Spinner size="lg" color="success" />
-              <p className="text-foreground/40 text-sm">Chargement de votre plan...</p>
+              <p className="text-foreground/40 text-sm">
+                Chargement de votre plan...
+              </p>
             </div>
           </div>
         </div>
@@ -394,18 +445,39 @@ export default function GenerateMealPlanPage() {
 
           {/* Right: Plan grid */}
           <div className="flex-1 min-w-0 relative" id="meal-plan-grid">
-
-            {/* Spinner overlay during generation */}
+            {/* Full-screen overlay during generation */}
             {isGenerating && (
-              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 backdrop-blur-sm bg-background/60 rounded-2xl">
-                <Spinner size="lg" color="success" />
-                <div className="text-center">
-                  <p className="font-semibold text-foreground/80">
-                    Génération de votre plan en cours...
-                  </p>
-                  <p className="text-xs text-foreground/40 mt-1">
-                    Notre IA prépare {config.days_count * config.meals_per_day} repas personnalisés pour vous
-                  </p>
+              <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 backdrop-blur-md bg-background/80">
+                <div className="flex flex-col items-center gap-5 p-8 rounded-3xl bg-content1 border border-divider shadow-2xl max-w-sm w-full mx-4">
+                  <Spinner size="lg" color="success" />
+                  <div className="text-center" style={{ minHeight: "2.5rem" }}>
+                    <AnimatePresence mode="wait">
+                      <motion.p
+                        key={stepIndex}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        transition={{ duration: 0.35 }}
+                        className="font-bold text-lg text-foreground"
+                      >
+                        {GENERATION_STEPS[stepIndex]}
+                      </motion.p>
+                    </AnimatePresence>
+                    <p className="text-sm text-foreground/50 mt-2">
+                      {config.days_count * config.meals_per_day} repas
+                      personnalisés en cours…
+                    </p>
+                  </div>
+                  <div className="w-full bg-default-100 rounded-full h-1.5 overflow-hidden">
+                    <motion.div
+                      className="h-full bg-success rounded-full"
+                      initial={{ width: "5%" }}
+                      animate={{
+                        width: `${Math.min(((stepIndex + 1) / GENERATION_STEPS.length) * 100, 95)}%`,
+                      }}
+                      transition={{ duration: 1.5, ease: "easeOut" }}
+                    />
+                  </div>
                 </div>
               </div>
             )}

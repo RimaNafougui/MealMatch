@@ -103,7 +103,12 @@ function HistoryPlanCard({
             </div>
           </div>
           {current && (
-            <Chip size="sm" color="success" variant="flat" className="shrink-0 text-xs font-semibold">
+            <Chip
+              size="sm"
+              color="success"
+              variant="flat"
+              className="shrink-0 text-xs font-semibold"
+            >
               Cette semaine
             </Chip>
           )}
@@ -117,14 +122,14 @@ function HistoryPlanCard({
         <div className="flex flex-wrap gap-4 text-sm">
           {plan.total_calories > 0 && (
             <span className="flex items-center gap-1.5 text-default-500">
-              <Flame size={13} className="text-warning" />
-              ~{Math.round(plan.total_calories)} cal/jour
+              <Flame size={13} className="text-warning" />~
+              {Math.round(plan.total_calories)} cal/jour
             </span>
           )}
           {plan.total_cost > 0 && (
             <span className="flex items-center gap-1.5 text-default-500">
-              <DollarSign size={13} className="text-success" />
-              ~{Number(plan.total_cost).toFixed(2)} $CA
+              <DollarSign size={13} className="text-success" />~
+              {Number(plan.total_cost).toFixed(2)} $CA
             </span>
           )}
           <span className="flex items-center gap-1.5 text-default-500">
@@ -217,10 +222,12 @@ function HistoryTab() {
       }
 
       toast.success("Plan répété avec succès !", {
-        description: "Le plan a été copié pour la semaine prochaine et est maintenant actif.",
+        description:
+          "Le plan a été copié pour la semaine prochaine et est maintenant actif.",
         action: {
           label: "Voir",
-          onClick: () => (window.location.href = `/dashboard/meal-plans/${data.plan.id}`),
+          onClick: () =>
+            (window.location.href = `/dashboard/meal-plans/${data.plan.id}`),
         },
       });
     } catch {
@@ -262,8 +269,9 @@ function HistoryTab() {
       <div className="flex items-start gap-3 p-4 rounded-2xl bg-success/5 border border-success/20 text-sm text-default-600">
         <RotateCcw size={16} className="text-success mt-0.5 shrink-0" />
         <p>
-          Vous pouvez <strong>répéter n&apos;importe quel plan passé</strong> pour la semaine
-          prochaine — les mêmes repas seront copiés et activés automatiquement.
+          Vous pouvez <strong>répéter n&apos;importe quel plan passé</strong>{" "}
+          pour la semaine prochaine — les mêmes repas seront copiés et activés
+          automatiquement.
         </p>
       </div>
 
@@ -296,7 +304,9 @@ export function MealPlansDashboard({
             <CalendarDays size={28} className="text-success" />
             Plans de repas
           </h1>
-          <p className="text-sm text-default-400 mt-1">Semaine du {weekLabel}</p>
+          <p className="text-sm text-default-400 mt-1">
+            Semaine du {weekLabel}
+          </p>
         </div>
         {activePlan ? (
           <Button
@@ -312,7 +322,7 @@ export function MealPlansDashboard({
         ) : (
           <Button
             as={NextLink}
-            href="/meal-plan/generate"
+            href="/generate"
             color="success"
             variant="solid"
             startContent={<Sparkles size={16} />}
@@ -359,14 +369,14 @@ export function MealPlansDashboard({
                   <div className="flex gap-3 ml-auto flex-wrap text-xs text-default-500">
                     {activePlan.total_calories > 0 && (
                       <span className="flex items-center gap-1">
-                        <Flame size={12} className="text-warning" />
-                        ~{Math.round(activePlan.total_calories)} cal/jour
+                        <Flame size={12} className="text-warning" />~
+                        {Math.round(activePlan.total_calories)} cal/jour
                       </span>
                     )}
                     {activePlan.total_cost > 0 && (
                       <span className="flex items-center gap-1">
-                        <DollarSign size={12} className="text-success" />
-                        ~{Number(activePlan.total_cost).toFixed(2)} $CA
+                        <DollarSign size={12} className="text-success" />~
+                        {Number(activePlan.total_cost).toFixed(2)} $CA
                       </span>
                     )}
                   </div>
@@ -383,13 +393,13 @@ export function MealPlansDashboard({
                     Aucun plan cette semaine
                   </h3>
                   <p className="text-default-400 text-sm mb-5">
-                    Générez un plan IA en moins d&apos;une minute, ou répétez
-                    un plan passé depuis l&apos;historique.
+                    Générez un plan IA en moins d&apos;une minute, ou répétez un
+                    plan passé depuis l&apos;historique.
                   </p>
                   <div className="flex flex-col gap-2">
                     <Button
                       as={NextLink}
-                      href="/meal-plan/generate"
+                      href="/generate"
                       color="success"
                       className="w-full font-bold text-white"
                       startContent={<Sparkles size={15} />}
@@ -403,8 +413,10 @@ export function MealPlansDashboard({
                 <div className="flex items-center gap-2 text-xs text-default-400">
                   <AlertCircle size={13} />
                   Vous avez déjà des plans passés ? Consultez l&apos;
-                  <span className="text-success font-semibold">Historique</span>
-                  {" "}pour les répéter.
+                  <span className="text-success font-semibold">
+                    Historique
+                  </span>{" "}
+                  pour les répéter.
                 </div>
               </div>
             )}

@@ -24,7 +24,11 @@ import {
   Lock,
   Package,
 } from "lucide-react";
-import type { SavedMealPlan, GeneratedMeal, GeneratedDay } from "@/types/meal-plan";
+import type {
+  SavedMealPlan,
+  GeneratedMeal,
+  GeneratedDay,
+} from "@/types/meal-plan";
 import { useUserPlan } from "@/hooks/useUserPlan";
 import { getLimits } from "@/utils/plan-limits";
 import { isMealPrepFriendly } from "@/utils/meal-prep";
@@ -59,13 +63,20 @@ const DIETARY_TAG_LABELS: Record<string, string> = {
 };
 
 const DAY_LABELS: Record<string, string> = {
-  Monday: "Lundi", monday: "Lundi",
-  Tuesday: "Mardi", tuesday: "Mardi",
-  Wednesday: "Mercredi", wednesday: "Mercredi",
-  Thursday: "Jeudi", thursday: "Jeudi",
-  Friday: "Vendredi", friday: "Vendredi",
-  Saturday: "Samedi", saturday: "Samedi",
-  Sunday: "Dimanche", sunday: "Dimanche",
+  Monday: "Lundi",
+  monday: "Lundi",
+  Tuesday: "Mardi",
+  tuesday: "Mardi",
+  Wednesday: "Mercredi",
+  wednesday: "Mercredi",
+  Thursday: "Jeudi",
+  thursday: "Jeudi",
+  Friday: "Vendredi",
+  friday: "Vendredi",
+  Saturday: "Samedi",
+  saturday: "Samedi",
+  Sunday: "Dimanche",
+  sunday: "Dimanche",
 };
 
 function MealCard({ meal }: { meal: GeneratedMeal }) {
@@ -76,13 +87,20 @@ function MealCard({ meal }: { meal: GeneratedMeal }) {
           {MEAL_LABELS[meal.slot] || meal.slot}
         </span>
         {meal.is_favorite && (
-          <Chip size="sm" color="danger" variant="flat" className="text-[10px] h-4">
+          <Chip
+            size="sm"
+            color="danger"
+            variant="flat"
+            className="text-[10px] h-4"
+          >
             ♥ Favori
           </Chip>
         )}
       </div>
       <p className="font-semibold text-sm line-clamp-2">{meal.title}</p>
-      <p className="text-xs text-default-400 line-clamp-2">{meal.description}</p>
+      <p className="text-xs text-default-400 line-clamp-2">
+        {meal.description}
+      </p>
       <div className="flex items-center gap-3 mt-1 flex-wrap">
         {meal.prep_time_minutes > 0 && (
           <span className="flex items-center gap-1 text-xs text-default-500">
@@ -103,7 +121,12 @@ function MealCard({ meal }: { meal: GeneratedMeal }) {
       {meal.dietary_tags?.length > 0 && (
         <div className="flex gap-1 flex-wrap mt-1">
           {meal.dietary_tags.slice(0, 3).map((tag) => (
-            <Chip key={tag} size="sm" variant="flat" className="text-[10px] h-4">
+            <Chip
+              key={tag}
+              size="sm"
+              variant="flat"
+              className="text-[10px] h-4"
+            >
               {DIETARY_TAG_LABELS[tag.toLowerCase()] ?? tag}
             </Chip>
           ))}
@@ -119,7 +142,9 @@ function DayCard({ day }: { day: GeneratedDay }) {
       <CardHeader className="pb-2 px-4 pt-4">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-success" />
-          <h3 className="font-bold text-sm">{DAY_LABELS[day.day] || day.day}</h3>
+          <h3 className="font-bold text-sm">
+            {DAY_LABELS[day.day] || day.day}
+          </h3>
         </div>
       </CardHeader>
       <CardBody className="px-4 pb-4 pt-0 flex flex-col gap-2">
@@ -192,7 +217,10 @@ export default function MealPlanDetailPage() {
     async function fetchPlan() {
       try {
         const res = await fetch(`/api/meal-plan/${planId}`);
-        if (res.status === 404) { setNotFound(true); return; }
+        if (res.status === 404) {
+          setNotFound(true);
+          return;
+        }
         if (!res.ok) throw new Error();
         const { plan: data } = await res.json();
         setPlan(data);
@@ -231,7 +259,8 @@ export default function MealPlanDetailPage() {
         description: "Copié pour la semaine prochaine et activé.",
         action: {
           label: "Voir",
-          onClick: () => (window.location.href = `/dashboard/meal-plans/${data.plan.id}`),
+          onClick: () =>
+            (window.location.href = `/dashboard/meal-plans/${data.plan.id}`),
         },
       });
     } catch {
@@ -267,12 +296,22 @@ export default function MealPlanDetailPage() {
   const totalMeals = days.reduce((sum, d) => sum + d.meals.length, 0);
   const avgCalories = Math.round(plan.meals?.total_calories_per_day_avg ?? 0);
 
-  const weekStartLabel = new Date(plan.week_start_date).toLocaleDateString("fr-CA", {
-    day: "numeric", month: "long", year: "numeric",
-  });
-  const weekEndLabel = new Date(plan.week_end_date).toLocaleDateString("fr-CA", {
-    day: "numeric", month: "long", year: "numeric",
-  });
+  const weekStartLabel = new Date(plan.week_start_date).toLocaleDateString(
+    "fr-CA",
+    {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    },
+  );
+  const weekEndLabel = new Date(plan.week_end_date).toLocaleDateString(
+    "fr-CA",
+    {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    },
+  );
 
   const isPast =
     !isCurrentWeek(plan.week_start_date) &&
@@ -336,28 +375,72 @@ export default function MealPlanDetailPage() {
 
       {/* Print-only header */}
       <div className="print-only" style={{ marginBottom: 20 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #18181b", paddingBottom: 12, marginBottom: 16 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            borderBottom: "2px solid #18181b",
+            paddingBottom: 12,
+            marginBottom: 16,
+          }}
+        >
           <div>
-            <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.5 }}>🍽 MealMatch</div>
-            <div style={{ fontSize: 12, color: "#71717a", marginTop: 2 }}>Plan de repas personnalisé</div>
+            <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.5 }}>
+              🍽 MealMatch
+            </div>
+            <div style={{ fontSize: 12, color: "#71717a", marginTop: 2 }}>
+              Plan de repas personnalisé
+            </div>
           </div>
           <div style={{ textAlign: "right", fontSize: 11, color: "#71717a" }}>
-            <div>Généré le {new Date().toLocaleDateString("fr-CA", { day: "numeric", month: "long", year: "numeric" })}</div>
+            <div>
+              Généré le{" "}
+              {new Date().toLocaleDateString("fr-CA", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
+            </div>
             {plan && (
-              <div style={{ marginTop: 2, fontWeight: 600, color: "#18181b", fontSize: 12 }}>
-                {new Date(plan.week_start_date).toLocaleDateString("fr-CA", { day: "numeric", month: "short" })}
+              <div
+                style={{
+                  marginTop: 2,
+                  fontWeight: 600,
+                  color: "#18181b",
+                  fontSize: 12,
+                }}
+              >
+                {new Date(plan.week_start_date).toLocaleDateString("fr-CA", {
+                  day: "numeric",
+                  month: "short",
+                })}
                 {" → "}
-                {new Date(plan.week_end_date).toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" })}
+                {new Date(plan.week_end_date).toLocaleDateString("fr-CA", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
               </div>
             )}
           </div>
         </div>
         {plan && (
-          <div style={{ display: "flex", gap: 24, fontSize: 12, color: "#3f3f46", marginBottom: 4 }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 24,
+              fontSize: 12,
+              color: "#3f3f46",
+              marginBottom: 4,
+            }}
+          >
             <span>📅 {plan.days_count} jours</span>
             <span>🍴 {days.reduce((s, d) => s + d.meals.length, 0)} repas</span>
             {avgCalories > 0 && <span>🔥 ~{avgCalories} cal/jour</span>}
-            {(plan.total_cost ?? 0) > 0 && <span>💵 ~{Number(plan.total_cost).toFixed(2)} $CA/sem.</span>}
+            {(plan.total_cost ?? 0) > 0 && (
+              <span>💵 ~{Number(plan.total_cost).toFixed(2)} $CA/sem.</span>
+            )}
           </div>
         )}
       </div>
@@ -451,14 +534,18 @@ export default function MealPlanDetailPage() {
       {/* Meal Prep Suggestions */}
       {(() => {
         const prepMeals = days.flatMap((d) =>
-          d.meals
-            .filter(isMealPrepFriendly)
-            .map((m) => ({ ...m, day: d.day }))
+          d.meals.filter(isMealPrepFriendly).map((m) => ({ ...m, day: d.day })),
         );
         if (prepMeals.length === 0) return null;
-        const totalPrepTime = prepMeals.reduce((s, m) => s + (m.prep_time_minutes || 0), 0);
+        const totalPrepTime = prepMeals.reduce(
+          (s, m) => s + (m.prep_time_minutes || 0),
+          0,
+        );
         return (
-          <Card className="border border-secondary/30 bg-secondary/5 no-print" data-no-print>
+          <Card
+            className="border border-secondary/30 bg-secondary/5 no-print"
+            data-no-print
+          >
             <CardHeader className="px-5 pt-5 pb-2 flex items-center gap-3">
               <div className="p-2 rounded-xl bg-secondary/10">
                 <Package size={18} className="text-secondary" />
@@ -470,7 +557,12 @@ export default function MealPlanDetailPage() {
                   {totalPrepTime > 0 && ` · ~${totalPrepTime} min au total`}
                 </p>
               </div>
-              <Chip size="sm" color="secondary" variant="flat" className="ml-auto text-xs">
+              <Chip
+                size="sm"
+                color="secondary"
+                variant="flat"
+                className="ml-auto text-xs"
+              >
                 Préparez dimanche
               </Chip>
             </CardHeader>
@@ -479,8 +571,12 @@ export default function MealPlanDetailPage() {
               {prepMeals.map((meal, i) => (
                 <div key={i} className="flex items-center gap-3 py-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-secondary flex-shrink-0" />
-                  <span className="text-sm font-medium flex-1 line-clamp-1">{meal.title}</span>
-                  <span className="text-xs text-default-400 flex-shrink-0">{DAY_LABELS[meal.day] ?? meal.day}</span>
+                  <span className="text-sm font-medium flex-1 line-clamp-1">
+                    {meal.title}
+                  </span>
+                  <span className="text-xs text-default-400 flex-shrink-0">
+                    {DAY_LABELS[meal.day] ?? meal.day}
+                  </span>
                   {meal.prep_time_minutes > 0 && (
                     <span className="flex items-center gap-1 text-xs text-default-400 flex-shrink-0">
                       <Clock size={11} /> {meal.prep_time_minutes} min
@@ -494,7 +590,10 @@ export default function MealPlanDetailPage() {
       })()}
 
       {/* Actions */}
-      <div className="flex flex-col sm:flex-row gap-3 flex-wrap pb-6 sm:pb-8 no-print" data-no-print>
+      <div
+        className="flex flex-col sm:flex-row gap-3 flex-wrap pb-6 sm:pb-8 no-print"
+        data-no-print
+      >
         <Button
           as={Link}
           href="/meal-plan/generate"
@@ -545,7 +644,14 @@ export default function MealPlanDetailPage() {
             className="font-semibold text-default-400 border border-dashed border-default-300"
           >
             Exporter en PDF
-            <Chip size="sm" color="warning" variant="flat" className="ml-1 text-[10px] h-4">Étudiant+</Chip>
+            <Chip
+              size="sm"
+              color="warning"
+              variant="flat"
+              className="ml-1 text-[10px] h-4"
+            >
+              Étudiant+
+            </Chip>
           </Button>
         )}
 

@@ -53,6 +53,9 @@ interface Recipe {
   calories?: number | null;
   price_per_serving?: number | null;
   dietary_tags?: string[] | null;
+  protein?: number | null;
+  carbs?: number | null;
+  fat?: number | null;
 }
 
 interface Pagination {

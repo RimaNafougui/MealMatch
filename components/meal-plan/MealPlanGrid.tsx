@@ -2,12 +2,13 @@
 import React, { useState } from "react";
 import { Button, Chip, Card, CardBody } from "@heroui/react";
 import { CheckCircle, DollarSign, Flame, TrendingUp } from "lucide-react";
+import { DndContext, DragEndEvent, closestCenter } from "@dnd-kit/core";
 import {
   GeneratedDay,
   GeneratedMeal,
   GeneratedMealPlan,
 } from "@/types/meal-plan";
-import { MealSlot } from "./MealSlot";
+import { DraggableMealSlot } from "./DraggableMealSlot";
 import { RepeatMealModal } from "./RepeatMealModal";
 import { MealDetailModal } from "./MealDetailModal";
 
@@ -69,6 +70,34 @@ export function MealPlanGrid({
       slot: repeatModal.slot as GeneratedMeal["slot"],
     });
     setRepeatModal({ isOpen: false, day: "", slot: "" });
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const [srcDay, srcSlot] = String(active.id).split("::");
+    const [dstDay, dstSlot] = String(over.id).split("::");
+
+    const srcMeal = plan.days.find((d) => d.day === srcDay)?.meals.find((m) => m.slot.toLowerCase() === srcSlot.toLowerCase());
+    const dstMeal = plan.days.find((d) => d.day === dstDay)?.meals.find((m) => m.slot.toLowerCase() === dstSlot.toLowerCase());
+
+    if (!srcMeal || !dstMeal) return;
+
+    const updatedDays = plan.days.map((d) => ({
+      ...d,
+      meals: d.meals.map((m) => {
+        if (d.day === srcDay && m.slot.toLowerCase() === srcSlot.toLowerCase()) {
+          return { ...dstMeal, slot: m.slot as GeneratedMeal["slot"] };
+        }
+        if (d.day === dstDay && m.slot.toLowerCase() === dstSlot.toLowerCase()) {
+          return { ...srcMeal, slot: m.slot as GeneratedMeal["slot"] };
+        }
+        return m;
+      }),
+    }));
+
+    onPlanChange({ ...plan, days: updatedDays });
   };
 
   const allMeals = plan.days.flatMap((d) => d.meals);
@@ -137,70 +166,72 @@ export function MealPlanGrid({
       </Card>
 
       {/* Grid - horizontal scroll on mobile */}
-      <div className="overflow-x-auto pb-2">
-        <div
-          className="grid gap-3 min-w-[640px]"
-          style={{
-            gridTemplateColumns: `120px repeat(${plan.days.length}, minmax(180px, 1fr))`,
-          }}
-        >
-          {/* Header row */}
-          <div /> {/* empty corner */}
-          {plan.days.map((day) => {
-            const totals = getDayTotals(day);
-            return (
-              <div key={day.day} className="text-center pb-1">
-                <p className="font-bold text-sm capitalize">
-                  {dayLabels[day.day] || day.day}
-                </p>
-                <p className="text-xs text-foreground/40">
-                  {totals.calories} cal · ${totals.cost.toFixed(2)}
-                </p>
-              </div>
-            );
-          })}
-          {/* Meal rows */}
-          {mealLabels.map((label) => (
-            <React.Fragment key={label}>
-              {/* Row label */}
-              <div className="flex items-center pr-3">
-                <span className="text-xs font-bold uppercase tracking-widest text-foreground/40 capitalize">
-                  {label}
-                </span>
-              </div>
+      <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <div className="overflow-x-auto pb-2">
+          <div
+            className="grid gap-3 min-w-[640px]"
+            style={{
+              gridTemplateColumns: `120px repeat(${plan.days.length}, minmax(180px, 1fr))`,
+            }}
+          >
+            {/* Header row */}
+            <div /> {/* empty corner */}
+            {plan.days.map((day) => {
+              const totals = getDayTotals(day);
+              return (
+                <div key={day.day} className="text-center pb-1">
+                  <p className="font-bold text-sm capitalize">
+                    {dayLabels[day.day] || day.day}
+                  </p>
+                  <p className="text-xs text-foreground/40">
+                    {totals.calories} cal · ${totals.cost.toFixed(2)}
+                  </p>
+                </div>
+              );
+            })}
+            {/* Meal rows */}
+            {mealLabels.map((label) => (
+              <React.Fragment key={label}>
+                {/* Row label */}
+                <div className="flex items-center pr-3">
+                  <span className="text-xs font-bold uppercase tracking-widest text-foreground/40 capitalize">
+                    {label}
+                  </span>
+                </div>
 
-              {/* Meal slots for this row */}
-              {plan.days.map((day) => {
-                const meal = day.meals.find(
-                  (m) => m.slot.toLowerCase() === label.toLowerCase(),
-                );
-                return (
-                  <div key={`${day.day}-${label}`}>
-                    {meal ? (
-                      <MealSlot
-                        meal={meal}
-                        day={day.day}
-                        slot={label}
-                        allMeals={allMeals}
-                        planId={planId}
-                        onMealUpdate={handleMealUpdate}
-                        onRepeatRequest={handleRepeatRequest}
-                        onViewDetail={setDetailMeal}
-                        canRegenerate={canRegenerateSlot}
-                        onRegenerated={onSlotRegenerated}
-                      />
-                    ) : (
-                      <div className="h-full min-h-[100px] rounded-xl border border-dashed border-divider flex items-center justify-center">
-                        <span className="text-xs text-foreground/30">—</span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </React.Fragment>
-          ))}
+                {/* Meal slots for this row */}
+                {plan.days.map((day) => {
+                  const meal = day.meals.find(
+                    (m) => m.slot.toLowerCase() === label.toLowerCase(),
+                  );
+                  return (
+                    <div key={`${day.day}-${label}`}>
+                      {meal ? (
+                        <DraggableMealSlot
+                          meal={meal}
+                          day={day.day}
+                          slot={label}
+                          allMeals={allMeals}
+                          planId={planId}
+                          onMealUpdate={handleMealUpdate}
+                          onRepeatRequest={handleRepeatRequest}
+                          onViewDetail={setDetailMeal}
+                          canRegenerate={canRegenerateSlot}
+                          onRegenerated={onSlotRegenerated}
+                        />
+                      ) : (
+                        <div className="h-full min-h-[100px] rounded-xl border border-dashed border-divider flex items-center justify-center">
+                          <span className="text-xs text-foreground/30">—</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </React.Fragment>
+            ))}
+          </div>
         </div>
-      </div>
+      </DndContext>
 
       {/* Hint + slot regen counter for free users */}
       <div className="flex flex-col items-center gap-1">

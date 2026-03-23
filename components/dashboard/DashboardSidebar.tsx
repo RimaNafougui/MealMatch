@@ -11,6 +11,7 @@ import {
   BrainCircuit,
   Users,
   PanelLeftOpen,
+  Refrigerator,
 } from "lucide-react";
 import NextLink from "next/link";
 import { usePathname } from "next/navigation";
@@ -22,6 +23,7 @@ export const navLinks = [
   { label: "Meal Plans", href: "/dashboard/meal-plans", icon: Calendar },
   { label: "Epicerie", href: "/dashboard/epicerie", icon: ShoppingCart },
   { label: "Favoris", href: "/dashboard/favoris", icon: Heart },
+  { label: "Frigo IA", href: "/dashboard/fridge", icon: Refrigerator },
 ];
 
 export const premiumLinks = [
