@@ -21,7 +21,7 @@ export async function GET() {
 
         const [savedRecipes, mealPlans, favorites, profile] = await Promise.all([
           supabase
-            .from("saved_recipes")
+            .from("user_recipes")
             .select("id", { count: "exact", head: true })
             .eq("user_id", userId),
           supabase

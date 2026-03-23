@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   Modal,
   ModalContent,
@@ -26,6 +26,9 @@ import {
   Droplets,
   ListOrdered,
   Tag,
+  ImagePlus,
+  Utensils,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -44,6 +47,7 @@ interface InstructionStep {
 
 interface RecipeFormData {
   title: string;
+  image_url: string;
   prep_time: string;
   servings: string;
   calories: string;
@@ -58,6 +62,7 @@ interface RecipeFormData {
 
 const DEFAULT_FORM: RecipeFormData = {
   title: "",
+  image_url: "",
   prep_time: "",
   servings: "4",
   calories: "",
@@ -145,6 +150,7 @@ export function AddRecipeModal({
     if (!editRecipe) return DEFAULT_FORM;
     return {
       title: String(editRecipe.title ?? ""),
+      image_url: editRecipe.image_url ? String(editRecipe.image_url) : "",
       prep_time: editRecipe.prep_time != null ? String(editRecipe.prep_time) : "",
       servings: editRecipe.servings != null ? String(editRecipe.servings) : "4",
       calories: editRecipe.calories != null ? String(editRecipe.calories) : "",
@@ -174,14 +180,43 @@ export function AddRecipeModal({
   );
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [imagePreview, setImagePreview] = useState<string | null>(
+    isEdit && editRecipe?.image_url ? String(editRecipe.image_url) : null,
+  );
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Reset form when modal opens/closes or edit recipe changes
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       setForm(isEdit ? buildFormFromEdit() : DEFAULT_FORM);
       setErrors({});
+      setImageFile(null);
+      setImagePreview(isEdit && editRecipe?.image_url ? String(editRecipe.image_url) : null);
       onClose();
     }
+  };
+
+  // ─── Image picker ────────────────────────────────────────────────────────
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image trop grande (max 5 Mo)");
+      return;
+    }
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const clearImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    setField("image_url", "");
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   // ─── Field helpers ───────────────────────────────────────────────────────
@@ -278,6 +313,19 @@ export function AddRecipeModal({
 
     setSaving(true);
     try {
+      // Upload new image if one was selected
+      let uploadedImageUrl: string | null = form.image_url || null;
+      if (imageFile) {
+        const fd = new FormData();
+        fd.append("file", imageFile);
+        const uploadRes = await fetch("/api/upload/recipe-image", { method: "POST", body: fd });
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok) throw new Error(uploadData.error || "Erreur d'upload");
+        uploadedImageUrl = uploadData.url;
+      }
+
+      const finalPayload = { ...payload, image_url: uploadedImageUrl };
+
       const url = isEdit
         ? `/api/recipes/user/${(editRecipe as Record<string, unknown>).id}`
         : "/api/recipes/user";
@@ -286,7 +334,7 @@ export function AddRecipeModal({
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(finalPayload),
       });
 
       const data = await res.json();
@@ -329,6 +377,53 @@ export function AddRecipeModal({
 
             <ModalBody className="gap-0 px-6 py-4">
               <ScrollShadow className="flex flex-col gap-6 max-h-[60vh] pr-1">
+
+                {/* ── Image ── */}
+                <div className="flex flex-col gap-2">
+                  <SectionLabel icon={<ImagePlus size={14} />} label="Photo (optionnel)" />
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={handleImageChange}
+                  />
+                  <div className="relative group/img w-full h-40 rounded-xl overflow-hidden border-2 border-dashed border-divider hover:border-success/50 transition-colors cursor-pointer bg-content2"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {imagePreview ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={imagePreview}
+                          alt="Aperçu"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className="text-white text-sm font-semibold flex items-center gap-1.5">
+                            <ImagePlus size={16} /> Changer l&apos;image
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); clearImage(); }}
+                          className="absolute top-2 right-2 z-10 p-1 rounded-full bg-black/60 hover:bg-black/80 text-white"
+                          title="Supprimer l'image"
+                        >
+                          <X size={14} />
+                        </button>
+                      </>
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-default-400">
+                        <Utensils size={36} className="text-default-300" />
+                        <span className="text-sm">Cliquer pour ajouter une photo</span>
+                        <span className="text-xs text-default-300">JPEG, PNG, WEBP — max 5 Mo</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <Divider />
 
                 {/* ── Titre ── */}
                 <div className="flex flex-col gap-2">

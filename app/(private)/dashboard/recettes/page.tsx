@@ -4,10 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardBody } from "@heroui/card";
 import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
-import { Chip } from "@heroui/chip";
 import { Skeleton } from "@heroui/skeleton";
-import { Tabs, Tab } from "@heroui/tabs";
-import { Link } from "@heroui/link";
 import { useDisclosure } from "@heroui/use-disclosure";
 import { RecipeCard } from "@/components/recipes/recipe-card";
 import { AddRecipeModal } from "@/components/recipes/AddRecipeModal";
@@ -16,7 +13,6 @@ import { useFavorites } from "@/hooks/useFavorites";
 import { toast } from "sonner";
 import {
   Search,
-  BookOpen,
   Utensils,
   Trash2,
   Plus,
@@ -27,21 +23,6 @@ import {
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-interface SavedRecipe {
-  savedId: string;
-  id: string;
-  title: string;
-  image_url?: string | null;
-  prep_time?: number | null;
-  servings?: number | null;
-  calories?: number | null;
-  price_per_serving?: number | null;
-  dietary_tags?: string[] | null;
-  notes?: string | null;
-  timesCooked?: number;
-  savedAt: string;
-}
 
 interface UserRecipe {
   id: string;
@@ -79,42 +60,6 @@ function RecipeSkeletonCard() {
   );
 }
 
-// ─── Saved recipe card ────────────────────────────────────────────────────────
-
-function SavedRecipeItem({
-  recipe,
-  favoriteIds,
-  onUnsave,
-}: {
-  recipe: SavedRecipe;
-  favoriteIds: Set<string>;
-  onUnsave: (recipeId: string) => void;
-}) {
-  const favoriteToggle = useFavoriteToggle(recipe.id);
-  const isFavorite = favoriteIds.has(recipe.id);
-
-  return (
-    <div className="relative group">
-      <RecipeCard
-        recipe={recipe}
-        isFavorite={isFavorite}
-        onFavoriteToggle={() => favoriteToggle.mutate(isFavorite)}
-      />
-      <Button
-        isIconOnly
-        size="sm"
-        variant="flat"
-        color="danger"
-        className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-        onPress={() => onUnsave(recipe.id)}
-        title="Retirer des recettes sauvegardées"
-      >
-        <Trash2 size={14} />
-      </Button>
-    </div>
-  );
-}
-
 // ─── User recipe card ─────────────────────────────────────────────────────────
 
 function UserRecipeItem({
@@ -138,86 +83,30 @@ function UserRecipeItem({
         isFavorite={isFavorite}
         onFavoriteToggle={() => favoriteToggle.mutate(isFavorite)}
       />
-      <Button
-        isIconOnly
-        size="sm"
-        variant="flat"
-        color="default"
-        className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-        onPress={() => onEdit(recipe)}
-        title="Modifier la recette"
-      >
-        <Pencil size={14} />
-      </Button>
-      <Button
-        isIconOnly
-        size="sm"
-        variant="flat"
-        color="danger"
-        className="absolute top-2 left-10 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-        onPress={() => onDelete(recipe.id)}
-        title="Supprimer la recette"
-      >
-        <Trash2 size={14} />
-      </Button>
-    </div>
-  );
-}
-
-// ─── Empty state ──────────────────────────────────────────────────────────────
-
-function EmptyState({
-  icon,
-  title,
-  subtitle,
-  action,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  subtitle: string;
-  action?: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-      <Card className="p-8 border border-dashed border-divider bg-content2 max-w-sm w-full">
-        <CardBody className="flex flex-col items-center gap-4">
-          {icon}
-          <div>
-            <p className="font-semibold text-lg">{title}</p>
-            <p className="text-default-400 text-sm mt-1">{subtitle}</p>
-          </div>
-          {action}
-        </CardBody>
-      </Card>
-    </div>
-  );
-}
-
-// ─── Error state ──────────────────────────────────────────────────────────────
-
-function FetchError({ onRetry }: { onRetry: () => void }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-      <Card className="p-8 border border-warning/30 bg-warning/5 max-w-sm w-full">
-        <CardBody className="flex flex-col items-center gap-4">
-          <AlertTriangle size={48} className="text-warning" />
-          <div>
-            <p className="font-semibold text-lg">Erreur de chargement</p>
-            <p className="text-default-400 text-sm mt-1">
-              Impossible de charger les recettes. Vérifiez votre connexion.
-            </p>
-          </div>
-          <Button
-            color="warning"
-            variant="flat"
-            startContent={<RefreshCw size={16} />}
-            onPress={onRetry}
-            className="font-semibold"
-          >
-            Réessayer
-          </Button>
-        </CardBody>
-      </Card>
+      <div className="absolute top-2 left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+        <Button
+          isIconOnly
+          size="sm"
+          variant="flat"
+          color="default"
+          onPress={() => onEdit(recipe)}
+          title="Modifier la recette"
+          className="bg-white/90 dark:bg-black/70"
+        >
+          <Pencil size={14} />
+        </Button>
+        <Button
+          isIconOnly
+          size="sm"
+          variant="flat"
+          color="danger"
+          onPress={() => onDelete(recipe.id)}
+          title="Supprimer la recette"
+          className="bg-white/90 dark:bg-black/70"
+        >
+          <Trash2 size={14} />
+        </Button>
+      </div>
     </div>
   );
 }
@@ -225,17 +114,9 @@ function FetchError({ onRetry }: { onRetry: () => void }) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function RecettesPage() {
-  const [activeTab, setActiveTab] = useState("saved");
-
-  const [savedRecipes, setSavedRecipes] = useState<SavedRecipe[]>([]);
-  const [savedLoading, setSavedLoading] = useState(true);
-  const [savedError, setSavedError] = useState(false);
-
-  const [userRecipes, setUserRecipes] = useState<UserRecipe[]>([]);
-  const [userLoading, setUserLoading] = useState(true);
-  const [userError, setUserError] = useState(false);
-  const [hasFetchedUser, setHasFetchedUser] = useState(false);
-
+  const [recipes, setRecipes] = useState<UserRecipe[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [search, setSearch] = useState("");
 
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -246,71 +127,34 @@ export default function RecettesPage() {
     (favorites ?? []).map((r: UserRecipe) => r?.id).filter(Boolean),
   );
 
-  // ─── Fetchers ─────────────────────────────────────────────────────────────
+  // ─── Fetch ──────────────────────────────────────────────────────────────────
 
-  const fetchSaved = useCallback(async () => {
-    setSavedLoading(true);
-    setSavedError(false);
-    try {
-      const res = await fetch("/api/saved-recipes");
-      if (!res.ok) throw new Error();
-      const { recipes: data } = await res.json();
-      setSavedRecipes(data ?? []);
-    } catch {
-      setSavedError(true);
-    } finally {
-      setSavedLoading(false);
-    }
-  }, []);
-
-  const fetchUserRecipes = useCallback(async () => {
-    setUserLoading(true);
-    setUserError(false);
+  const fetchRecipes = useCallback(async () => {
+    setLoading(true);
+    setError(false);
     try {
       const res = await fetch("/api/recipes/user");
       if (!res.ok) throw new Error();
       const { recipes: data } = await res.json();
-      setUserRecipes(data ?? []);
+      setRecipes(data ?? []);
     } catch {
-      setUserError(true);
+      setError(true);
     } finally {
-      setUserLoading(false);
-      setHasFetchedUser(true);
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchSaved();
-  }, [fetchSaved]);
+    fetchRecipes();
+  }, [fetchRecipes]);
 
-  useEffect(() => {
-    if (activeTab === "mine" && !hasFetchedUser) {
-      fetchUserRecipes();
-    }
-  }, [activeTab, hasFetchedUser, fetchUserRecipes]);
+  // ─── Actions ────────────────────────────────────────────────────────────────
 
-  // ─── Actions ──────────────────────────────────────────────────────────────
-
-  async function handleUnsave(recipeId: string) {
-    try {
-      const res = await fetch("/api/saved-recipes", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipeId }),
-      });
-      if (!res.ok) throw new Error();
-      setSavedRecipes((prev) => prev.filter((r) => r.id !== recipeId));
-      toast.success("Recette retirée");
-    } catch {
-      toast.error("Erreur lors de la suppression");
-    }
-  }
-
-  async function handleDeleteUserRecipe(id: string) {
+  async function handleDelete(id: string) {
     try {
       const res = await fetch(`/api/recipes/user/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
-      setUserRecipes((prev) => prev.filter((r) => r.id !== id));
+      setRecipes((prev) => prev.filter((r) => r.id !== id));
       toast.success("Recette supprimée");
     } catch {
       toast.error("Erreur lors de la suppression");
@@ -330,32 +174,24 @@ export default function RecettesPage() {
   function handleRecipeCreated(recipe: Record<string, unknown>) {
     const r = recipe as unknown as UserRecipe;
     if (editRecipe) {
-      setUserRecipes((prev) => prev.map((x) => (x.id === r.id ? r : x)));
+      setRecipes((prev) => prev.map((x) => (x.id === r.id ? r : x)));
+      toast.success("Recette mise à jour");
     } else {
-      setUserRecipes((prev) => [r, ...prev]);
-      setActiveTab("mine");
-      if (!hasFetchedUser) setHasFetchedUser(true);
+      setRecipes((prev) => [r, ...prev]);
     }
   }
 
-  // ─── Filtered lists ───────────────────────────────────────────────────────
+  // ─── Filtered list ──────────────────────────────────────────────────────────
 
-  const filteredSaved = useMemo(
+  const filtered = useMemo(
     () =>
-      savedRecipes.filter((r) =>
+      recipes.filter((r) =>
         r.title.toLowerCase().includes(search.toLowerCase()),
       ),
-    [savedRecipes, search],
-  );
-  const filteredUser = useMemo(
-    () =>
-      userRecipes.filter((r) =>
-        r.title.toLowerCase().includes(search.toLowerCase()),
-      ),
-    [userRecipes, search],
+    [recipes, search],
   );
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex flex-col gap-6">
@@ -367,7 +203,7 @@ export default function RecettesPage() {
             Mes Recettes
           </h1>
           <p className="text-default-500 mt-1 text-sm">
-            Vos recettes sauvegardées et celles que vous avez créées.
+            Vos recettes personnelles — créez, modifiez et retrouvez‑les dans vos plans de repas.
           </p>
         </div>
         <Button
@@ -380,185 +216,94 @@ export default function RecettesPage() {
         </Button>
       </div>
 
-      {/* Tabs */}
-      <Tabs
-        selectedKey={activeTab}
-        onSelectionChange={(k) => {
-          setActiveTab(k as string);
-          setSearch("");
-        }}
-        color="success"
-        variant="underlined"
-        classNames={{ tabList: "border-b border-divider" }}
-      >
-        {/* ── Sauvegardées ── */}
-        <Tab
-          key="saved"
-          title={
-            <span className="flex items-center gap-1.5 text-sm font-medium">
-              <BookOpen size={15} />
-              Sauvegardées
-              {!savedLoading && savedRecipes.length > 0 && (
-                <Chip
-                  size="sm"
-                  variant="flat"
-                  color="success"
-                  className="h-4 text-[10px] px-1 min-w-0"
-                >
-                  {savedRecipes.length}
-                </Chip>
-              )}
-            </span>
-          }
-        >
-          {(savedLoading || savedRecipes.length > 0) && (
-            <div className="mt-4">
-              <Input
-                placeholder="Rechercher une recette..."
-                value={search}
-                onValueChange={setSearch}
-                startContent={<Search size={16} className="text-default-400" />}
-                variant="flat"
-                className="max-w-sm"
-              />
-            </div>
-          )}
-          <div className="mt-4">
-            {savedLoading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <RecipeSkeletonCard key={i} />
-                ))}
-              </div>
-            ) : savedError ? (
-              <FetchError onRetry={fetchSaved} />
-            ) : filteredSaved.length === 0 && search ? (
-              <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-                <Search size={40} className="text-default-300" />
-                <p className="text-default-500 font-medium">
-                  Aucun résultat pour &quot;{search}&quot;
-                </p>
-                <Button size="sm" variant="flat" onPress={() => setSearch("")}>
-                  Réinitialiser
-                </Button>
-              </div>
-            ) : savedRecipes.length === 0 ? (
-              <EmptyState
-                icon={<Utensils size={48} className="text-default-300" />}
-                title="Aucune recette sauvegardée"
-                subtitle="Explorez le catalogue et sauvegardez vos recettes préférées."
-                action={
-                  <Button
-                    as={Link}
-                    href="/explore"
-                    color="success"
-                    variant="flat"
-                    startContent={<BookOpen size={16} />}
-                    className="font-semibold"
-                  >
-                    Explorer les recettes
-                  </Button>
-                }
-              />
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredSaved.map((recipe) => (
-                  <SavedRecipeItem
-                    key={recipe.savedId}
-                    recipe={recipe}
-                    favoriteIds={favoriteIds}
-                    onUnsave={handleUnsave}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </Tab>
+      {/* Search — only when there are recipes or while loading */}
+      {(loading || recipes.length > 0) && (
+        <Input
+          placeholder="Rechercher une recette..."
+          value={search}
+          onValueChange={setSearch}
+          startContent={<Search size={16} className="text-default-400" />}
+          variant="flat"
+          className="max-w-sm"
+        />
+      )}
 
-        {/* ── Mes créations ── */}
-        <Tab
-          key="mine"
-          title={
-            <span className="flex items-center gap-1.5 text-sm font-medium">
-              <ChefHat size={15} />
-              Mes créations
-              {!userLoading && userRecipes.length > 0 && (
-                <Chip
-                  size="sm"
-                  variant="flat"
-                  color="success"
-                  className="h-4 text-[10px] px-1 min-w-0"
-                >
-                  {userRecipes.length}
-                </Chip>
-              )}
-            </span>
-          }
-        >
-          {(userLoading || userRecipes.length > 0) && (
-            <div className="mt-4">
-              <Input
-                placeholder="Rechercher une recette..."
-                value={search}
-                onValueChange={setSearch}
-                startContent={<Search size={16} className="text-default-400" />}
-                variant="flat"
-                className="max-w-sm"
-              />
-            </div>
-          )}
-          <div className="mt-4">
-            {userLoading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <RecipeSkeletonCard key={i} />
-                ))}
-              </div>
-            ) : userError ? (
-              <FetchError onRetry={fetchUserRecipes} />
-            ) : filteredUser.length === 0 && search ? (
-              <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-                <Search size={40} className="text-default-300" />
-                <p className="text-default-500 font-medium">
-                  Aucun résultat pour &quot;{search}&quot;
+      {/* Content */}
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <RecipeSkeletonCard key={i} />
+          ))}
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+          <Card className="p-8 border border-warning/30 bg-warning/5 max-w-sm w-full">
+            <CardBody className="flex flex-col items-center gap-4">
+              <AlertTriangle size={48} className="text-warning" />
+              <div>
+                <p className="font-semibold text-lg">Erreur de chargement</p>
+                <p className="text-default-400 text-sm mt-1">
+                  Impossible de charger les recettes. Vérifiez votre connexion.
                 </p>
-                <Button size="sm" variant="flat" onPress={() => setSearch("")}>
-                  Réinitialiser
-                </Button>
               </div>
-            ) : userRecipes.length === 0 ? (
-              <EmptyState
-                icon={<ChefHat size={48} className="text-default-300" />}
-                title="Aucune recette créée"
-                subtitle="Partagez vos recettes maison avec vos plans de repas."
-                action={
-                  <Button
-                    color="success"
-                    variant="flat"
-                    startContent={<Plus size={16} />}
-                    onPress={handleOpenAdd}
-                    className="font-semibold"
-                  >
-                    Créer une recette
-                  </Button>
-                }
-              />
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredUser.map((recipe) => (
-                  <UserRecipeItem
-                    key={recipe.id}
-                    recipe={recipe}
-                    favoriteIds={favoriteIds}
-                    onDelete={handleDeleteUserRecipe}
-                    onEdit={handleEdit}
-                  />
-                ))}
+              <Button
+                color="warning"
+                variant="flat"
+                startContent={<RefreshCw size={16} />}
+                onPress={fetchRecipes}
+                className="font-semibold"
+              >
+                Réessayer
+              </Button>
+            </CardBody>
+          </Card>
+        </div>
+      ) : filtered.length === 0 && search ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+          <Search size={40} className="text-default-300" />
+          <p className="text-default-500 font-medium">
+            Aucun résultat pour &quot;{search}&quot;
+          </p>
+          <Button size="sm" variant="flat" onPress={() => setSearch("")}>
+            Réinitialiser
+          </Button>
+        </div>
+      ) : recipes.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+          <Card className="p-8 border border-dashed border-divider bg-content2 max-w-sm w-full">
+            <CardBody className="flex flex-col items-center gap-4">
+              <ChefHat size={48} className="text-default-300" />
+              <div>
+                <p className="font-semibold text-lg">Aucune recette créée</p>
+                <p className="text-default-400 text-sm mt-1">
+                  Partagez vos recettes maison et retrouvez‑les dans vos plans de repas.
+                </p>
               </div>
-            )}
-          </div>
-        </Tab>
-      </Tabs>
+              <Button
+                color="success"
+                variant="flat"
+                startContent={<Plus size={16} />}
+                onPress={handleOpenAdd}
+                className="font-semibold"
+              >
+                Créer ma première recette
+              </Button>
+            </CardBody>
+          </Card>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map((recipe) => (
+            <UserRecipeItem
+              key={recipe.id}
+              recipe={recipe}
+              favoriteIds={favoriteIds}
+              onDelete={handleDelete}
+              onEdit={handleEdit}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Modal */}
       <AddRecipeModal

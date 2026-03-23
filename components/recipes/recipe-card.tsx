@@ -12,7 +12,7 @@ import {
   Button,
   Skeleton,
 } from "@heroui/react";
-import { Heart, Clock, Users, DollarSign, Flame, Sparkles } from "lucide-react";
+import { Heart, Clock, Users, DollarSign, Flame, Sparkles, Utensils } from "lucide-react";
 import { isMealPrepFriendlyRecipe } from "@/utils/meal-prep";
 import { QuickAskModal } from "@/components/ai/QuickAskModal";
 
@@ -62,7 +62,7 @@ export function RecipeCard({
 
   if (isLoading) return <RecipeCardSkeleton />;
 
-  const imageUrl = recipe.image_url || "/foodPuzzle.png";
+  const imageUrl = recipe.image_url || null;
   const prepTime = recipe.prep_time || 0;
   const servings = recipe.servings || 4;
   const calories = recipe.calories || 0;
@@ -81,13 +81,19 @@ export function RecipeCard({
           <CardHeader className="p-0">
           {/* Wrapper gives us a stable relative context for overlays */}
           <div className="relative w-full overflow-hidden">
-            <Image
-              src={imageUrl}
-              alt={recipe.title}
-              radius="none"
-              classNames={{ wrapper: "w-full" }}
-              className="aspect-video object-cover w-full group-hover:scale-[1.03] transition-transform duration-200"
-            />
+            {imageUrl ? (
+              <Image
+                src={imageUrl}
+                alt={recipe.title}
+                radius="none"
+                classNames={{ wrapper: "w-full" }}
+                className="aspect-video object-cover w-full group-hover:scale-[1.03] transition-transform duration-200"
+              />
+            ) : (
+              <div className="aspect-video w-full bg-default-100 flex items-center justify-center">
+                <Utensils size={40} className="text-default-300" />
+              </div>
+            )}
 
             {/* Top-right button row — heart + sparkles */}
             <div className="absolute top-2 right-2 z-20 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">

@@ -224,7 +224,7 @@ export default function DashboardPage() {
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <StatCard
-            label="Recettes sauvegardées"
+            label="Mes recettes"
             value={stats?.savedRecipes ?? 0}
             icon={<Utensils size={18} />}
             color="text-warning"
