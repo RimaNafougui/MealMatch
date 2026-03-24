@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getSupabaseServer } from "@/utils/supabase-server";
 import OpenAI from "openai";
@@ -8,22 +7,29 @@ import { startOfWeek, startOfMonth, format, addDays, parseISO, differenceInDays 
 import { mealPlanRateLimit } from "@/utils/rate-limit";
 import { cacheDel, cacheDelPattern, CacheKey } from "@/utils/redis";
 import { getLimits } from "@/utils/plan-limits";
+import { NextResponse } from "next/server";
 
 const generateSchema = z.object({
   days_count: z.number().int().min(1).max(28).default(7),
   meals_per_day: z.number().int().min(1).max(6).default(3),
   meal_labels: z.array(z.string()).optional(),
-  start_date: z.string().optional(),           // yyyy-MM-dd
-  end_date: z.string().optional(),             // yyyy-MM-dd
-  max_prep_time: z.number().nullable().optional(),  // minutes, null = no limit
+  start_date: z.string().optional(),
+  end_date: z.string().optional(),
+  max_prep_time: z.number().nullable().optional(),
   cuisine_types: z.array(z.string()).optional(),
   allow_repetitions: z.boolean().optional(),
   avoid_ingredients: z.array(z.string()).optional(),
+  target_calories_per_meal: z.number().positive().nullable().optional(),
+  target_protein_per_meal: z.number().positive().nullable().optional(),
+  target_carbs_per_meal: z.number().positive().nullable().optional(),
+  target_fat_per_meal: z.number().positive().nullable().optional(),
 });
 
-export const maxDuration = 60; // Vercel: allow up to 60s for AI generation
+// 120s — streaming responses keep the connection alive well within this
+export const maxDuration = 120;
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 55_000, maxRetries: 1 });
+// No client-level timeout; cancellation is handled via req.signal
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: 0 });
 
 function getMealLabels(count: number): string[] {
   if (count === 1) return ["meal"];
@@ -31,7 +37,6 @@ function getMealLabels(count: number): string[] {
   return ["breakfast", "lunch", "dinner"];
 }
 
-/** Returns day names like ["monday","tuesday",...] for a given date range */
 function getDayNamesForRange(start: Date, daysCount: number): string[] {
   return Array.from({ length: daysCount }, (_, i) =>
     format(addDays(start, i), "EEEE").toLowerCase(),
@@ -39,473 +44,327 @@ function getDayNamesForRange(start: Date, daysCount: number): string[] {
 }
 
 export async function POST(req: Request) {
-  try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  // ── Auth & rate-limit — return JSON errors synchronously ──────────────────
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const userId = session.user.id;
 
-    const userId = session.user.id;
-
-    // ── Rate limiting: max 3 generation attempts per user per minute ─────────
-    // (The DB weekly-usage check is the primary guard; this prevents API abuse)
-    const rl = await mealPlanRateLimit(userId);
-    if (!rl.success) {
-      return NextResponse.json(
-        { error: "Too many requests. Please wait before generating again." },
-        {
-          status: 429,
-          headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) },
-        },
-      );
-    }
-    const supabase = getSupabaseServer();
-    const rawBody = await req.json();
-    const parsed = generateSchema.safeParse(rawBody);
-    if (!parsed.success) {
-      return NextResponse.json({ error: "Configuration invalide", details: parsed.error.flatten() }, { status: 400 });
-    }
-    const { days_count, meals_per_day, meal_labels, start_date, end_date,
-            max_prep_time, cuisine_types, allow_repetitions, avoid_ingredients } = parsed.data;
-
-    // --- Resolve date range ---
-    let planStart: Date;
-    let actualDaysCount: number;
-
-    if (start_date && end_date) {
-      planStart = parseISO(start_date);
-      const planEnd = parseISO(end_date);
-      actualDaysCount = Math.max(1, Math.min(28, differenceInDays(planEnd, planStart) + 1));
-    } else {
-      planStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-      actualDaysCount = days_count;
-    }
-
-    const weekStartStr = format(planStart, "yyyy-MM-dd");
-    const weekEnd = format(addDays(planStart, actualDaysCount - 1), "yyyy-MM-dd");
-
-    const config: MealPlanConfig = {
-      days_count: actualDaysCount,
-      meals_per_day: meals_per_day as MealPlanConfig["meals_per_day"],
-      start_date: weekStartStr,
-      end_date: weekEnd,
-    };
-
-    // --- Fetch user profile (includes plan) ---
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select(
-        "plan, dietary_restrictions, allergies, budget_min, budget_max, meal_plan_days, meal_plan_meals_per_day, daily_calorie_target, tdee_kcal, weight_goal, macro_protein_pct, macro_carbs_pct, macro_fat_pct",
-      )
-      .eq("id", userId)
-      .single();
-
-    const userPlan = profile?.plan ?? "free";
-    const limits = getLimits(userPlan);
-
-    // Check if a usage record already exists this week (to avoid duplicate inserts)
-    const { data: existingUsage } = await supabase
-      .from("meal_plan_usage")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("week_start_date", weekStartStr)
-      .maybeSingle();
-
-    if (userPlan === "free") {
-      // Monthly limit: max 5 per month for free users
-      const monthStart = startOfMonth(new Date()).toISOString();
-      const { count: monthlyCount } = await supabase
-        .from("meal_plan_usage")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", userId)
-        .gte("generated_at", monthStart);
-
-      if ((monthlyCount ?? 0) >= limits.mealPlansPerMonth) {
-        return NextResponse.json(
-          {
-            error: "monthly_limit_reached",
-            message: `Vous avez atteint la limite de ${limits.mealPlansPerMonth} plans de repas par mois pour le plan gratuit.`,
-          },
-          { status: 429 },
-        );
-      }
-    }
-    // Student and premium users can regenerate freely — no weekly block.
-
-    // --- Fetch user favorites ---
-    const { data: favorites } = await supabase
-      .from("user_favorites")
-      .select(
-        `
-        recipe_id,
-        recipes_catalog (
-          id, title, calories, prep_time, dietary_tags, price_per_serving, ingredients, spoonacular_id
-        )
-      `,
-      )
-      .eq("user_id", userId)
-      .limit(15);
-
-    const favoriteSummaries = (favorites || [])
-      .map((f: any) => f.recipes_catalog)
-      .filter(Boolean)
-      .map((r: any) => ({
-        id: r.id,
-        title: r.title,
-        calories: r.calories,
-        prep_time: r.prep_time,
-        tags: r.dietary_tags,
-        cost: r.price_per_serving,
-        spoonacular_id: r.spoonacular_id,
-      }));
-
-    const restrictions = profile?.dietary_restrictions?.length
-      ? profile.dietary_restrictions.join(", ")
-      : "none";
-    const allergies = profile?.allergies?.length
-      ? profile.allergies.join(", ")
-      : "none";
-
-    // --- Allergen tag mapping: exclude recipes likely to contain the allergen ---
-    const allergenToExclusionTag: Record<string, string> = {
-      gluten: "gluten-free", blé: "gluten-free", wheat: "gluten-free",
-      dairy: "dairy-free", lactose: "dairy-free", lait: "dairy-free",
-      nuts: "nut-free", "noix": "nut-free", peanuts: "nut-free",
-      shellfish: "shellfish-free", fruits_de_mer: "shellfish-free",
-      eggs: "egg-free", oeufs: "egg-free", soy: "soy-free", soja: "soy-free",
-    };
-    const requiredSafeTags = (profile?.allergies || [])
-      .map((a: string) => allergenToExclusionTag[a.toLowerCase().trim()])
-      .filter(Boolean);
-
-    // --- Fetch a larger pool then filter by allergen safety ---
-    const { data: allCatalogRecipes } = await supabase
-      .from("recipes_catalog")
-      .select("id, title, calories, prep_time, dietary_tags, price_per_serving, ingredients, spoonacular_id, protein, carbs, fat")
-      .limit(80);
-
-    // Pre-filter: keep only recipes safe for user's allergies (if we have enough)
-    let catalogRecipes = allCatalogRecipes || [];
-    if (requiredSafeTags.length > 0) {
-      const safeRecipes = catalogRecipes.filter((r: any) => {
-        const tags = (r.dietary_tags || []).map((t: string) => t.toLowerCase());
-        return requiredSafeTags.every((rt: string) => tags.includes(rt));
-      });
-      // Only use the filtered pool if it contains enough recipes; otherwise fall back
-      if (safeRecipes.length >= 10) catalogRecipes = safeRecipes;
-    }
-
-    // --- Fetch user's own recipes ---
-    const { data: userRecipes } = await supabase
-      .from("user_recipes")
-      .select("id, title, calories, prep_time, dietary_tags, price_per_serving, ingredients, protein, carbs, fat")
-      .eq("user_id", userId)
-      .limit(20);
-
-    // Build recipe pool summaries for the AI
-    const catalogPool = (catalogRecipes || []).map((r: any) => ({
-      source: "catalog",
-      id: r.id,
-      spoonacular_id: r.spoonacular_id,
-      title: r.title,
-      calories: r.calories,
-      prep_time: r.prep_time,
-      cost: r.price_per_serving,
-      tags: r.dietary_tags,
-      protein: r.protein,
-      carbs: r.carbs,
-      fat: r.fat,
-    }));
-
-    const userPool = (userRecipes || []).map((r: any) => ({
-      source: "user_recipe",
-      id: r.id,
-      title: r.title,
-      calories: r.calories,
-      prep_time: r.prep_time,
-      cost: r.price_per_serving,
-      tags: r.dietary_tags,
-      protein: r.protein,
-      carbs: r.carbs,
-      fat: r.fat,
-    }));
-
-    const allAvailableRecipes = [...catalogPool, ...userPool];
-    const totalNeeded = config.days_count * config.meals_per_day;
-
-    const days = getDayNamesForRange(planStart, actualDaysCount);
-    const mealLabels = getMealLabels(config.meals_per_day);
-    const budgetRange =
-      profile?.budget_min && profile?.budget_max
-        ? `${profile.budget_min}–${profile.budget_max} $ CAD par semaine`
-        : "économique (moins de 80 $ CAD/semaine)";
-
-    // Nutritional targets derived from profile
-    const dailyCalorieTarget = profile?.daily_calorie_target ?? null;
-    const caloriesPerMeal = dailyCalorieTarget
-      ? Math.round(dailyCalorieTarget / config.meals_per_day)
-      : null;
-    const proteinPct = profile?.macro_protein_pct ?? 30;
-    const carbsPct   = profile?.macro_carbs_pct   ?? 40;
-    const fatPct     = profile?.macro_fat_pct     ?? 30;
-    const weightGoal = profile?.weight_goal ?? null;
-
-    const macroTargets = caloriesPerMeal
-      ? {
-          protein_g: Math.round((caloriesPerMeal * proteinPct) / 100 / 4),
-          carbs_g:   Math.round((caloriesPerMeal * carbsPct)   / 100 / 4),
-          fat_g:     Math.round((caloriesPerMeal * fatPct)      / 100 / 9),
-        }
-      : null;
-
-    // --- Build OpenAI prompt ---
-    const systemPrompt = `Tu es un assistant de planification de repas pour des étudiants universitaires au Canada.
-Tu crées des plans de repas pratiques, abordables et nutritifs.
-TOUJOURS répondre en JSON valide uniquement. Pas de markdown, pas d'explication, pas de blocs de code.
-Le JSON doit être parseable directement par JSON.parse().
-Tout le contenu (titres, descriptions, instructions) doit être en FRANÇAIS.`;
-
-    const allergyBlock = allergies !== "none"
-      ? `\n⚠️ ALLERGIES CRITIQUES (NE JAMAIS UTILISER CES INGRÉDIENTS) : ${allergies}\nTout repas contenant ces allergènes est INTERDIT et peut être dangereux pour la santé.`
-      : "";
-
-    const nutritionBlock = dailyCalorieTarget
-      ? `\n🎯 OBJECTIFS NUTRITIONNELS OBLIGATOIRES :
-- Calories totales/jour : ${dailyCalorieTarget} kcal → ${caloriesPerMeal} kcal par repas (±10% acceptable)
-- Protéines/repas : ${macroTargets?.protein_g}g (${proteinPct}% des calories)
-- Glucides/repas : ${macroTargets?.carbs_g}g (${carbsPct}% des calories)
-- Lipides/repas : ${macroTargets?.fat_g}g (${fatPct}% des calories)
-- Objectif de poids : ${weightGoal === "lose" ? "PERTE DE POIDS — choisir des recettes hypocaloriques, riches en protéines et fibres, faibles en graisses saturées" : weightGoal === "gain" ? "PRISE DE MASSE — choisir des recettes caloriques, riches en protéines et glucides complexes" : weightGoal === "maintain" ? "MAINTIEN — équilibre calorique" : "non spécifié"}
-Ces valeurs nutritionnelles DOIVENT être reflétées dans les champs calories, protein, carbs, fat de chaque repas.`
-      : "";
-
-    // Per-generation constraint blocks
-    const prepTimeBlock = max_prep_time != null
-      ? `\n⏱️ TEMPS DE PRÉPARATION MAX : ${max_prep_time} minutes par repas. Exclure tout repas dépassant cette durée.`
-      : "";
-
-    const cuisineBlock = cuisine_types && cuisine_types.length > 0
-      ? `\n🌍 TYPES DE CUISINE SOUHAITÉS : ${cuisine_types.join(", ")}. Privilégier ces cuisines pour ce plan.`
-      : "";
-
-    const avoidBlock = avoid_ingredients && avoid_ingredients.length > 0
-      ? `\n🚫 INGRÉDIENTS À ÉVITER CETTE SEMAINE (en plus des allergies) : ${avoid_ingredients.join(", ")}. Ne pas les utiliser dans aucun repas.`
-      : "";
-
-    const repetitionBlock = allow_repetitions
-      ? `\n♻️ MODE MEAL PREP : La répétition de repas identiques sur plusieurs jours est autorisée et encouragée pour faciliter la préparation en lot (batch cooking).`
-      : `\n✅ VARIÉTÉ : Chaque repas doit être différent — ne jamais répéter le même titre dans le plan.`;
-
-    const userPrompt = `Génère un plan de repas de ${config.days_count} jours (${days.join(", ")}) avec ${config.meals_per_day} repas par jour (${mealLabels.join(", ")}).
-${allergyBlock}
-${prepTimeBlock}
-${avoidBlock}
-${cuisineBlock}
-${repetitionBlock}
-${nutritionBlock}
-
-Profil de l'utilisateur :
-- Restrictions alimentaires : ${restrictions}
-- Budget hebdomadaire : ${budgetRange}
-- Recettes favorites à intégrer (inclure au moins 2-3 si possible) : ${
-      favoriteSummaries.length > 0
-        ? JSON.stringify(favoriteSummaries.map((f: any) => ({ id: f.id, title: f.title, source: "catalog", spoonacular_id: f.spoonacular_id })))
-        : "aucune sauvegardée"
-    }
-
-Recettes disponibles dans la bibliothèque (catalogue + recettes de l'utilisateur) :
-${JSON.stringify(allAvailableRecipes.slice(0, 50), null, 0)}
-
-RÈGLES IMPORTANTES (dans l'ordre de priorité) :
-1. ⚠️ SÉCURITÉ ALIMENTAIRE : Respecter ABSOLUMENT toutes les allergies et restrictions. Ne jamais inclure un ingrédient interdit, même en trace.
-2. Respecter les restrictions alimentaires : ${restrictions !== "none" ? `les recettes doivent être compatibles avec : ${restrictions}` : "aucune restriction"}
-3. 🎯 NUTRITION : Chaque repas DOIT être proche des cibles caloriques et en macronutriments définies. Vérifie les valeurs nutritionnelles et ajuste si besoin.
-4. Rester dans le budget hebdomadaire
-5. ${allow_repetitions ? "Mode meal prep : répétitions autorisées" : "Varier les cuisines et ingrédients — ne jamais répéter le même repas dans le plan"}
-6. ${max_prep_time != null ? `Chaque repas doit être préparable en moins de ${max_prep_time} min` : "Préférer des recettes accessibles : ingrédients simples, moins de 45 min de préparation"}
-7. Intégrer les recettes favorites là où elles s'adaptent naturellement
-8. PRIORITÉ : utiliser les recettes du catalogue ou de l'utilisateur autant que possible
-9. Si aucune recette disponible ne convient, génère une recette originale (source "ai") avec :
-   - Instructions étape par étape complètes en français (minimum 4 étapes)
-   - Mesures exactes pour chaque ingrédient
-   - Valeurs nutritionnelles précises (calories, protéines, glucides, lipides)
-   - URL d'image unsplash pertinente (ex: https://source.unsplash.com/800x600/?salade,poulet)
-10. Pour les recettes du catalogue ou de l'utilisateur, inclure leur "id" et "source" exacts
-
-Retourne EXACTEMENT cette structure JSON :
-{
-  "days": [
-    {
-      "day": "monday",
-      "meals": [
-        {
-          "slot": "${mealLabels[0]}",
-          "source": "catalog",
-          "recipe_catalog_id": "uuid-from-catalog-or-null",
-          "user_recipe_id": null,
-          "title": "Nom de la recette en français",
-          "description": "Une phrase de description en français",
-          "prep_time_minutes": 20,
-          "calories": 450,
-          "protein": 25,
-          "carbs": 50,
-          "fat": 12,
-          "estimated_cost_usd": 3.50,
-          "dietary_tags": ["vegetarian"],
-          "ingredients_summary": "pâtes, sauce tomate, parmesan",
-          "instructions": [],
-          "is_favorite": false,
-          "can_repeat": true,
-          "spoonacular_search_query": "pasta tomato",
-          "image_url": null
-        }
-      ]
-    }
-  ],
-  "total_estimated_cost": 45.00,
-  "total_calories_per_day_avg": 1800
-}
-
-Notes sur les champs :
-- Pour source "catalog" : renseigne recipe_catalog_id avec l'id exact, user_recipe_id = null, instructions = []
-- Pour source "user_recipe" : renseigne user_recipe_id avec l'id exact, recipe_catalog_id = null, instructions = []
-- Pour source "ai" : recipe_catalog_id = null, user_recipe_id = null, instructions = ["Étape 1 : ...", "Étape 2 : ...", ...], image_url = URL unsplash
-- spoonacular_id doit être renseigné si la recette vient du catalogue et a un spoonacular_id`;
-
-    // --- Call OpenAI (streaming) ---
-    const stream = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      temperature: 0.7,
-      max_tokens: 6000,
-      stream: true,
-    });
-
-    let rawContent = "";
-    for await (const chunk of stream) {
-      const delta = chunk.choices[0]?.delta?.content;
-      if (delta) rawContent += delta;
-    }
-
-    let mealPlan: GeneratedMealPlan;
-    try {
-      mealPlan = JSON.parse(rawContent);
-    } catch {
-      // Try to extract JSON if there's any wrapping text
-      const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        mealPlan = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error("Failed to parse OpenAI response as JSON");
-      }
-    }
-
-    // --- Enrich plan: match catalog IDs and user recipe IDs ---
-    // Build lookups for catalog
-    const catalogIdMap = new Map(
-      (catalogRecipes || []).map((r: any) => [r.id, { spoonacular_id: r.spoonacular_id }])
-    );
-    const userRecipeIdMap = new Map(
-      (userRecipes || []).map((r: any) => [r.id, true])
-    );
-
-    mealPlan.days = mealPlan.days.map((day: any) => ({
-      ...day,
-      meals: day.meals.map((meal: any) => {
-        // If AI returned a catalog recipe, ensure spoonacular_id is set
-        if (meal.source === "catalog" && meal.recipe_catalog_id) {
-          const catalogEntry = catalogIdMap.get(meal.recipe_catalog_id);
-          if (catalogEntry) {
-            return { ...meal, spoonacular_id: catalogEntry.spoonacular_id };
-          }
-        }
-        return meal;
-      }),
-    }));
-
-    // Also match favorites by title for backward compatibility
-    if (favoriteSummaries.length > 0) {
-      const titleToIds = new Map(
-        favoriteSummaries.map((f: any) => [
-          f.title.toLowerCase(),
-          { recipe_catalog_id: f.id, spoonacular_id: f.spoonacular_id },
-        ]),
-      );
-
-      mealPlan.days = mealPlan.days.map((day: any) => ({
-        ...day,
-        meals: day.meals.map((meal: any) => {
-          if (!meal.recipe_catalog_id) {
-            const match = titleToIds.get(meal.title?.toLowerCase());
-            if (match) return { ...meal, ...match, source: "catalog" };
-          }
-          return meal;
-        }),
-      }));
-    }
-
-    // --- Save usage record (only on first generation; regenerations reuse the existing record) ---
-    if (!existingUsage) {
-      await supabase.from("meal_plan_usage").insert({
-        user_id: userId,
-        week_start_date: weekStartStr,
-        days_count: config.days_count,
-        meals_per_day: config.meals_per_day,
-      });
-    }
-
-    // --- Save draft meal plan ---
-    const { data: savedPlan, error: saveError } = await supabase
-      .from("meal_plans")
-      .upsert(
-        {
-          user_id: userId,
-          week_start_date: weekStartStr,
-          week_end_date: weekEnd,
-          meals: mealPlan,
-          total_calories: mealPlan.total_calories_per_day_avg,
-          total_cost: mealPlan.total_estimated_cost,
-          days_count: config.days_count,
-          meals_per_day: config.meals_per_day,
-          meal_labels: mealLabels,
-          status: "draft",
-          is_active: false,
-          generated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id,week_start_date" },
-      )
-      .select()
-      .single();
-
-    if (saveError) {
-      console.error("Error saving meal plan:", saveError);
-      return NextResponse.json(
-        { error: "Failed to save meal plan" },
-        { status: 500 },
-      );
-    }
-
-    // Bust meal plan + stats caches so the UI reflects the new plan immediately
-    await Promise.all([
-      cacheDel(CacheKey.mealPlanCurrent(userId, weekStartStr)),
-      cacheDel(CacheKey.userStats(userId)),
-      cacheDelPattern(`user:${userId}:meal-plan:*`),
-    ]);
-
-    return NextResponse.json({
-      success: true,
-      plan: savedPlan,
-      meal_plan: mealPlan,
-      config: { days, meal_labels: mealLabels },
-    });
-  } catch (error) {
-    console.error("Meal plan generation error:", error);
+  const rl = await mealPlanRateLimit(userId);
+  if (!rl.success) {
     return NextResponse.json(
-      { error: "Failed to generate meal plan" },
-      { status: 500 },
+      { error: "Too many requests. Please wait before generating again." },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) } },
     );
   }
+
+  const rawBody = await req.json();
+  const parsed = generateSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Configuration invalide", details: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const {
+    days_count, meals_per_day, start_date, end_date,
+    max_prep_time, cuisine_types, allow_repetitions, avoid_ingredients,
+    target_calories_per_meal, target_protein_per_meal,
+    target_carbs_per_meal, target_fat_per_meal,
+  } = parsed.data;
+
+  // ── Resolve date range ────────────────────────────────────────────────────
+  let planStart: Date;
+  let actualDaysCount: number;
+  if (start_date && end_date) {
+    planStart = parseISO(start_date);
+    actualDaysCount = Math.max(1, Math.min(28, differenceInDays(parseISO(end_date), planStart) + 1));
+  } else {
+    planStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+    actualDaysCount = days_count;
+  }
+  const weekStartStr = format(planStart, "yyyy-MM-dd");
+  const weekEnd = format(addDays(planStart, actualDaysCount - 1), "yyyy-MM-dd");
+
+  const config: MealPlanConfig = {
+    days_count: actualDaysCount,
+    meals_per_day: meals_per_day as MealPlanConfig["meals_per_day"],
+    start_date: weekStartStr,
+    end_date: weekEnd,
+  };
+
+  const supabase = getSupabaseServer();
+
+  // ── Phase 1: all independent DB reads in parallel ─────────────────────────
+  const monthStart = startOfMonth(new Date()).toISOString();
+  const [
+    { data: profile },
+    { data: favorites },
+    { data: allCatalogRecipes },
+    { data: userRecipes },
+  ] = await Promise.all([
+    supabase.from("profiles")
+      .select("plan, dietary_restrictions, allergies, budget_min, budget_max, daily_calorie_target, weight_goal, macro_protein_pct, macro_carbs_pct, macro_fat_pct")
+      .eq("id", userId).single(),
+    supabase.from("user_favorites")
+      .select("recipe_id, recipes_catalog(id, title, calories, prep_time, dietary_tags, price_per_serving, spoonacular_id)")
+      .eq("user_id", userId).limit(15),
+    supabase.from("recipes_catalog")
+      .select("id, title, calories, prep_time, dietary_tags, price_per_serving, spoonacular_id, protein, carbs, fat")
+      .limit(80),
+    supabase.from("user_recipes")
+      .select("id, title, calories, prep_time, dietary_tags, price_per_serving, protein, carbs, fat")
+      .eq("user_id", userId).limit(20),
+  ]);
+
+  const userPlan = profile?.plan ?? "free";
+  const limits = getLimits(userPlan);
+
+  // ── Phase 2: usage checks ─────────────────────────────────────────────────
+  const [{ data: existingUsage }, { count: monthlyCount }] = await Promise.all([
+    supabase.from("meal_plan_usage").select("id").eq("user_id", userId).eq("week_start_date", weekStartStr).maybeSingle(),
+    userPlan === "free"
+      ? supabase.from("meal_plan_usage").select("id", { count: "exact", head: true }).eq("user_id", userId).gte("generated_at", monthStart)
+      : Promise.resolve({ count: 0, data: null, error: null }),
+  ]);
+
+  if (userPlan === "free" && (monthlyCount ?? 0) >= limits.mealPlansPerMonth) {
+    return NextResponse.json(
+      { error: "monthly_limit_reached", message: `Limite de ${limits.mealPlansPerMonth} plans/mois atteinte.` },
+      { status: 429 },
+    );
+  }
+
+  // ── Build recipe pool ─────────────────────────────────────────────────────
+  const allergenToExclusionTag: Record<string, string> = {
+    gluten: "gluten-free", blé: "gluten-free", wheat: "gluten-free",
+    dairy: "dairy-free", lactose: "dairy-free", lait: "dairy-free",
+    nuts: "nut-free", noix: "nut-free", peanuts: "nut-free",
+    shellfish: "shellfish-free", eggs: "egg-free", oeufs: "egg-free",
+    soy: "soy-free", soja: "soy-free",
+  };
+  const requiredSafeTags = (profile?.allergies || [])
+    .map((a: string) => allergenToExclusionTag[a.toLowerCase().trim()])
+    .filter(Boolean);
+
+  let catalogRecipes = allCatalogRecipes || [];
+  if (requiredSafeTags.length > 0) {
+    const safe = catalogRecipes.filter((r: any) => {
+      const tags = (r.dietary_tags || []).map((t: string) => t.toLowerCase());
+      return requiredSafeTags.every((rt: string) => tags.includes(rt));
+    });
+    if (safe.length >= 10) catalogRecipes = safe;
+  }
+
+  const catalogPool = catalogRecipes.map((r: any) => ({
+    source: "catalog", id: r.id, title: r.title, calories: r.calories,
+    prep_time: r.prep_time, cost: r.price_per_serving,
+    protein: r.protein, carbs: r.carbs, fat: r.fat,
+  }));
+  const userPool = (userRecipes || []).map((r: any) => ({
+    source: "user_recipe", id: r.id, title: r.title, calories: r.calories,
+    prep_time: r.prep_time, cost: r.price_per_serving,
+    protein: r.protein, carbs: r.carbs, fat: r.fat,
+  }));
+  const recipePool = [...catalogPool, ...userPool].slice(0, 30);
+
+  const favoriteSummaries = (favorites || [])
+    .map((f: any) => f.recipes_catalog).filter(Boolean)
+    .map((r: any) => ({ id: r.id, title: r.title, spoonacular_id: r.spoonacular_id }));
+
+  // ── Nutritional targets ───────────────────────────────────────────────────
+  const dailyCalorieTarget = profile?.daily_calorie_target ?? null;
+  const profileCalsPerMeal = dailyCalorieTarget ? Math.round(dailyCalorieTarget / meals_per_day) : null;
+  const caloriesPerMeal = target_calories_per_meal ?? profileCalsPerMeal;
+  const proteinPct = profile?.macro_protein_pct ?? 30;
+  const carbsPct   = profile?.macro_carbs_pct   ?? 40;
+  const fatPct     = profile?.macro_fat_pct     ?? 30;
+
+  const macroTargets = (caloriesPerMeal || target_protein_per_meal || target_carbs_per_meal || target_fat_per_meal)
+    ? {
+        protein_g: target_protein_per_meal ?? (caloriesPerMeal ? Math.round((caloriesPerMeal * proteinPct) / 400) : null),
+        carbs_g:   target_carbs_per_meal   ?? (caloriesPerMeal ? Math.round((caloriesPerMeal * carbsPct)   / 400) : null),
+        fat_g:     target_fat_per_meal     ?? (caloriesPerMeal ? Math.round((caloriesPerMeal * fatPct)      / 900) : null),
+      }
+    : null;
+
+  // ── Prompt ────────────────────────────────────────────────────────────────
+  const restrictions = profile?.dietary_restrictions?.length ? profile.dietary_restrictions.join(", ") : "none";
+  const allergies    = profile?.allergies?.length            ? profile.allergies.join(", ")            : "none";
+  const budgetRange  = (profile?.budget_min && profile?.budget_max)
+    ? `${profile.budget_min}–${profile.budget_max} $ CAD/sem`
+    : "< 80 $ CAD/sem";
+
+  const days      = getDayNamesForRange(planStart, actualDaysCount);
+  const mealLabels = getMealLabels(meals_per_day);
+  const dynamicMaxTokens = Math.min(5500, actualDaysCount * meals_per_day * 200 + 500);
+
+  const systemPrompt = `Tu es un assistant de planification de repas. Réponds UNIQUEMENT en JSON valide parseable par JSON.parse(). Tout en FRANÇAIS.`;
+
+  const blocks = [
+    allergies !== "none" ? `⚠️ ALLERGIES (JAMAIS utiliser) : ${allergies}` : "",
+    max_prep_time != null ? `⏱️ Prep max : ${max_prep_time} min` : "",
+    avoid_ingredients?.length ? `🚫 Éviter : ${avoid_ingredients.join(", ")}` : "",
+    cuisine_types?.length ? `🌍 Cuisines : ${cuisine_types.join(", ")}` : "",
+    allow_repetitions ? "♻️ Répétitions autorisées (meal prep)" : "✅ Pas de répétition de repas",
+    (caloriesPerMeal || macroTargets) ? `🎯 Objectifs/repas :${caloriesPerMeal ? ` ${caloriesPerMeal} kcal` : ""}${macroTargets?.protein_g != null ? ` | P:${macroTargets.protein_g}g` : ""}${macroTargets?.carbs_g != null ? ` | G:${macroTargets.carbs_g}g` : ""}${macroTargets?.fat_g != null ? ` | L:${macroTargets.fat_g}g` : ""}` : "",
+    profile?.weight_goal === "lose" ? "Objectif : perte de poids (hypocalorique, riche en protéines)" :
+    profile?.weight_goal === "gain" ? "Objectif : prise de masse (hypercalorique, riche en protéines)" : "",
+  ].filter(Boolean).join("\n");
+
+  const userPrompt = `Plan de ${actualDaysCount} jours (${days.join(", ")}), ${meals_per_day} repas/jour (${mealLabels.join(", ")}).
+${blocks}
+Restrictions : ${restrictions} | Budget : ${budgetRange}
+Favoris à inclure (2-3) : ${favoriteSummaries.length ? JSON.stringify(favoriteSummaries) : "aucun"}
+Recettes disponibles (utilise "id" et "source" exacts dans ta réponse) :
+${JSON.stringify(recipePool)}
+
+Retourne ce JSON (un objet, pas un tableau) :
+{"days":[{"day":"monday","meals":[{"slot":"${mealLabels[0]}","source":"catalog","recipe_catalog_id":"uuid-ou-null","user_recipe_id":null,"title":"Titre","description":"1 phrase","prep_time_minutes":20,"calories":450,"protein":25,"carbs":50,"fat":12,"estimated_cost_usd":3.5,"dietary_tags":["vegetarian"],"ingredients_summary":"ingrédient1, ingrédient2","instructions":[],"is_favorite":false,"can_repeat":false,"spoonacular_search_query":"search terms","image_url":null}]}],"total_estimated_cost":45.0,"total_calories_per_day_avg":1800}
+Rules: source "catalog"→recipe_catalog_id=uuid exact. source "user_recipe"→user_recipe_id=uuid exact. source "ai"→both ids null, instructions=["Étape 1:...",…], image_url=unsplash URL.`;
+
+  // ── SSE streaming response ────────────────────────────────────────────────
+  const encoder = new TextEncoder();
+  const openaiAbort = new AbortController();
+  req.signal.addEventListener("abort", () => openaiAbort.abort(), { once: true });
+
+  const readableStream = new ReadableStream({
+    async start(controller) {
+      const send = (data: object) => {
+        try { controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`)); } catch {}
+      };
+
+      try {
+        const openaiStream = await openai.chat.completions.create(
+          {
+            model: "gpt-4o-mini",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+            temperature: 0.7,
+            max_tokens: dynamicMaxTokens,
+            response_format: { type: "json_object" },
+            stream: true,
+          },
+          { signal: openaiAbort.signal },
+        );
+
+        let rawContent = "";
+        let finishReason = "";
+        for await (const chunk of openaiStream) {
+          const delta = chunk.choices[0]?.delta?.content;
+          if (delta) rawContent += delta;
+          if (chunk.choices[0]?.finish_reason) finishReason = chunk.choices[0].finish_reason;
+        }
+
+        if (openaiAbort.signal.aborted) { controller.close(); return; }
+
+        if (finishReason === "length") {
+          console.warn(`[meal-plan/generate] Token limit hit (max_tokens=${dynamicMaxTokens}). Raw length=${rawContent.length}`);
+        }
+
+        // ── Parse — with regex fallback for minor wrapping issues ──
+        let mealPlan: GeneratedMealPlan;
+        try {
+          mealPlan = JSON.parse(rawContent);
+        } catch {
+          // Try to extract the outermost JSON object
+          const match = rawContent.match(/\{[\s\S]*\}/);
+          if (match) {
+            try {
+              mealPlan = JSON.parse(match[0]);
+            } catch {
+              console.error("[meal-plan/generate] JSON parse failed after extraction. finish_reason:", finishReason, "raw preview:", rawContent.slice(0, 300));
+              send({ type: "error", error: finishReason === "length" ? "Plan trop long — réduisez le nombre de jours ou de repas." : "Réponse IA invalide. Réessayez." });
+              controller.close();
+              return;
+            }
+          } else {
+            console.error("[meal-plan/generate] No JSON found. finish_reason:", finishReason, "raw preview:", rawContent.slice(0, 300));
+            send({ type: "error", error: finishReason === "length" ? "Plan trop long — réduisez le nombre de jours ou de repas." : "Réponse IA invalide. Réessayez." });
+            controller.close();
+            return;
+          }
+        }
+
+        // ── Enrich: add spoonacular_id from catalog map ──
+        const catalogIdMap = new Map(catalogRecipes.map((r: any) => [r.id, r.spoonacular_id]));
+        const titleToIds = new Map(
+          favoriteSummaries.map((f: any) => [f.title.toLowerCase(), { recipe_catalog_id: f.id, spoonacular_id: f.spoonacular_id }])
+        );
+
+        mealPlan.days = mealPlan.days.map((day: any) => ({
+          ...day,
+          meals: day.meals.map((meal: any) => {
+            if (meal.source === "catalog" && meal.recipe_catalog_id) {
+              const spId = catalogIdMap.get(meal.recipe_catalog_id);
+              if (spId != null) return { ...meal, spoonacular_id: spId };
+            }
+            if (!meal.recipe_catalog_id) {
+              const match = titleToIds.get(meal.title?.toLowerCase());
+              if (match) return { ...meal, ...match, source: "catalog" };
+            }
+            return meal;
+          }),
+        }));
+
+        // ── Save usage + plan in parallel ──
+        await Promise.all([
+          !existingUsage
+            ? supabase.from("meal_plan_usage").insert({ user_id: userId, week_start_date: weekStartStr, days_count: config.days_count, meals_per_day: config.meals_per_day })
+            : Promise.resolve(),
+          cacheDel(CacheKey.mealPlanCurrent(userId, weekStartStr)),
+          cacheDel(CacheKey.userStats(userId)),
+          cacheDelPattern(`user:${userId}:meal-plan:*`),
+        ]);
+
+        const { data: savedPlan, error: saveError } = await supabase
+          .from("meal_plans")
+          .upsert(
+            {
+              user_id: userId,
+              week_start_date: weekStartStr,
+              week_end_date: weekEnd,
+              meals: mealPlan,
+              total_calories: mealPlan.total_calories_per_day_avg,
+              total_cost: mealPlan.total_estimated_cost,
+              days_count: config.days_count,
+              meals_per_day: config.meals_per_day,
+              meal_labels: mealLabels,
+              status: "draft",
+              is_active: false,
+              generated_at: new Date().toISOString(),
+            },
+            { onConflict: "user_id,week_start_date" },
+          )
+          .select()
+          .single();
+
+        if (saveError) {
+          send({ type: "error", error: "Failed to save meal plan" });
+          controller.close();
+          return;
+        }
+
+        send({ type: "done", success: true, plan: savedPlan, meal_plan: mealPlan, config: { days, meal_labels: mealLabels } });
+      } catch (err: any) {
+        const isAbort = err?.name === "AbortError" || openaiAbort.signal.aborted;
+        if (!isAbort) {
+          console.error("Meal plan generation error:", err);
+          send({ type: "error", error: "Failed to generate meal plan" });
+        }
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(readableStream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      "Connection": "keep-alive",
+      "X-Accel-Buffering": "no",
+    },
+  });
 }

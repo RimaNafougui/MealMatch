@@ -80,13 +80,14 @@ export function MealSlot({
   return (
     <Card
       className={`
-        border transition-all duration-200 group
+        border transition-all duration-200 group cursor-pointer
         ${
           meal.is_favorite
-            ? "border-warning/50 bg-warning-50/20 dark:bg-warning-900/10"
+            ? "border-warning/50 bg-warning-50/20 dark:bg-warning-900/10 hover:border-warning/70"
             : "border-divider bg-content1 hover:border-primary/30"
         }
       `}
+      onClick={() => !isRegenerating && onViewDetail(meal)}
     >
       <CardBody className="p-3 gap-2">
         {/* Header row */}
@@ -96,7 +97,7 @@ export function MealSlot({
           >
             {slot}
           </span>
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
             <Button
               isIconOnly
               size="sm"
@@ -135,16 +136,13 @@ export function MealSlot({
               className="text-warning mt-0.5 shrink-0 fill-warning"
             />
           )}
-          <button
-            className="font-semibold text-sm leading-tight line-clamp-2 text-left hover:text-primary transition-colors cursor-pointer"
-            onClick={() => !isRegenerating && onViewDetail(meal)}
-          >
+          <p className="font-semibold text-sm leading-tight line-clamp-2 text-left">
             {isRegenerating ? (
               <span className="opacity-50 italic">Finding new recipe...</span>
             ) : (
               meal.title
             )}
-          </button>
+          </p>
         </div>
 
         {/* Description */}

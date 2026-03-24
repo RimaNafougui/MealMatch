@@ -43,10 +43,14 @@ export interface MealPlanConfig {
   start_date?: string; // yyyy-MM-dd
   end_date?: string;   // yyyy-MM-dd
   // Per-generation personalization overrides
-  max_prep_time?: number | null;   // minutes: 20 | 45 | null (no limit)
-  cuisine_types?: string[];        // e.g. ["italian", "asian"]
-  allow_repetitions?: boolean;     // meal-prep mode
-  avoid_ingredients?: string[];    // one-off ingredient exclusions
+  max_prep_time?: number | null;            // minutes: 20 | 45 | null (no limit)
+  cuisine_types?: string[];                 // e.g. ["italian", "asian"]
+  allow_repetitions?: boolean;             // meal-prep mode
+  avoid_ingredients?: string[];            // one-off ingredient exclusions
+  target_calories_per_meal?: number | null; // override calorie target per meal
+  target_protein_per_meal?: number | null;  // override protein target per meal (g)
+  target_carbs_per_meal?: number | null;    // override carbs target per meal (g)
+  target_fat_per_meal?: number | null;      // override fat target per meal (g)
 }
 
 export interface SavedMealPlan {
