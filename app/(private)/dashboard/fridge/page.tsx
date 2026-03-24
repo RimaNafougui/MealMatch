@@ -26,7 +26,7 @@ export default function FridgePage() {
   function addIngredient() {
     const val = inputValue.trim();
     if (!val) return;
-    if (ingredients.includes(val.toLowerCase())) {
+    if (ingredients.map((i) => i.toLowerCase()).includes(val.toLowerCase())) {
       toast.error("Cet ingrédient est déjà dans la liste");
       return;
     }

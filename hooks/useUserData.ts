@@ -190,11 +190,17 @@ export function useLogWeight() {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error ?? "Failed to log weight");
       }
-      return res.json();
+      return res.json() as Promise<{ success: boolean; log: WeightLog; warning: string | null; updated: boolean }>;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       // Invalidate all weight-log queries (any days range)
       qc.invalidateQueries({ queryKey: ["user", "weight-logs"] });
+      // Surface server-side warnings (e.g. implausible weight change, overwritten entry)
+      if (data.warning) {
+        import("sonner").then(({ toast }) => toast.warning(data.warning!));
+      } else if (data.updated) {
+        import("sonner").then(({ toast }) => toast.info("Entrée du jour mise à jour."));
+      }
     },
   });
 }

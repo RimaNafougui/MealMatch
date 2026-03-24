@@ -173,25 +173,14 @@ export async function POST(req: NextRequest) {
     // Free users get a flat list; paid users get the intelligent aisle-organized list
     let organizedItems;
     if (userPlan === "free") {
-      // Basic flat list: deduplicate by name only, no aisle grouping
-      const seen = new Map<
-        string,
-        { name: string; quantity: number; unit: string; category: string }
-      >();
-      for (const ing of rawIngredients) {
-        const key = ing.name.toLowerCase().trim();
-        if (seen.has(key)) {
-          seen.get(key)!.quantity += ing.quantity ?? 1;
-        } else {
-          seen.set(key, {
-            name: ing.name,
-            quantity: ing.quantity ?? 1,
-            unit: ing.unit ?? "",
-            category: "Divers",
-          });
-        }
-      }
-      organizedItems = Array.from(seen.values());
+      // Basic flat list: same unit-conversion aggregation as paid, but no aisle grouping
+      const aggregated = aggregateIngredients(rawIngredients);
+      organizedItems = aggregated.map((item) => ({
+        name: item.name,
+        quantity: item.quantity,
+        unit: item.unit,
+        category: "Divers",
+      }));
     } else {
       // Aggregate, classify, and sort ingredients (intelligent aisle-organized list)
       organizedItems = aggregateIngredients(rawIngredients);

@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { cacheGet, cacheSet } from "@/utils/redis";
 import OpenAI from "openai";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+const DAILY_FRIDGE_LIMIT = 10;
 
 export async function POST(req: Request) {
   try {
@@ -15,6 +18,19 @@ export async function POST(req: Request) {
     if (!Array.isArray(ingredients) || ingredients.length === 0) {
       return NextResponse.json({ error: "ingredients array is required" }, { status: 400 });
     }
+
+    // Rate limit: DAILY_FRIDGE_LIMIT generations per day
+    const today = new Date().toISOString().split("T")[0];
+    const rlKey = `ratelimit:fridge:${session.user.id}:${today}`;
+    const count = (await cacheGet<number>(rlKey)) ?? 0;
+    if (count >= DAILY_FRIDGE_LIMIT) {
+      return NextResponse.json(
+        { error: `Limite de ${DAILY_FRIDGE_LIMIT} générations par jour atteinte. Revenez demain.` },
+        { status: 429 },
+      );
+    }
+    const secondsUntilMidnight = 86400 - (Math.floor(Date.now() / 1000) % 86400);
+    await cacheSet(rlKey, count + 1, secondsUntilMidnight);
 
     const ingredientList = ingredients.slice(0, 20).join(", ");
 
@@ -47,7 +63,21 @@ Réponds UNIQUEMENT avec un JSON valide, sans texte supplémentaire. Format exac
     });
 
     const raw = completion.choices[0]?.message?.content ?? "{}";
-    const parsed = JSON.parse(raw);
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      // Attempt regex extraction as fallback
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (!match) {
+        return NextResponse.json({ error: "Invalid response from AI" }, { status: 502 });
+      }
+      try {
+        parsed = JSON.parse(match[0]);
+      } catch {
+        return NextResponse.json({ error: "Invalid response from AI" }, { status: 502 });
+      }
+    }
 
     return NextResponse.json(parsed);
   } catch (err) {

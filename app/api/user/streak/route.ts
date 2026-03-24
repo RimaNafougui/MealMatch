@@ -24,24 +24,27 @@ export async function GET() {
       return NextResponse.json({ streak: 0, lastPlanned: null });
     }
 
-    // Group by ISO year-week
+    // Group by ISO year-week using UTC dates to avoid timezone drift
     const weekSet = new Set<string>();
     for (const row of data) {
+      // Use UTC date components to avoid midnight timezone shifts
       const d = new Date(row.generated_at);
-      const week = `${getISOWeekYear(d)}-W${String(getISOWeek(d)).padStart(2, "0")}`;
+      const utcDate = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+      const week = `${getISOWeekYear(utcDate)}-W${String(getISOWeek(utcDate)).padStart(2, "0")}`;
       weekSet.add(week);
     }
 
-    // Walk backwards from current week counting consecutive weeks
+    // Walk backwards from current UTC week counting consecutive weeks
     const now = new Date();
+    const utcNow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
     let streak = 0;
-    let checkDate = new Date(now);
+    let checkDate = new Date(utcNow);
 
     while (true) {
       const key = `${getISOWeekYear(checkDate)}-W${String(getISOWeek(checkDate)).padStart(2, "0")}`;
       if (weekSet.has(key)) {
         streak++;
-        // Go back 7 days
+        // Go back 7 days (stay in UTC)
         checkDate = new Date(checkDate.getTime() - 7 * 24 * 60 * 60 * 1000);
       } else {
         break;

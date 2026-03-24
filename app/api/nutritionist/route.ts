@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getSupabaseServer } from "@/utils/supabase-server";
 import { getLimits } from "@/utils/plan-limits";
+import { cacheGet, cacheSet } from "@/utils/redis";
 import OpenAI from "openai";
+
+const DAILY_MSG_LIMIT = 30;
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -34,6 +37,19 @@ export async function POST(req: Request) {
     if (!message || typeof message !== "string") {
       return NextResponse.json({ error: "message is required" }, { status: 400 });
     }
+
+    // Rate limit: DAILY_MSG_LIMIT messages per day
+    const today = new Date().toISOString().split("T")[0];
+    const rlKey = `ratelimit:nutritionist:${session.user.id}:${today}`;
+    const count = (await cacheGet<number>(rlKey)) ?? 0;
+    if (count >= DAILY_MSG_LIMIT) {
+      return NextResponse.json(
+        { error: "daily_limit_reached", message: `Limite de ${DAILY_MSG_LIMIT} messages par jour atteinte. Revenez demain.` },
+        { status: 429 },
+      );
+    }
+    const secondsUntilMidnight = 86400 - (Math.floor(Date.now() / 1000) % 86400);
+    await cacheSet(rlKey, count + 1, secondsUntilMidnight);
 
     // Verify session ownership if session_id provided
     if (session_id) {

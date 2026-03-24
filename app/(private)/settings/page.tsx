@@ -393,6 +393,7 @@ export default function SettingsPage() {
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [showAllLogs, setShowAllLogs] = useState(false);
+  const [pendingDeleteLogId, setPendingDeleteLogId] = useState<string | null>(null);
 
   const fetchWeightLogs = useCallback(async () => {
     setLoadingLogs(true);
@@ -405,12 +406,19 @@ export default function SettingsPage() {
   }, []);
 
   async function deleteWeightLog(id: string) {
-    await fetch("/api/user/weight-logs", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    setWeightLogs((prev) => prev.filter((l) => l.id !== id));
+    try {
+      await fetch("/api/user/weight-logs", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      setWeightLogs((prev) => prev.filter((l) => l.id !== id));
+      toast.success("Entrée supprimée");
+    } catch {
+      toast.error("Impossible de supprimer cette entrée");
+    } finally {
+      setPendingDeleteLogId(null);
+    }
   }
 
   const macroGrams = (calories: number | null) => {
@@ -1789,13 +1797,32 @@ export default function SettingsPage() {
                                   {log.note}
                                 </span>
                               )}
-                              <button
-                                type="button"
-                                onClick={() => deleteWeightLog(log.id)}
-                                className="p-1.5 rounded-lg hover:bg-danger/10 text-default-300 hover:text-danger transition-colors shrink-0"
-                              >
-                                <Trash2 size={13} />
-                              </button>
+                              {pendingDeleteLogId === log.id ? (
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => deleteWeightLog(log.id)}
+                                    className="text-[10px] px-2 py-0.5 rounded-lg bg-danger/10 text-danger font-semibold hover:bg-danger/20 transition-colors"
+                                  >
+                                    Confirmer
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setPendingDeleteLogId(null)}
+                                    className="text-[10px] px-2 py-0.5 rounded-lg bg-default-100 text-default-500 hover:bg-default-200 transition-colors"
+                                  >
+                                    Annuler
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setPendingDeleteLogId(log.id)}
+                                  className="p-1.5 rounded-lg hover:bg-danger/10 text-default-300 hover:text-danger transition-colors shrink-0"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              )}
                             </div>
                           ))}
                       </div>

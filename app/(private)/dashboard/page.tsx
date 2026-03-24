@@ -343,33 +343,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* CTA if no meal plan */}
-      {!loading && (stats?.mealPlans ?? 0) === 0 && (
-        <Card className="border border-primary/20 bg-primary/5 p-6">
-          <CardBody className="flex flex-col sm:flex-row items-center gap-4 p-0">
-            <div className="p-3 rounded-xl bg-primary/10">
-              <Sparkles size={24} className="text-primary" />
-            </div>
-            <div className="flex-1 text-center sm:text-left">
-              <p className="font-semibold">Pas encore de plan de repas</p>
-              <p className="text-default-400 text-sm">
-                Générez votre premier plan de repas personnalisé par IA en moins
-                d&apos;une minute.
-              </p>
-            </div>
-            <Button
-              as={Link}
-              href="/dashboard/meal-plan/generate"
-              color="primary"
-              variant="flat"
-              startContent={<Sparkles size={16} />}
-              className="font-semibold flex-shrink-0"
-            >
-              Générer maintenant
-            </Button>
-          </CardBody>
-        </Card>
-      )}
     </div>
   );
 }

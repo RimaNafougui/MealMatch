@@ -32,6 +32,9 @@ const UNIT_MAP: Record<string, string> = {
   tablespoon: "c. à s.",
   tablespoons: "c. à s.",
   tbsp: "c. à s.",
+  tbsps: "c. à s.",
+  tbs: "c. à s.",
+  "T": "c. à s.",   // capital T = tablespoon in many recipes
   "cuillère à soupe": "c. à s.",
   "cuillères à soupe": "c. à s.",
   "c. à soupe": "c. à s.",
@@ -41,6 +44,8 @@ const UNIT_MAP: Record<string, string> = {
   teaspoon: "c. à t.",
   teaspoons: "c. à t.",
   tsp: "c. à t.",
+  tsps: "c. à t.",
+  "t": "c. à t.",   // lowercase t = teaspoon in many recipes
   "cuillère à thé": "c. à t.",
   "cuillères à thé": "c. à t.",
   "c. à thé": "c. à t.",
@@ -51,6 +56,7 @@ const UNIT_MAP: Record<string, string> = {
   cups: "tasse",
   tasse: "tasse",
   tasses: "tasse",
+  c: "tasse",        // "c" alone is cup in many recipe contexts
   // gram / kilogram
   gram: "g",
   grams: "g",
@@ -474,45 +480,129 @@ export function parseIngredientsSummary(summary: string): RawIngredient[] {
     });
 }
 
+// ─── Unit conversion helpers ──────────────────────────────────────────────────
+// Allows aggregating the same ingredient measured in different compatible units.
+// e.g. "1 tasse basil" + "3 c. à s. basil" + "1 c. à t. basil" → single entry.
+
+const VOLUME_TO_ML: Record<string, number> = {
+  "ml": 1,
+  "L": 1000,
+  "c. à t.": 5,
+  "c. à s.": 15,
+  "tasse": 240,
+  "oz": 29.574,
+};
+
+const WEIGHT_TO_G: Record<string, number> = {
+  "g": 1,
+  "kg": 1000,
+  "oz": 28.35,
+  "lb": 453.59,
+};
+
+type UnitType = "volume" | "weight";
+
+function toBaseUnit(quantity: number, unit: string): { value: number; type: UnitType } | null {
+  if (unit in VOLUME_TO_ML) return { value: quantity * VOLUME_TO_ML[unit], type: "volume" };
+  if (unit in WEIGHT_TO_G) return { value: quantity * WEIGHT_TO_G[unit], type: "weight" };
+  return null;
+}
+
+function fromBaseUnit(value: number, type: UnitType): { quantity: number; unit: string } {
+  if (type === "volume") {
+    if (value >= 240) return { quantity: Math.round((value / 240) * 10) / 10, unit: "tasse" };
+    if (value >= 15)  return { quantity: Math.round((value / 15)  * 10) / 10, unit: "c. à s." };
+    return { quantity: Math.round((value / 5) * 10) / 10, unit: "c. à t." };
+  } else {
+    if (value >= 1000) return { quantity: Math.round((value / 1000) * 100) / 100, unit: "kg" };
+    return { quantity: Math.round(value * 10) / 10, unit: "g" };
+  }
+}
+
 // ─── Aggregation ──────────────────────────────────────────────────────────────
 
 export function aggregateIngredients(rawIngredients: RawIngredient[]): OrganizedItem[] {
-  // Key = normalizedName + normalizedUnit  → ensures e.g. "carrots"/"carrot"
-  // and "gousse"/"gousses" share the same bucket while different units stay
-  // separate (3 tbsp lemon juice ≠ 3 tsp lemon juice).
-  const map = new Map<string, OrganizedItem>();
+  // First pass: group all occurrences by normalizedName only.
+  // Within each group we then try to convert everything to a common base unit.
+  // If units are incompatible (e.g. "pièce" vs "tasse"), keep them separate.
+
+  type Accumulator = {
+    displayName: string;
+    classification: AisleInfo;
+    // base-unit buckets
+    volumeMl: number;
+    weightG: number;
+    // unitless / count bucket: key = normalizedUnit → quantity
+    other: Map<string, { unit: string; quantity: number; displayName: string }>;
+  };
+
+  const groups = new Map<string, Accumulator>();
 
   for (const ingredient of rawIngredients) {
     if (!ingredient.name?.trim()) continue;
 
     const normalizedName = normalizeIngredientName(ingredient.name);
     const normalizedUnit = normalizeUnit(ingredient.unit ?? "");
-    const key = `${normalizedName}::${normalizedUnit}`;
-
+    const qty = ingredient.quantity || 1;
     const classification = classifyIngredient(normalizedName);
 
-    if (map.has(key)) {
-      const existing = map.get(key)!;
-      existing.quantity =
-        Math.round((existing.quantity + (ingredient.quantity || 1)) * 100) / 100;
+    if (!groups.has(normalizedName)) {
+      groups.set(normalizedName, {
+        displayName: ingredient.name.trim(),
+        classification,
+        volumeMl: 0,
+        weightG: 0,
+        other: new Map(),
+      });
+    }
+
+    const group = groups.get(normalizedName)!;
+    const base = toBaseUnit(qty, normalizedUnit);
+
+    if (base?.type === "volume") {
+      group.volumeMl = Math.round((group.volumeMl + base.value) * 1000) / 1000;
+    } else if (base?.type === "weight") {
+      group.weightG = Math.round((group.weightG + base.value) * 1000) / 1000;
     } else {
-      map.set(key, {
-        // Use the original (display-friendly) name from the first occurrence
-        name: ingredient.name.trim(),
-        quantity: ingredient.quantity || 1,
-        unit: normalizedUnit,
+      // unitless or unrecognised unit — bucket by unit key
+      const key = normalizedUnit;
+      if (group.other.has(key)) {
+        const entry = group.other.get(key)!;
+        entry.quantity = Math.round((entry.quantity + qty) * 100) / 100;
+      } else {
+        group.other.set(key, { unit: normalizedUnit, quantity: qty, displayName: ingredient.name.trim() });
+      }
+    }
+  }
+
+  // Second pass: build OrganizedItem list from the groups
+  const items: OrganizedItem[] = [];
+
+  for (const group of Array.from(groups.values())) {
+    const { displayName, classification } = group;
+
+    if (group.volumeMl > 0) {
+      const { quantity, unit } = fromBaseUnit(group.volumeMl, "volume");
+      items.push({ name: displayName, quantity, unit, price: null, checked: false, ...classification });
+    }
+    if (group.weightG > 0) {
+      const { quantity, unit } = fromBaseUnit(group.weightG, "weight");
+      items.push({ name: displayName, quantity, unit, price: null, checked: false, ...classification });
+    }
+    for (const entry of Array.from(group.other.values())) {
+      items.push({
+        name: entry.displayName,
+        quantity: entry.quantity,
+        unit: entry.unit,
         price: null,
         checked: false,
-        aisle: classification.aisle,
-        category: classification.category,
-        emoji: classification.emoji,
-        sortOrder: classification.sortOrder,
+        ...classification,
       });
     }
   }
 
   // Sort by aisle order, then alphabetically within each aisle
-  return Array.from(map.values()).sort((a, b) => {
+  return items.sort((a, b) => {
     if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
     return a.name.localeCompare(b.name, "fr");
   });

@@ -198,6 +198,7 @@ export default function MealPlanDetailPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [repeating, setRepeating] = useState(false);
+  const [exportingCalendar, setExportingCalendar] = useState(false);
 
   const { data: planData } = useUserPlan();
   const userPlan: string = planData?.plan ?? "free";
@@ -205,12 +206,23 @@ export default function MealPlanDetailPage() {
 
   const handlePrint = () => window.print();
 
-  const handleCalendarExport = () => {
-    const url = `/api/calendar/export?planId=${planId}`;
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "mealmatch-plan.ics";
-    a.click();
+  const handleCalendarExport = async () => {
+    setExportingCalendar(true);
+    try {
+      const res = await fetch(`/api/calendar/export?planId=${planId}`);
+      if (!res.ok) throw new Error("Erreur lors de l'export");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "mealmatch-plan.ics";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Impossible d'exporter vers le calendrier");
+    } finally {
+      setExportingCalendar(false);
+    }
   };
 
   useEffect(() => {
@@ -245,8 +257,19 @@ export default function MealPlanDetailPage() {
       const data = await res.json();
 
       if (res.status === 409) {
-        toast.error("Un plan existe déjà pour la semaine prochaine.", {
-          description: "Supprimez ou remplacez-le avant de répéter.",
+        toast.error("Un plan actif existe déjà pour la semaine prochaine.", {
+          description: "Ouvrez ce plan et supprimez-le, ou générez-en un nouveau pour cette semaine.",
+          action: {
+            label: "Voir les plans",
+            onClick: () => (window.location.href = "/dashboard/meal-plans"),
+          },
+        });
+        return;
+      }
+      if (res.status === 403) {
+        toast.error("Limite mensuelle atteinte.", {
+          description: "Passez à un plan payant pour générer davantage de plans.",
+          action: { label: "Voir les plans", onClick: () => (window.location.href = "/pricing") },
         });
         return;
       }
@@ -342,11 +365,23 @@ export default function MealPlanDetailPage() {
             margin-bottom: 8px;
           }
 
-          /* 3-column grid → 2-column on A4 */
+          /* Switch to flex-wrap for print — CSS Grid clips at page boundaries */
           .days-grid {
-            display: grid !important;
-            grid-template-columns: 1fr 1fr !important;
-            gap: 10px !important;
+            display: flex !important;
+            flex-wrap: wrap !important;
+            align-items: flex-start !important;
+            gap: 0 !important;
+          }
+          .days-grid > * {
+            width: 48% !important;
+            margin-right: 2% !important;
+            margin-bottom: 10px !important;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+            box-sizing: border-box !important;
+          }
+          .days-grid > *:nth-child(2n) {
+            margin-right: 0 !important;
           }
 
           /* Meal slot cards */
@@ -387,7 +422,7 @@ export default function MealPlanDetailPage() {
         >
           <div>
             <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.5 }}>
-              🍽 MealMatch
+              MealMatch
             </div>
             <div style={{ fontSize: 12, color: "#71717a", marginTop: 2 }}>
               Plan de repas personnalisé
@@ -661,6 +696,7 @@ export default function MealPlanDetailPage() {
             variant="flat"
             startContent={<Download size={16} />}
             onPress={handleCalendarExport}
+            isLoading={exportingCalendar}
             className="font-semibold"
           >
             Exporter vers calendrier

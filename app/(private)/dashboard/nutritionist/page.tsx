@@ -64,7 +64,12 @@ function ChatMessage({ msg }: { msg: Message }) {
 
 function NutritionistChat() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("nutritionist_active_session") ?? null;
+    }
+    return null;
+  });
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -75,7 +80,17 @@ function NutritionistChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
-  // Load sessions on mount
+  // Persist active session across page reloads
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (activeSessionId) {
+      localStorage.setItem("nutritionist_active_session", activeSessionId);
+    } else {
+      localStorage.removeItem("nutritionist_active_session");
+    }
+  }, [activeSessionId]);
+
+  // Load sessions on mount, then restore last active session
   useEffect(() => {
     loadSessions();
   }, []);
@@ -94,7 +109,16 @@ function NutritionistChat() {
       const res = await fetch("/api/nutritionist/sessions");
       if (!res.ok) return;
       const data = await res.json();
-      setSessions(data.sessions ?? []);
+      const fetched: ChatSession[] = data.sessions ?? [];
+      setSessions(fetched);
+      // Auto-restore last active session if it still exists
+      const saved = typeof window !== "undefined"
+        ? localStorage.getItem("nutritionist_active_session")
+        : null;
+      if (saved && fetched.some((s) => s.id === saved)) {
+        setActiveSessionId(saved);
+        loadSessionMessages(saved);
+      }
     } catch {
     } finally {
       setLoadingSessions(false);
@@ -151,6 +175,9 @@ function NutritionistChat() {
       if (activeSessionId === sessionId) {
         setActiveSessionId(null);
         setMessages([WELCOME_MESSAGE]);
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("nutritionist_active_session");
+        }
       }
     } catch {
       toast.error("Impossible de supprimer la conversation.");

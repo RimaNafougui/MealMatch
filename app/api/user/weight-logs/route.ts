@@ -72,6 +72,31 @@ export async function POST(req: NextRequest) {
 
     const supabase = getSupabaseServer();
 
+    // Plausibility check: warn if change from most recent log > 5 kg
+    const { data: lastLog } = await supabase
+      .from("weight_logs")
+      .select("weight_kg, logged_at")
+      .eq("user_id", userId)
+      .neq("logged_at", dateStr)
+      .order("logged_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    let warning: string | null = null;
+    if (lastLog && Math.abs(weightKg - lastLog.weight_kg) > 5) {
+      warning = `Variation importante détectée (+${Math.abs(weightKg - lastLog.weight_kg).toFixed(1)} kg depuis la dernière entrée). Vérifiez la valeur saisie.`;
+    }
+
+    // Check if an entry already exists for this date (will be overwritten by upsert)
+    const { data: existingEntry } = await supabase
+      .from("weight_logs")
+      .select("id, weight_kg")
+      .eq("user_id", userId)
+      .eq("logged_at", dateStr)
+      .maybeSingle();
+
+    const wasUpdated = !!existingEntry;
+
     // Upsert — one entry per day per user
     const { data, error } = await supabase
       .from("weight_logs")
@@ -99,7 +124,7 @@ export async function POST(req: NextRequest) {
       CacheKey.weightLogs(userId, 365),
     );
 
-    return NextResponse.json({ success: true, log: data });
+    return NextResponse.json({ success: true, log: data, warning, updated: wasUpdated });
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
