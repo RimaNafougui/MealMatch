@@ -11,6 +11,7 @@ import {
   X,
   Plus,
   Target,
+  Wallet,
 } from "lucide-react";
 import { format, addDays, differenceInDays, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -394,7 +395,58 @@ export function GenerateConfig({
         </CardBody>
       </Card>
 
-      {/* ── 7. Objectifs nutritionnels par repas ── */}
+      {/* ── 7. Weekly budget ── */}
+      <Card className="border border-divider bg-content1">
+        <CardBody className="gap-4 p-5">
+          <div className="flex items-center gap-2">
+            <Wallet size={16} className="text-success" />
+            <span className="font-semibold text-xs uppercase tracking-widest text-foreground/60">
+              Budget épicerie / semaine
+            </span>
+            <span className="ml-auto text-[10px] text-foreground/30">optionnel</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-foreground/40">$</span>
+              <input
+                type="number"
+                value={config.weekly_budget_cad ?? ""}
+                min={10}
+                max={500}
+                step={5}
+                onChange={(e) =>
+                  update({ weekly_budget_cad: e.target.value ? Number(e.target.value) : null })
+                }
+                placeholder="ex: 60"
+                className="w-full pl-7 pr-10 py-2.5 rounded-xl border-2 border-divider bg-content2 text-sm font-medium focus:border-success focus:outline-none transition-colors"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-foreground/30 font-medium">CAD</span>
+            </div>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {[40, 60, 80, 100].map((preset) => (
+              <button
+                key={preset}
+                onClick={() => update({ weekly_budget_cad: config.weekly_budget_cad === preset ? null : preset })}
+                className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
+                  config.weekly_budget_cad === preset
+                    ? "border-success bg-success/10 text-success"
+                    : "border-divider text-foreground/40 hover:border-success/40"
+                }`}
+              >
+                ${preset}
+              </button>
+            ))}
+          </div>
+          {config.weekly_budget_cad && (
+            <p className="text-[11px] text-success/70">
+              L&apos;IA ciblera ~${(config.weekly_budget_cad / (config.days_count ?? 7)).toFixed(0)}$/jour · ~${(config.weekly_budget_cad / ((config.days_count ?? 7) * (config.meals_per_day ?? 3))).toFixed(2)} par repas
+            </p>
+          )}
+        </CardBody>
+      </Card>
+
+      {/* ── 8. Objectifs nutritionnels par repas ── */}
       <Card className="border border-divider bg-content1">
         <CardBody className="gap-4 p-5">
           <div className="flex items-center gap-2">
@@ -483,6 +535,14 @@ export function GenerateConfig({
         <Chip color="success" variant="flat" size="sm">
           {config.days_count * config.meals_per_day} repas
         </Chip>
+        {config.weekly_budget_cad && (
+          <>
+            <span className="text-foreground/40 text-sm">·</span>
+            <Chip color="success" variant="flat" size="sm" startContent={<Wallet size={10} />}>
+              ${config.weekly_budget_cad} CAD/sem
+            </Chip>
+          </>
+        )}
       </div>
 
       {/* ── Generate button ── */}

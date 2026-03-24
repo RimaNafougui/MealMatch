@@ -23,6 +23,7 @@ const generateSchema = z.object({
   target_protein_per_meal: z.number().positive().nullable().optional(),
   target_carbs_per_meal: z.number().positive().nullable().optional(),
   target_fat_per_meal: z.number().positive().nullable().optional(),
+  weekly_budget_cad: z.number().positive().max(500).nullable().optional(),
 });
 
 // 120s — streaming responses keep the connection alive well within this
@@ -70,6 +71,7 @@ export async function POST(req: Request) {
     max_prep_time, cuisine_types, allow_repetitions, avoid_ingredients,
     target_calories_per_meal, target_protein_per_meal,
     target_carbs_per_meal, target_fat_per_meal,
+    weekly_budget_cad,
   } = parsed.data;
 
   // ── Resolve date range ────────────────────────────────────────────────────
@@ -190,9 +192,11 @@ export async function POST(req: Request) {
   // ── Prompt ────────────────────────────────────────────────────────────────
   const restrictions = profile?.dietary_restrictions?.length ? profile.dietary_restrictions.join(", ") : "none";
   const allergies    = profile?.allergies?.length            ? profile.allergies.join(", ")            : "none";
-  const budgetRange  = (profile?.budget_min && profile?.budget_max)
-    ? `${profile.budget_min}–${profile.budget_max} $ CAD/sem`
-    : "< 80 $ CAD/sem";
+  const budgetRange = weekly_budget_cad
+    ? `${weekly_budget_cad} $ CAD/sem (strict — keep total estimated cost under this)`
+    : (profile?.budget_min && profile?.budget_max)
+      ? `${profile.budget_min}–${profile.budget_max} $ CAD/sem`
+      : "< 80 $ CAD/sem";
 
   const days      = getDayNamesForRange(planStart, actualDaysCount);
   const mealLabels = getMealLabels(meals_per_day);

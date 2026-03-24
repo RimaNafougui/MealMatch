@@ -28,6 +28,10 @@ import {
   Zap,
   Timer,
   UtensilsCrossed,
+  TrendingDown,
+  PiggyBank,
+  Receipt,
+  BadgeDollarSign,
 } from "lucide-react";
 
 // ─── Animation primitives ─────────────────────────────────────────────────────
@@ -173,9 +177,26 @@ export function LandingPage() {
               variants={fadeUp}
               className="text-lg sm:text-xl text-white/95 max-w-xl leading-relaxed"
             >
-              MealMatch génère des plans de repas intelligents, économiques et
-              adaptés à ton rythme — en quelques secondes.
+              L&apos;assistant repas conçu pour les étudiants — mange sainement,{" "}
+              <span className="text-success-200 font-semibold">économise jusqu&apos;à 80$/mois</span>{" "}
+              et ne dépasse jamais ton budget.
             </motion.p>
+
+            {/* Budget highlight pill */}
+            <motion.div variants={fadeUp} className="flex flex-wrap gap-3">
+              {[
+                { icon: <PiggyBank size={14} />, text: "Budget hebdomadaire personnalisable" },
+                { icon: <TrendingDown size={14} />, text: "Moins de gaspillage alimentaire" },
+              ].map((item) => (
+                <span
+                  key={item.text}
+                  className="flex items-center gap-1.5 text-xs font-semibold bg-black/30 text-success-200 border border-success/30 rounded-full px-3 py-1.5"
+                >
+                  {item.icon}
+                  {item.text}
+                </span>
+              ))}
+            </motion.div>
 
             {/* CTA buttons */}
             <motion.div variants={fadeUp} className="flex flex-wrap gap-3 items-center">
@@ -191,12 +212,12 @@ export function LandingPage() {
               </Button>
               <Button
                 as={Link}
-                href="#features"
+                href="#budget"
                 variant="bordered"
                 size="lg"
                 className="font-semibold text-white border-white/40 hover:bg-white/10"
               >
-                En savoir plus
+                Voir les économies
               </Button>
             </motion.div>
 
@@ -208,7 +229,7 @@ export function LandingPage() {
               {[
                 "Gratuit pour commencer",
                 "Sans carte de crédit",
-                "Résultats en 30 secondes",
+                "Économise dès la 1ère semaine",
               ].map((t) => (
                 <span key={t} className="flex items-center gap-1.5">
                   <CheckCircle2 size={15} className="text-success-200" />
@@ -232,31 +253,39 @@ export function LandingPage() {
           <StaggerReveal className="grid grid-cols-1 sm:grid-cols-3 gap-6" staggerDelay={0.12}>
             {[
               {
-                quote: "J'économise 80$ par mois depuis que j'utilise MealMatch. Incroyable!",
+                quote: "Je dépensais 350$/mois en épicerie. Avec MealMatch et un budget de 60$/semaine, je suis à 240$. C'est énorme quand t'es étudiant.",
                 name: "Léa T.",
                 role: "Étudiante en médecine",
+                saving: "110$/mois économisés",
                 stars: 5,
               },
               {
-                quote: "La liste d'épicerie automatique m'a changé la vie. Plus de gaspillage.",
+                quote: "La liste d'épicerie organisée évite les achats inutiles. En 3 mois j'ai économisé assez pour payer un mois de loyer.",
                 name: "Marc D.",
-                role: "Développeur logiciel",
+                role: "Étudiant en génie",
+                saving: "Zéro gaspillage",
                 stars: 5,
               },
               {
-                quote: "En 30 secondes j'ai un plan de repas complet pour la semaine. Magique.",
+                quote: "Je fixe mon budget à 50$/semaine et MealMatch construit un plan autour. Je mange mieux qu'avant tout en dépensant moins.",
                 name: "Sophie R.",
-                role: "Infirmière",
+                role: "Étudiante en soins infirmiers",
+                saving: "Budget respecté à 100%",
                 stars: 5,
               },
             ].map((t, i) => (
               <StaggerItem key={i}>
                 <Card className="backdrop-blur-xl bg-white/70 dark:bg-black/40 border border-divider/50 p-5 h-full">
                   <CardBody className="gap-3">
-                    <div className="flex gap-0.5">
-                      {Array.from({ length: t.stars }).map((_, s) => (
-                        <Star key={s} size={14} className="text-warning fill-warning" />
-                      ))}
+                    <div className="flex items-center justify-between">
+                      <div className="flex gap-0.5">
+                        {Array.from({ length: t.stars }).map((_, s) => (
+                          <Star key={s} size={14} className="text-warning fill-warning" />
+                        ))}
+                      </div>
+                      <span className="text-xs font-semibold text-success bg-success/10 rounded-full px-2 py-0.5">
+                        {t.saving}
+                      </span>
                     </div>
                     <p className="text-sm text-default-600 leading-relaxed italic">
                       &ldquo;{t.quote}&rdquo;
@@ -446,7 +475,137 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ── 5. HOW IT WORKS + CTA ───────────────────────────────────────────── */}
+      {/* ── 5. BUDGET ÉTUDIANT ──────────────────────────────────────────────── */}
+      <section
+        id="budget"
+        className="max-w-7xl mx-auto px-6 w-full py-24 relative z-10"
+      >
+        <ScrollReveal className="text-center space-y-3 mb-14">
+          <Chip color="success" variant="flat" size="sm" className="font-semibold text-xs tracking-wide">
+            Budget Étudiant
+          </Chip>
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+            Finis les fins de mois{" "}
+            <span className="text-success">difficiles</span>
+          </h2>
+          <p className="text-default-500 max-w-xl mx-auto">
+            MealMatch est conçu pour les petits budgets. Tu définis ton budget
+            hebdomadaire, l&apos;IA s&apos;adapte — jamais de mauvaises surprises à la caisse.
+          </p>
+        </ScrollReveal>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+          {/* Left — comparison card */}
+          <ScrollReveal>
+            <Card className="backdrop-blur-xl bg-white/70 dark:bg-black/40 border border-divider/50 overflow-hidden">
+              <CardBody className="p-0">
+                {/* Header */}
+                <div className="bg-success/10 border-b border-success/20 px-6 py-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-success/20 flex items-center justify-center">
+                    <Receipt size={20} className="text-success" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm">Comparaison mensuelle</p>
+                    <p className="text-xs text-default-400">Budget épicerie étudiant typique</p>
+                  </div>
+                </div>
+                <div className="p-6 space-y-4">
+                  {[
+                    { label: "Sans planification", amount: 420, color: "bg-danger/20 text-danger", width: "100%" },
+                    { label: "Avec MealMatch (60$/sem)", amount: 240, color: "bg-success/20 text-success", width: "57%" },
+                  ].map((row) => (
+                    <div key={row.label} className="space-y-1.5">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-default-500">{row.label}</span>
+                        <span className={`font-bold px-2 py-0.5 rounded-full text-xs ${row.color}`}>
+                          {row.amount}$/mois
+                        </span>
+                      </div>
+                      <div className="h-2 rounded-full bg-default-100 overflow-hidden">
+                        <motion.div
+                          className={`h-full rounded-full ${row.label.includes("Sans") ? "bg-danger/50" : "bg-success"}`}
+                          initial={{ width: 0 }}
+                          whileInView={{ width: row.width }}
+                          viewport={{ once: true }}
+                          transition={{ duration: 0.9, ease: "easeOut", delay: 0.3 }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  <div className="pt-3 border-t border-divider/40 flex items-center justify-between">
+                    <span className="text-sm text-default-500">Économies potentielles</span>
+                    <div className="flex items-center gap-1.5">
+                      <TrendingDown size={16} className="text-success" />
+                      <span className="text-lg font-extrabold text-success">180$/mois</span>
+                    </div>
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+          </ScrollReveal>
+
+          {/* Right — budget features */}
+          <StaggerReveal className="flex flex-col gap-5" staggerDelay={0.12}>
+            {[
+              {
+                icon: <BadgeDollarSign size={22} className="text-success" />,
+                bg: "bg-success/10 border-success/20",
+                title: "Budget hebdomadaire personnalisable",
+                desc: "Définis ton budget (ex. 50$/semaine) et l'IA génère un plan de repas complet qui respecte cette enveloppe — sans compromis sur la qualité.",
+              },
+              {
+                icon: <PiggyBank size={22} className="text-primary" />,
+                bg: "bg-primary/10 border-primary/20",
+                title: "Coût estimé par repas",
+                desc: "Chaque recette affiche le coût estimé. Tu sais exactement ce que tu dépenses avant d'aller à l'épicerie.",
+              },
+              {
+                icon: <ShoppingCart size={22} className="text-warning" />,
+                bg: "bg-warning/10 border-warning/20",
+                title: "Liste d'épicerie optimisée",
+                desc: "Les ingrédients sont regroupés et quantifiés précisément. Fini les achats en double et le gaspillage de nourriture.",
+              },
+              {
+                icon: <Receipt size={22} className="text-secondary" />,
+                bg: "bg-secondary/10 border-secondary/20",
+                title: "Suivi du coût hebdomadaire",
+                desc: "Ton tableau de bord affiche le coût réel de ton plan actif. Gardes le contrôle de ton budget alimentaire semaine après semaine.",
+              },
+            ].map((item, i) => (
+              <StaggerItem key={i}>
+                <div className="flex items-start gap-4">
+                  <div className={`w-11 h-11 rounded-xl border flex items-center justify-center shrink-0 ${item.bg}`}>
+                    {item.icon}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm">{item.title}</h3>
+                    <p className="text-xs text-default-500 mt-1 leading-relaxed">{item.desc}</p>
+                  </div>
+                </div>
+              </StaggerItem>
+            ))}
+          </StaggerReveal>
+        </div>
+
+        {/* Bottom stat bar */}
+        <ScrollReveal delay={0.2} className="mt-12">
+          <div className="rounded-2xl bg-success/5 border border-success/20 px-6 py-5 grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
+            {[
+              { value: "180$", label: "Économisés en moyenne / mois" },
+              { value: "< 5min", label: "Pour configurer ton budget" },
+              { value: "0 gaspillage", label: "Grâce aux quantités exactes" },
+              { value: "100%", label: "Adapté à ton budget" },
+            ].map((s, i) => (
+              <div key={i} className="space-y-1">
+                <p className="text-xl font-extrabold text-success">{s.value}</p>
+                <p className="text-xs text-default-500">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </ScrollReveal>
+      </section>
+
+      {/* ── 6. HOW IT WORKS + CTA ─────────────────────────────────────────── */}
       <section className="max-w-7xl mx-auto px-6 w-full py-24 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           {/* Steps */}
@@ -564,7 +723,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ── 6. BLOG PREVIEW ─────────────────────────────────────────────────── */}
+      {/* ── 7. BLOG PREVIEW ─────────────────────────────────────────────────── */}
       <section className="bg-white/40 dark:bg-black/20 backdrop-blur-sm border-t border-divider/40 py-24 relative z-10">
         <div className="max-w-7xl mx-auto px-6 w-full flex flex-col gap-10">
           <ScrollReveal className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -648,7 +807,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ── 7. FINAL CTA ────────────────────────────────────────────────────── */}
+      {/* ── 8. FINAL CTA ────────────────────────────────────────────────────── */}
       <section className="relative z-10 pb-24 pt-12 px-6">
         <ScrollReveal>
           <div className="max-w-4xl mx-auto">
@@ -665,16 +824,30 @@ export function LandingPage() {
                   animate={{ rotate: [0, 8, -8, 0], scale: [1, 1.05, 1] }}
                   transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                 >
-                  <UtensilsCrossed size={32} className="text-white" />
+                  <PiggyBank size={32} className="text-white" />
                 </motion.div>
                 <div className="space-y-3">
                   <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-                    Prêt à mieux manger ?
+                    Économise 180$ dès ce mois-ci.
                   </h2>
                   <p className="text-white/80 text-lg max-w-xl mx-auto">
-                    Rejoignez MealMatch aujourd&apos;hui et laissez l&apos;IA gérer vos repas — gratuitement.
+                    Définis ton budget, génère ton plan, fais ton épicerie.{" "}
+                    MealMatch s&apos;occupe du reste — gratuitement.
                   </p>
                 </div>
+              </div>
+
+              <div className="relative flex flex-wrap justify-center gap-4 text-sm text-white/90">
+                {[
+                  "Budget 100% respecté",
+                  "Zéro gaspillage",
+                  "Recettes abordables",
+                ].map((pt) => (
+                  <span key={pt} className="flex items-center gap-1.5">
+                    <CheckCircle2 size={15} className="text-white/80" />
+                    {pt}
+                  </span>
+                ))}
               </div>
 
               <Button
@@ -684,8 +857,12 @@ export function LandingPage() {
                 className="bg-white text-success font-bold shadow-xl px-10"
                 endContent={<ChevronRight size={18} />}
               >
-                Créer mon compte
+                Commencer à économiser — gratuitement
               </Button>
+
+              <p className="relative text-white/60 text-xs">
+                Aucune carte de crédit &bull; Résultats en 30 secondes
+              </p>
             </div>
           </div>
         </ScrollReveal>

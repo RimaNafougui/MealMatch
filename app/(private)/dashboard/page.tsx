@@ -21,12 +21,14 @@ import {
   BrainCircuit,
   Refrigerator,
   Flame,
+  Wallet,
 } from "lucide-react";
 import ProgressDashboard from "@/components/dashboard/ProgressDashboard";
 import { useStats } from "@/hooks/useUserData";
 import { useUserPlan } from "@/hooks/useUserPlan";
 import { useSplash } from "@/contexts/SplashContext";
 import { useStreak } from "@/hooks/useStreak";
+import { useMealPlans } from "@/hooks/useMealPlans";
 
 function StatCard({
   label,
@@ -68,7 +70,12 @@ export default function DashboardPage() {
   const { data: stats, isLoading: statsLoading } = useStats();
   const { data: planData, isLoading: planLoading } = useUserPlan();
   const { data: streakData } = useStreak();
+  const { data: mealPlansData } = useMealPlans();
   const loading = statsLoading || planLoading;
+
+  // Grab the active plan's weekly cost
+  const activePlan = (mealPlansData as any)?.plans?.find((p: any) => p.status === "active") ?? null;
+  const weeklyCost: number | null = activePlan?.total_cost ? Number(activePlan.total_cost) : null;
   const { hideSplash } = useSplash();
   const livePlan = planData?.plan ?? stats?.profile?.plan ?? "free";
   const isPremium = livePlan === "premium";
@@ -222,7 +229,7 @@ export default function DashboardPage() {
         <h2 className="text-sm font-semibold text-default-400 uppercase tracking-wider mb-3">
           Vos statistiques
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard
             label="Mes recettes"
             value={stats?.savedRecipes ?? 0}
@@ -244,6 +251,31 @@ export default function DashboardPage() {
             color="text-danger"
             loading={loading}
           />
+          {/* Weekly cost card */}
+          <Card className="border border-divider/50 bg-white/50 dark:bg-black/20">
+            <CardBody className="flex flex-row items-center gap-4 p-4">
+              <div className="p-3 rounded-xl bg-default-100 text-success">
+                <Wallet size={18} />
+              </div>
+              <div>
+                {loading ? (
+                  <>
+                    <Skeleton className="h-6 w-14 rounded-lg mb-1" />
+                    <Skeleton className="h-3 w-20 rounded-lg" />
+                  </>
+                ) : (
+                  <>
+                    <p className="text-2xl font-bold">
+                      {weeklyCost != null ? `$${weeklyCost.toFixed(0)}` : "—"}
+                    </p>
+                    <p className="text-xs text-default-400">
+                      {weeklyCost != null ? "budget cette sem." : "aucun plan actif"}
+                    </p>
+                  </>
+                )}
+              </div>
+            </CardBody>
+          </Card>
         </div>
       </div>
 

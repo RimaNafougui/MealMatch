@@ -51,6 +51,7 @@ export interface MealPlanConfig {
   target_protein_per_meal?: number | null;  // override protein target per meal (g)
   target_carbs_per_meal?: number | null;    // override carbs target per meal (g)
   target_fat_per_meal?: number | null;      // override fat target per meal (g)
+  weekly_budget_cad?: number | null;        // max weekly grocery budget in CAD
 }
 
 export interface SavedMealPlan {
